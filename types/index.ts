@@ -123,3 +123,21 @@ export interface AssetsRiskSummaryResponse {
   hasInsufficientData: boolean;
   insufficientDataReason?: string;
 }
+
+export interface OHLCVCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+// The "Raw" format coming from the API (Unix, O, H, L, C, V)
+export type RawOHLCVTuple = [number, number, number, number, number, number];
+
+export interface RawOHLCVResponse {
+  candles?: RawOHLCVTuple[];
+  data?: RawOHLCVTuple[];
+  // Sometimes APIs return the array directly
+}

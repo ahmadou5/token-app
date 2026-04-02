@@ -8,8 +8,9 @@ import axios from "axios";
 export type OHLCVInterval = "1H" | "4H" | "1D" | "1W";
 export type OHLCVTimeframe = "24H" | "7D" | "30D" | "90D" | "1Y";
 
+// The "Clean" format used by your UI
 export interface OHLCVCandle {
-  time: number; // unix ms
+  time: number;
   open: number;
   high: number;
   low: number;
@@ -17,14 +18,13 @@ export interface OHLCVCandle {
   volume: number;
 }
 
-interface UseOHLCVReturn {
-  candles: OHLCVCandle[];
-  isLoading: boolean;
-  error: Error | null;
-  interval: OHLCVInterval;
-  timeframe: OHLCVTimeframe;
-  setInterval: (i: OHLCVInterval) => void;
-  setTimeframe: (t: OHLCVTimeframe) => void;
+// The "Raw" format coming from the API (Unix, O, H, L, C, V)
+export type RawOHLCVTuple = [number, number, number, number, number, number];
+
+export interface RawOHLCVResponse {
+  candles?: RawOHLCVTuple[];
+  data?: RawOHLCVTuple[];
+  // Sometimes APIs return the array directly
 }
 /**
  * Create a specialized Axios instance
@@ -58,7 +58,7 @@ export const tokenRequest = {
         endpoint: `/assets/${assetId}/ohlcv?interval=${interval}&limit=${limit}`,
       },
     });
-    return data as UseOHLCVReturn["candles"];
+    return data as RawOHLCVResponse | RawOHLCVTuple[];
   },
 
   searchAsset: async (query: string) => {

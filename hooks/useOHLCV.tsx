@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { tokenRequest } from "@/lib/token";
+import { RawOHLCVTuple } from "@/types";
 
 export type OHLCVInterval = "1H" | "4H" | "1D" | "1W";
 export type OHLCVTimeframe = "24H" | "7D" | "30D" | "90D" | "1Y";
@@ -45,66 +46,37 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     setError(null);
     try {
       const limit = TIMEFRAME_LIMIT[timeframe];
-      // The tokens.xyz OHLCV endpoint
       const data = await tokenRequest.getOHLCV(assetId, interval, limit);
 
-      // Handle both array format and { candles: [] } format
-      let parsed: OHLCVCandle[];
+      let rawArray: RawOHLCVTuple[] = [];
 
+      // 1. Extract the raw array regardless of wrapper object
       if (Array.isArray(data)) {
-        // Check if it's already OHLCVCandle[] or tuple array
-        if (
-          data.length > 0 &&
-          typeof data[0] === "object" &&
-          "time" in data[0]
-        ) {
-          parsed = data as OHLCVCandle[];
-        } else {
-          const raw = data as unknown as Array<
-            [number, number, number, number, number, number]
-          >;
-          parsed = raw.map((c) => ({
+        rawArray = data as RawOHLCVTuple[];
+      } else if (data && typeof data === "object") {
+        rawArray = data.candles || data.data || [];
+      }
+
+      // 2. Map Raw Tuples to Clean Objects
+      // We check if index 0 is a number to ensure we aren't mapping
+      // an already-parsed object array (safety check)
+      const parsed: OHLCVCandle[] = rawArray.map((c) => {
+        if (Array.isArray(c)) {
+          return {
             time: c[0],
             open: c[1],
             high: c[2],
             low: c[3],
             close: c[4],
             volume: c[5],
-          }));
+          };
         }
-      } else if (typeof data === "object" && data !== null) {
-        const raw =
-          "candles" in data
-            ? (
-                data as {
-                  candles: Array<
-                    [number, number, number, number, number, number]
-                  >;
-                }
-              ).candles
-            : "data" in data
-              ? (
-                  data as {
-                    data: Array<
-                      [number, number, number, number, number, number]
-                    >;
-                  }
-                ).data
-              : [];
-        parsed = raw.map((c) => ({
-          time: c[0],
-          open: c[1],
-          high: c[2],
-          low: c[3],
-          close: c[4],
-          volume: c[5],
-        }));
-      } else {
-        parsed = [];
-      }
+        return c as unknown as OHLCVCandle;
+      });
 
       setCandles(parsed);
     } catch (err) {
+      console.error("OHLCV Fetch Error:", err);
       setError(err instanceof Error ? err : new Error("Failed to fetch OHLCV"));
       setCandles([]);
     } finally {
