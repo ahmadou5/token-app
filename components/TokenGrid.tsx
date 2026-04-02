@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTokens } from "@/hooks/useToken";
 import { TokenCard, ListHeader } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SearchModal, SearchTrigger } from "@/components/SearcModal";
 import type { AnyToken } from "@/hooks/useToken";
 import type { ViewMode } from "@/components/TokenCard";
 
@@ -17,7 +18,6 @@ function GridIcon() {
     </svg>
   );
 }
-
 function ListIcon() {
   return (
     <svg viewBox="0 0 16 16" fill="none" width="15" height="15">
@@ -69,63 +69,6 @@ function CategoryTabs({
   );
 }
 
-function SearchBar({
-  value,
-  onChange,
-  isSearching,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  isSearching: boolean;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        ref.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, []);
-  return (
-    <div className="tg-search">
-      <svg className="tg-search__icon" viewBox="0 0 16 16" fill="none">
-        <circle
-          cx="6.5"
-          cy="6.5"
-          r="4.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M10.5 10.5L14 14"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-      <input
-        ref={ref}
-        className="tg-search__input"
-        type="text"
-        placeholder="Search tokens…"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label="Search tokens"
-      />
-      {isSearching && <span className="tg-search__spinner" />}
-      {value && !isSearching && (
-        <button className="tg-search__clear" onClick={() => onChange("")}>
-          ✕
-        </button>
-      )}
-      <span className="tg-search__kbd">⌘K</span>
-    </div>
-  );
-}
-
 function SkeletonCard() {
   return (
     <div className="tg-skeleton">
@@ -145,7 +88,6 @@ function SkeletonCard() {
     </div>
   );
 }
-
 function SkeletonRow() {
   return (
     <div className="tg-skeleton-row">
@@ -153,7 +95,6 @@ function SkeletonRow() {
     </div>
   );
 }
-
 function EmptyState({ query }: { query: string }) {
   return (
     <div className="tg-empty">
@@ -191,21 +132,24 @@ export interface TokenGridProps {
 
 export function TokenGrid({ onTokenClick }: TokenGridProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [searchOpen, setSearchOpen] = useState(false);
+
   const {
     filtered,
     categories,
     activeCategory,
     setActiveCategory,
     searchQuery,
-    setSearchQuery,
     isLoading,
-    isSearching,
     error,
     refetch,
   } = useTokens();
 
   return (
-    <div className="">
+    <div className="tg">
+      {/* Search modal */}
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+
       {/* Top nav */}
       <div className="tg-topbar">
         <div className="tg-topbar__left">
@@ -227,10 +171,9 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
           <span className="tg-topbar__brand">Tokens</span>
         </div>
         <div className="tg-topbar__center">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            isSearching={isSearching}
+          <SearchTrigger
+            onClick={() => setSearchOpen(true)}
+            placeholder="Find tokens..."
           />
         </div>
         <div className="tg-topbar__right">

@@ -3,7 +3,11 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { tokenRequest } from "@/lib/token";
-import { useOHLCV, OHLCVInterval, OHLCVTimeframe } from "@/hooks/useOHLCV";
+import {
+  useOHLCV,
+  type OHLCVInterval,
+  type OHLCVTimeframe,
+} from "@/hooks/useOHLCV";
 import {
   TokenAvatar,
   TrustBadge,
@@ -12,17 +16,16 @@ import {
   fmtCompact,
 } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { AssetRisk } from "@/types";
+import { MarketsSection } from "@/components/Market";
+import { SecuritySection } from "@/components/Secuirity";
+import { VariantsSection, type VariantRow } from "@/components/Variant";
+import type { AssetRisk, AssetMarket, AssetProfile } from "@/types";
 import { useTokens } from "@/hooks/useToken";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtPct(n: number | null | undefined) {
   if (n == null) return "—";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
-
-// ─── SVG Line Chart ───────────────────────────────────────────────────────────
 
 function OHLCVChart({
   candles,
@@ -35,61 +38,46 @@ function OHLCVChart({
   const H = 220;
   const PAD = { top: 16, right: 16, bottom: 32, left: 56 };
 
-  const { path, areaPath, yLabels, xLabels, minVal, maxVal } = useMemo(() => {
+  const { path, areaPath, yLabels, xLabels } = useMemo(() => {
     if (!candles.length)
-      return {
-        path: "",
-        areaPath: "",
-        yLabels: [],
-        xLabels: [],
-        minVal: 0,
-        maxVal: 0,
-      };
-
+      return { path: "", areaPath: "", yLabels: [], xLabels: [] };
     const closes = candles.map((c) => c.close);
     const minVal = Math.min(...closes);
     const maxVal = Math.max(...closes);
     const range = maxVal - minVal || 1;
-
     const iW = W - PAD.left - PAD.right;
     const iH = H - PAD.top - PAD.bottom;
-
-    const pts = closes.map((v, i) => {
-      const x = PAD.left + (i / (closes.length - 1)) * iW;
-      const y = PAD.top + (1 - (v - minVal) / range) * iH;
-      return [x, y] as [number, number];
-    });
-
+    const pts = closes.map(
+      (v, i) =>
+        [
+          PAD.left + (i / (closes.length - 1)) * iW,
+          PAD.top + (1 - (v - minVal) / range) * iH,
+        ] as [number, number],
+    );
     const path = pts
       .map(
         ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`,
       )
       .join(" ");
-    const areaPath = `${path} L ${pts[pts.length - 1][0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
-
-    // Y axis labels
+    const last = pts[pts.length - 1];
+    const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
     const steps = 4;
-    const yLabels = Array.from({ length: steps + 1 }, (_, i) => {
-      const v = minVal + (maxVal - minVal) * (i / steps);
-      const y = PAD.top + (1 - i / steps) * (H - PAD.top - PAD.bottom);
-      return { y, label: fmtPrice(v) };
-    });
-
-    // X axis labels (evenly spaced, up to 6)
+    const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
+      y: PAD.top + (1 - i / steps) * iH,
+      label: fmtPrice(minVal + (maxVal - minVal) * (i / steps)),
+    }));
     const xCount = Math.min(6, candles.length);
     const xLabels = Array.from({ length: xCount }, (_, i) => {
       const idx = Math.round((i / (xCount - 1)) * (candles.length - 1));
-      const c = candles[idx];
-      const x = PAD.left + (idx / (candles.length - 1)) * iW;
-      const d = new Date(c.time);
-      const label = d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      return { x, label };
+      return {
+        x: PAD.left + (idx / (candles.length - 1)) * iW,
+        label: new Date(candles[idx].time).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+      };
     });
-
-    return { path, areaPath, yLabels, xLabels, minVal, maxVal };
+    return { path, areaPath, yLabels, xLabels };
   }, [candles]);
 
   const positive =
@@ -97,21 +85,18 @@ function OHLCVChart({
     candles[candles.length - 1].close >= candles[0].close;
   const lineColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="td-chart td-chart--loading">
         <div className="td-chart__shimmer" />
       </div>
     );
-  }
-
-  if (!candles.length) {
+  if (!candles.length)
     return (
       <div className="td-chart td-chart--empty">
         <span>No chart data available</span>
       </div>
     );
-  }
 
   return (
     <div className="td-chart">
@@ -119,7 +104,6 @@ function OHLCVChart({
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="td-chart__svg"
-        aria-label="Price chart"
       >
         <defs>
           <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
@@ -127,8 +111,6 @@ function OHLCVChart({
             <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
           </linearGradient>
         </defs>
-
-        {/* Grid lines */}
         {yLabels.map(({ y }) => (
           <line
             key={y}
@@ -140,11 +122,7 @@ function OHLCVChart({
             strokeWidth="1"
           />
         ))}
-
-        {/* Area fill */}
         <path d={areaPath} fill="url(#chartGrad)" />
-
-        {/* Price line */}
         <path
           d={path}
           fill="none"
@@ -153,8 +131,6 @@ function OHLCVChart({
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-
-        {/* Y labels */}
         {yLabels.map(({ y, label }) => (
           <text
             key={y}
@@ -168,8 +144,6 @@ function OHLCVChart({
             {label}
           </text>
         ))}
-
-        {/* X labels */}
         {xLabels.map(({ x, label }) => (
           <text
             key={x}
@@ -187,8 +161,6 @@ function OHLCVChart({
     </div>
   );
 }
-
-// ─── Timeframe/Interval controls ──────────────────────────────────────────────
 
 const TIMEFRAMES: OHLCVTimeframe[] = ["24H", "7D", "30D", "90D", "1Y"];
 const INTERVALS: OHLCVInterval[] = ["1H", "4H", "1D", "1W"];
@@ -234,92 +206,6 @@ function ChartControls({
   );
 }
 
-// ─── Security score gauge ─────────────────────────────────────────────────────
-
-function SecurityGauge({
-  score,
-  grade,
-  label,
-}: {
-  score: number;
-  grade: string;
-  label: string;
-}) {
-  const pct = score / 100;
-  const r = 52;
-  const cx = 70;
-  const cy = 70;
-  const startAngle = Math.PI;
-  const endAngle = 2 * Math.PI;
-  const totalArc = endAngle - startAngle;
-  const filled = startAngle + pct * totalArc;
-
-  const toXY = (angle: number) => ({
-    x: cx + r * Math.cos(angle),
-    y: cy + r * Math.sin(angle),
-  });
-
-  const start = toXY(startAngle);
-  const end = toXY(endAngle);
-  const filledEnd = toXY(filled);
-  const largeArc = pct > 0.5 ? 1 : 0;
-
-  const trackPath = `M ${start.x} ${start.y} A ${r} ${r} 0 1 1 ${end.x} ${end.y}`;
-  const fillPath = `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${filledEnd.x} ${filledEnd.y}`;
-
-  const color =
-    score >= 80
-      ? "var(--tc-accent-up)"
-      : score >= 60
-        ? "#f59e0b"
-        : "var(--tc-accent-down)";
-
-  return (
-    <div className="td-gauge">
-      <svg viewBox="0 0 140 80" className="td-gauge__svg">
-        <path
-          d={trackPath}
-          fill="none"
-          stroke="var(--tc-divider)"
-          strokeWidth="10"
-          strokeLinecap="round"
-        />
-        <path
-          d={fillPath}
-          fill="none"
-          stroke={color}
-          strokeWidth="10"
-          strokeLinecap="round"
-        />
-        <text
-          x={cx}
-          y={cy - 8}
-          textAnchor="middle"
-          fontSize="22"
-          fontWeight="500"
-          fill="var(--tc-text-primary)"
-          fontFamily="var(--tc-font-mono)"
-        >
-          {score}
-        </text>
-        <text
-          x={cx}
-          y={cy + 10}
-          textAnchor="middle"
-          fontSize="10"
-          fill="var(--tc-text-muted)"
-          fontFamily="var(--tc-font-sans)"
-        >
-          Grade {grade}
-        </text>
-      </svg>
-      <span className="td-gauge__label">{label}</span>
-    </div>
-  );
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 interface TokenPageData {
   name: string | null;
   symbol: string | null;
@@ -333,6 +219,7 @@ interface TokenPageData {
   mcap: number | null;
   fdv: number | null;
   supply: number | null;
+  holders: number | null;
   trustTier: string | null;
   description: string | null;
   website: string | null;
@@ -346,11 +233,15 @@ export default function TokenDetailPage({
 }) {
   const { assetId } = use(params);
   const router = useRouter();
+  const { tokens } = useTokens();
 
   const [pageData, setPageData] = useState<TokenPageData | null>(null);
   const [risk, setRisk] = useState<AssetRisk | null>(null);
+  const [markets, setMarkets] = useState<AssetMarket[]>([]);
+  const [marketsTotal, setMarketsTotal] = useState(0);
+  const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
-  const { tokens } = useTokens();
+
   const {
     candles,
     isLoading: chartLoading,
@@ -365,36 +256,58 @@ export default function TokenDetailPage({
       setIsLoadingPage(true);
       try {
         const raw = await tokenRequest.getAsset(assetId, true);
-        const data = tokens.find((t) => t.assetId === assetId);
-        // The full asset response with profile/risk/markets
-        const r = raw;
-        const market = r?.includes?.markets?.data?.markets[0] ?? null;
-        const profile = r?.includes?.profile?.data ?? null;
-        const riskData = r?.includes?.risk?.data ?? null;
+        const curatedMatch = tokens.find((t) => t.assetId === assetId);
+        const market0 = raw?.includes?.markets?.data?.markets[0] ?? null;
+        const profile: AssetProfile | null =
+          raw?.includes?.profile?.data ?? null;
+        const riskData: AssetRisk | null = raw?.includes?.risk?.data ?? null;
+        const marketsData: AssetMarket[] =
+          raw?.includes?.markets?.data?.markets ?? [];
 
         setPageData({
-          name: r?.asset?.name ?? null,
-          symbol: r?.asset?.symbol ?? null,
-          category: r?.asset?.category ?? "",
-          imageUrl:
-            r.includes.markets?.data.markets[0]?.base.icon ??
-            data?.imageUrl ??
-            null,
+          name: raw?.asset?.name ?? null,
+          symbol: raw?.asset?.symbol ?? null,
+          category: raw?.asset?.category ?? "",
+          imageUrl: market0?.base?.icon ?? curatedMatch?.imageUrl ?? null,
           price: profile?.price ?? null,
           change24h: profile?.priceChange24h ?? null,
-          change1h: data?.stats?.priceChange1hPercent ?? null,
-          volume: market?.volume24h ?? null,
-          liquidity: market?.liquidity ?? null,
+          change1h: curatedMatch?.stats?.priceChange1hPercent ?? null,
+          volume: market0?.volume24h ?? profile?.volume24h ?? null,
+          liquidity: market0?.liquidity ?? null,
           mcap: profile?.marketCap ?? null,
           fdv: profile?.fdv ?? null,
           supply: profile?.totalSupply ?? null,
-          trustTier: data?.primaryVariant?.trustTier ?? null,
+          holders: null,
+          trustTier: curatedMatch?.primaryVariant?.trustTier ?? null,
           description: profile?.description ?? null,
-          website: profile?.links.website ?? null,
-          twitter: profile?.links.twitter ?? null,
+          website: profile?.links?.website ?? null,
+          twitter: profile?.links?.twitter ?? null,
         });
 
         if (riskData) setRisk(riskData);
+        setMarkets(marketsData);
+        setMarketsTotal(
+          raw?.includes?.markets?.data?.total ?? marketsData.length,
+        );
+
+        const variantRows: VariantRow[] = [];
+        if (curatedMatch?.primaryVariant) {
+          const pv = curatedMatch.primaryVariant;
+          variantRows.push({
+            name: pv.name ?? pv.label ?? raw?.asset?.name ?? "",
+            symbol: pv.symbol ?? raw?.asset?.symbol ?? "",
+            mint: pv.mint,
+            trustTier: pv.trustTier,
+            price: pv.market?.price ?? null,
+            liquidity: pv.market?.liquidity ?? null,
+            volume24h: pv.market?.volume24hUSD ?? null,
+            kind: pv.kind ?? "spot",
+            tags: pv.tags ?? [],
+            issuer: pv.issuer,
+            logoURI: pv.market?.logoURI ?? null,
+          });
+        }
+        setVariants(variantRows);
       } catch (e) {
         console.error("Failed to load token detail", e);
       } finally {
@@ -431,11 +344,9 @@ export default function TokenDetailPage({
   }
 
   const d = pageData;
-  const positive = (d?.change24h ?? 0) >= 0;
 
   return (
     <div className="td-page">
-      {/* Top nav */}
       <div className="td-topbar">
         <div className="td-topbar__left">
           <button className="td-back" onClick={() => router.back()}>
@@ -456,9 +367,8 @@ export default function TokenDetailPage({
       </div>
 
       <div className="td-layout">
-        {/* ── Left / main column ── */}
         <div className="td-main">
-          {/* Token header */}
+          {/* Header */}
           <div className="td-header">
             <TokenAvatar
               src={d?.imageUrl ?? null}
@@ -494,7 +404,7 @@ export default function TokenDetailPage({
             />
           </div>
 
-          {/* Stats grid */}
+          {/* Stats */}
           <section className="td-section">
             <h2 className="td-section__title">Stats</h2>
             <div className="td-stats-grid">
@@ -532,64 +442,48 @@ export default function TokenDetailPage({
               ))}
             </div>
           </section>
+
+          {markets.length > 0 && (
+            <MarketsSection markets={markets} total={marketsTotal} />
+          )}
+          {risk && (
+            <SecuritySection
+              risk={risk}
+              liquidity={d?.liquidity}
+              volume={d?.volume}
+              holders={d?.holders}
+            />
+          )}
+          {variants.length > 0 && (
+            <VariantsSection assetName={d?.name} variants={variants} />
+          )}
         </div>
 
-        {/* ── Right sidebar ── */}
+        {/* Sidebar */}
         <aside className="td-sidebar">
-          {/* About */}
           {d?.description && (
             <div className="td-card">
               <h3 className="td-card__title">About {d.name}</h3>
               <p className="td-card__desc">{d.description}</p>
             </div>
           )}
-
-          {/* Security */}
           {risk && (
             <div className="td-card">
-              <h3 className="td-card__title">Security</h3>
-              <SecurityGauge
-                score={risk.marketScore.score}
-                grade={risk.marketScore.grade}
-                label={risk.marketScore.label}
-              />
-              <div className="td-security-rows">
-                {[
-                  { label: "Liquidity", value: fmtCompact(d?.liquidity) },
-                  { label: "Trading", value: fmtCompact(d?.volume) },
-                ].map(({ label, value }) => (
-                  <div key={label} className="td-security-row">
-                    <span className="td-security-row__label">{label}</span>
-                    <span className="td-security-row__value">{value}</span>
-                    <svg
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      width="12"
-                      height="12"
-                      className="td-security-row__check"
-                    >
-                      <circle
-                        cx="6"
-                        cy="6"
-                        r="5.5"
-                        stroke="var(--tc-accent-up)"
-                        strokeWidth="1"
-                      />
-                      <path
-                        d="M3.5 6l2 2 3-3"
-                        stroke="var(--tc-accent-up)"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                ))}
+              <h3 className="td-card__title">Security score</h3>
+              <div className="td-sidebar-score">
+                <span className="td-sidebar-score__num">
+                  {risk.marketScore.score}
+                </span>
+                <span className="td-sidebar-score__max">/100</span>
+                <span className="td-sidebar-score__grade">
+                  Grade {risk.marketScore.grade}
+                </span>
               </div>
+              <p className="td-sidebar-score__label">
+                {risk.marketScore.label}
+              </p>
             </div>
           )}
-
-          {/* Links */}
           {(d?.website || d?.twitter) && (
             <div className="td-card">
               <h3 className="td-card__title">Official links</h3>
