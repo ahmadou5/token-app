@@ -12,55 +12,8 @@ import {
   fmtCompact,
 } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type {
-  AssetRisk,
-  AssetsResolveResponse,
-  AssetsRiskSummaryResponse,
-} from "@/types";
+import type { AssetRisk } from "@/types";
 import { useTokens } from "@/hooks/useToken";
-
-interface AssetDetailResponse {
-  asset?: {
-    name: string | null;
-    symbol: string | null;
-    category: string;
-    profile?: {
-      description: string | null;
-      website: string | null;
-      twitter: string | null;
-    };
-  };
-  primaryVariant?: {
-    market?: {
-      logoURI: string | null;
-      price: number | null;
-      priceChange24hPercent: number | null;
-      priceChange1hPercent: number | null;
-      volume24hUSD: number | null;
-      liquidity: number | null;
-      marketCap: number | null;
-      fdv: number | null;
-      supply: number | null;
-    };
-    trustTier: string | null;
-  };
-  variant?: {
-    market?: {
-      logoURI: string | null;
-      price: number | null;
-      priceChange24hPercent: number | null;
-      priceChange1hPercent: number | null;
-      volume24hUSD: number | null;
-      liquidity: number | null;
-      marketCap: number | null;
-      fdv: number | null;
-      supply: number | null;
-    };
-    trustTier: string | null;
-  };
-  imageUrl?: string | null;
-  risk?: AssetsRiskSummaryResponse;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -423,9 +376,9 @@ export default function TokenDetailPage({
           name: r?.asset?.name ?? null,
           symbol: r?.asset?.symbol ?? null,
           category: r?.asset?.category ?? "",
-          imageUrl: market?.base.icon ?? null,
-          price: market?.price ?? null,
-          change24h: data?.stats?.priceChange24hPercent ?? null,
+          imageUrl: data?.imageUrl ?? null,
+          price: profile?.price ?? null,
+          change24h: profile?.priceChange24h ?? null,
           change1h: data?.stats?.priceChange1hPercent ?? null,
           volume: market?.volume24h ?? null,
           liquidity: market?.liquidity ?? null,

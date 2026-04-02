@@ -76,6 +76,8 @@ export function TokenAvatar({
         <Image
           src={src}
           alt={name}
+          width={20}
+          height={20}
           className="tc-avatar__img"
           onError={(e) => {
             e.currentTarget.style.display = "none";
