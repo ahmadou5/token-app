@@ -9,7 +9,7 @@ import axios from "axios";
  * Create a specialized Axios instance
  */
 const localClient = axios.create({
-  baseURL: "/api/tokens",
+  baseURL: "/api/token",
 });
 
 export const tokenRequest = {
