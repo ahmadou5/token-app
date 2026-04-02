@@ -5,6 +5,27 @@ import {
 } from "@/types";
 import axios from "axios";
 
+export type OHLCVInterval = "1H" | "4H" | "1D" | "1W";
+export type OHLCVTimeframe = "24H" | "7D" | "30D" | "90D" | "1Y";
+
+export interface OHLCVCandle {
+  time: number; // unix ms
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface UseOHLCVReturn {
+  candles: OHLCVCandle[];
+  isLoading: boolean;
+  error: Error | null;
+  interval: OHLCVInterval;
+  timeframe: OHLCVTimeframe;
+  setInterval: (i: OHLCVInterval) => void;
+  setTimeframe: (t: OHLCVTimeframe) => void;
+}
 /**
  * Create a specialized Axios instance
  */
@@ -29,6 +50,15 @@ export const tokenRequest = {
       },
     });
     return data as AssetsResolveResponse;
+  },
+
+  getOHLCV: async (assetId: string, interval: string, limit: number) => {
+    const { data } = await localClient.get("/", {
+      params: {
+        endpoint: `/assets/${assetId}/ohlcv?interval=${interval}&limit=${limit}`,
+      },
+    });
+    return data as UseOHLCVReturn["candles"];
   },
 
   searchAsset: async (query: string) => {

@@ -46,26 +46,62 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     try {
       const limit = TIMEFRAME_LIMIT[timeframe];
       // The tokens.xyz OHLCV endpoint
-      const { data } = await (
-        await import("axios")
-      ).default.get("/api/token", {
-        params: {
-          endpoint: `/assets/${assetId}/ohlcv?interval=${interval.toLowerCase()}&limit=${limit}`,
-        },
-      });
+      const data = await tokenRequest.getOHLCV(assetId, interval, limit);
 
       // Handle both array format and { candles: [] } format
-      const raw: Array<[number, number, number, number, number, number]> =
-        Array.isArray(data) ? data : (data?.candles ?? data?.data ?? []);
+      let parsed: OHLCVCandle[];
 
-      const parsed: OHLCVCandle[] = raw.map((c) => ({
-        time: c[0],
-        open: c[1],
-        high: c[2],
-        low: c[3],
-        close: c[4],
-        volume: c[5],
-      }));
+      if (Array.isArray(data)) {
+        // Check if it's already OHLCVCandle[] or tuple array
+        if (
+          data.length > 0 &&
+          typeof data[0] === "object" &&
+          "time" in data[0]
+        ) {
+          parsed = data as OHLCVCandle[];
+        } else {
+          const raw = data as unknown as Array<
+            [number, number, number, number, number, number]
+          >;
+          parsed = raw.map((c) => ({
+            time: c[0],
+            open: c[1],
+            high: c[2],
+            low: c[3],
+            close: c[4],
+            volume: c[5],
+          }));
+        }
+      } else if (typeof data === "object" && data !== null) {
+        const raw =
+          "candles" in data
+            ? (
+                data as {
+                  candles: Array<
+                    [number, number, number, number, number, number]
+                  >;
+                }
+              ).candles
+            : "data" in data
+              ? (
+                  data as {
+                    data: Array<
+                      [number, number, number, number, number, number]
+                    >;
+                  }
+                ).data
+              : [];
+        parsed = raw.map((c) => ({
+          time: c[0],
+          open: c[1],
+          high: c[2],
+          low: c[3],
+          close: c[4],
+          volume: c[5],
+        }));
+      } else {
+        parsed = [];
+      }
 
       setCandles(parsed);
     } catch (err) {
