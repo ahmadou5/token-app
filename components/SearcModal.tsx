@@ -42,7 +42,7 @@ function ResultRow({
   const imageUrl = "imageUrl" in token ? token.imageUrl : null;
   const logoURI = token.primaryVariant?.market?.logoURI ?? null;
   const src = imageUrl ?? logoURI;
-  const initials = name.slice(0, 2).toUpperCase();
+  const initials = name?.slice(0, 2).toUpperCase();
 
   return (
     <div
@@ -114,7 +114,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
     .slice(0, 8);
 
   const results: AnyToken[] = searchQuery.trim()
-    ? filtered.slice(0, 12)
+    ? filtered?.slice(0, 12)
     : topByVolume;
 
   // Focus input on open

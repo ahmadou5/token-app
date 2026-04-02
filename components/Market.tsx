@@ -13,7 +13,7 @@ function fmtChange(n: number | null | undefined) {
 
 function truncateMint(mint: string) {
   if (mint.length <= 10) return mint;
-  return `${mint.slice(0, 4)}…${mint.slice(-4)}`;
+  return `${mint?.slice(0, 4)}…${mint?.slice(-4)}`;
 }
 
 function hashString(value: string) {
@@ -161,7 +161,7 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   });
 
   const totalPages = Math.ceil(sorted.length / perPage);
-  const pageItems = sorted.slice((page - 1) * perPage, page * perPage);
+  const pageItems = sorted?.slice((page - 1) * perPage, page * perPage);
 
   return (
     <section className="td-section">
@@ -256,7 +256,9 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
               {/* 24h Trades */}
               <div className="mkt-col--trades mkt-num-stack">
                 <span className="mkt-num">
-                  {Math.floor(deterministicRand(`${mkt.address}-trades`) * 10000).toLocaleString()}
+                  {Math.floor(
+                    deterministicRand(`${mkt.address}-trades`) * 10000,
+                  ).toLocaleString()}
                 </span>
                 {tradesChange && (
                   <span
@@ -270,7 +272,9 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
               {/* 24h Wallets */}
               <div className="mkt-col--wallets mkt-num-stack">
                 <span className="mkt-num">
-                  {Math.floor(deterministicRand(`${mkt.address}-wallets`) * 1000).toLocaleString()}
+                  {Math.floor(
+                    deterministicRand(`${mkt.address}-wallets`) * 1000,
+                  ).toLocaleString()}
                 </span>
                 {walletsChange && (
                   <span
