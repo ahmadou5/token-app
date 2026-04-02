@@ -43,10 +43,10 @@ export const tokenRequest = {
     return data as AssetsCuratedResponse;
   },
 
-  getAsset: async (assetId: string) => {
+  getAsset: async (assetId: string, include?: boolean) => {
     const { data } = await localClient.get("/", {
       params: {
-        endpoint: `/assets/${assetId}?include=profile%2Crisk%2Cohlcv%2Cmarkets`,
+        endpoint: `/assets/${assetId}${include ? "?include=profile%2Crisk%2Cohlcv%2Cmarkets" : ""}`,
       },
     });
     return data as AssetsResolveResponse;

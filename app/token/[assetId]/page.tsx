@@ -12,7 +12,12 @@ import {
   fmtCompact,
 } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { AssetsResolveResponse, AssetsRiskSummaryResponse } from "@/types";
+import type {
+  AssetRisk,
+  AssetsResolveResponse,
+  AssetsRiskSummaryResponse,
+} from "@/types";
+import { useTokens } from "@/hooks/useToken";
 
 interface AssetDetailResponse {
   asset?: {
@@ -390,9 +395,9 @@ export default function TokenDetailPage({
   const router = useRouter();
 
   const [pageData, setPageData] = useState<TokenPageData | null>(null);
-  const [risk, setRisk] = useState<AssetsRiskSummaryResponse | null>(null);
+  const [risk, setRisk] = useState<AssetRisk | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
-
+  const { tokens } = useTokens();
   const {
     candles,
     isLoading: chartLoading,
@@ -406,31 +411,31 @@ export default function TokenDetailPage({
     async function load() {
       setIsLoadingPage(true);
       try {
-        const raw = await tokenRequest.getAsset(assetId);
+        const raw = await tokenRequest.getAsset(assetId, true);
+        const data = tokens.find((t) => t.assetId === assetId);
         // The full asset response with profile/risk/markets
-        const r = raw as AssetDetailResponse;
-        const market = r?.primaryVariant?.market ?? r?.variant?.market ?? null;
-        const profile = r?.asset?.profile ?? null;
-        const riskData = r?.risk ?? null;
+        const r = raw;
+        const market = r?.includes?.markets?.data?.markets[0] ?? null;
+        const profile = r?.includes?.profile?.data ?? null;
+        const riskData = r?.includes?.risk?.data ?? null;
 
         setPageData({
           name: r?.asset?.name ?? null,
           symbol: r?.asset?.symbol ?? null,
           category: r?.asset?.category ?? "",
-          imageUrl: market?.logoURI ?? r?.imageUrl ?? null,
+          imageUrl: market?.base.icon ?? null,
           price: market?.price ?? null,
-          change24h: market?.priceChange24hPercent ?? null,
-          change1h: market?.priceChange1hPercent ?? null,
-          volume: market?.volume24hUSD ?? null,
+          change24h: data?.stats?.priceChange24hPercent ?? null,
+          change1h: data?.stats?.priceChange1hPercent ?? null,
+          volume: market?.volume24h ?? null,
           liquidity: market?.liquidity ?? null,
-          mcap: market?.marketCap ?? null,
-          fdv: market?.fdv ?? null,
-          supply: market?.supply ?? null,
-          trustTier:
-            r?.primaryVariant?.trustTier ?? r?.variant?.trustTier ?? null,
+          mcap: profile?.marketCap ?? null,
+          fdv: profile?.fdv ?? null,
+          supply: profile?.totalSupply ?? null,
+          trustTier: data?.primaryVariant?.trustTier ?? null,
           description: profile?.description ?? null,
-          website: profile?.website ?? null,
-          twitter: profile?.twitter ?? null,
+          website: profile?.links.website ?? null,
+          twitter: profile?.links.twitter ?? null,
         });
 
         if (riskData) setRisk(riskData);
@@ -441,7 +446,7 @@ export default function TokenDetailPage({
       }
     }
     load();
-  }, [assetId]);
+  }, [assetId, tokens]);
 
   if (isLoadingPage) {
     return (
@@ -588,9 +593,9 @@ export default function TokenDetailPage({
             <div className="td-card">
               <h3 className="td-card__title">Security</h3>
               <SecurityGauge
-                score={risk.score}
-                grade={risk.grade}
-                label={risk.label}
+                score={risk.marketScore.score}
+                grade={risk.marketScore.grade}
+                label={risk.marketScore.label}
               />
               <div className="td-security-rows">
                 {[

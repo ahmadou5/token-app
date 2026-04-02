@@ -60,6 +60,23 @@ export interface AssetsResolveResponse {
     issuerUrl?: string;
     label?: string;
   } | null;
+  includes: {
+    profile?: {
+      ok: boolean;
+      data: AssetProfile;
+    };
+    risk?: {
+      ok: boolean;
+      data: AssetRisk;
+    };
+    markets?: {
+      ok: boolean;
+      data: {
+        markets: AssetMarket[];
+        total: number;
+      };
+    };
+  };
 }
 
 export interface AssetsCuratedResponse {
@@ -140,4 +157,46 @@ export interface RawOHLCVResponse {
   candles?: RawOHLCVTuple[];
   data?: RawOHLCVTuple[];
   // Sometimes APIs return the array directly
+}
+
+export interface AssetProfile {
+  marketCap: number;
+  fdv: number;
+  circulatingSupply: number;
+  totalSupply: number;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  allTimeHigh: number;
+  allTimeHighDate: string;
+  description: string;
+  links: {
+    website?: string;
+    reddit?: string;
+    twitter?: string;
+  };
+}
+
+export interface AssetRisk {
+  marketScore: {
+    score: number;
+    grade: string;
+    label: string;
+    tone: "safe" | "warning" | "danger";
+    components: Record<
+      string,
+      { score: number; status: string; hasData: boolean }
+    >;
+  };
+}
+
+export interface AssetMarket {
+  address: string;
+  name: string;
+  price: number;
+  liquidity: number;
+  volume24h: number;
+  source: string;
+  base: { symbol: string; icon?: string };
+  quote: { symbol: string; icon?: string };
 }
