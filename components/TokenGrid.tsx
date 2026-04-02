@@ -205,7 +205,7 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
   } = useTokens();
 
   return (
-    <div className="tg">
+    <div className="">
       {/* Top nav */}
       <div className="tg-topbar">
         <div className="tg-topbar__left">

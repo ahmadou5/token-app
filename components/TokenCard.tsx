@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkline } from "@/components/Sparkline";
 import type { AnyToken } from "@/hooks/useToken";
+import Image from "next/image";
 
 export function fmtPrice(n: number | null | undefined): string {
   if (n == null) return "—";
@@ -72,7 +73,7 @@ export function TokenAvatar({
   if (src) {
     return (
       <div className="tc-avatar" style={style}>
-        <img
+        <Image
           src={src}
           alt={name}
           className="tc-avatar__img"
