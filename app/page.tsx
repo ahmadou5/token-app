@@ -1,5 +1,5 @@
 "use client";
-import { TokenGrid } from "@/component/TokenGrid";
+import { TokenGrid } from "@/components/TokenGrid";
 import { tokenRequest } from "@/lib/token";
 import Image from "next/image";
 import { useEffect } from "react";

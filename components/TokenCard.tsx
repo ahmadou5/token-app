@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { AnyToken } from "@/hook/useToken"; // adjust path
+import type { AnyToken } from "@/hooks/useToken"; // adjust path
 
 // ─── Utility: format numbers ───────────────────────────────────────────────────
 

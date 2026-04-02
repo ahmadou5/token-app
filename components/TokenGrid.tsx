@@ -1,12 +1,9 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useTokens } from "@/hook/useToken";
-import { TokenCard } from "@/component/TokenCard";
-import type { AnyToken } from "@/hook/useToken";
-import "./TokenCard.css"; // adjust to your CSS import strategy
-
-// ─── Category Tab Bar ─────────────────────────────────────────────────────────
+import { useTokens } from "@/hooks/useToken";
+import { TokenCard } from "@/components/TokenCard";
+import type { AnyToken } from "@/hooks/useToken";
 
 function CategoryTabs({
   categories,
@@ -35,8 +32,6 @@ function CategoryTabs({
   );
 }
 
-// ─── Search bar ───────────────────────────────────────────────────────────────
-
 function SearchBar({
   value,
   onChange,
@@ -48,7 +43,6 @@ function SearchBar({
 }) {
   const ref = useRef<HTMLInputElement>(null);
 
-  // ⌘K / Ctrl+K to focus
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -103,8 +97,6 @@ function SearchBar({
   );
 }
 
-// ─── Skeleton card ────────────────────────────────────────────────────────────
-
 function SkeletonCard() {
   return (
     <div className="tg-skeleton">
@@ -124,8 +116,6 @@ function SkeletonCard() {
     </div>
   );
 }
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({ query }: { query: string }) {
   return (
@@ -160,8 +150,6 @@ function EmptyState({ query }: { query: string }) {
   );
 }
 
-// ─── TokenGrid ────────────────────────────────────────────────────────────────
-
 export interface TokenGridProps {
   onTokenClick?: (token: AnyToken) => void;
 }
@@ -182,7 +170,6 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
 
   return (
     <div className="tg">
-      {/* Header */}
       <header className="tg-header">
         <h1 className="tg-header__title">Tokens on Solana</h1>
         <SearchBar
@@ -192,7 +179,6 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
         />
       </header>
 
-      {/* Category tabs */}
       {!isLoading && !error && (
         <CategoryTabs
           categories={categories}
@@ -201,7 +187,6 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
         />
       )}
 
-      {/* Error */}
       {error && (
         <div className="tg-error">
           <p>Failed to load tokens.</p>
@@ -211,7 +196,6 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
         </div>
       )}
 
-      {/* Grid */}
       <div className="tg-grid">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
