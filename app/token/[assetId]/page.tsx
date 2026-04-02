@@ -12,7 +12,7 @@ import {
   fmtCompact,
 } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { AssetMarket, AssetRisk, AssetsResolveResponse } from "@/types";
+import type { AssetRisk } from "@/types";
 import { useTokens } from "@/hooks/useToken";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -23,130 +23,7 @@ function fmtPct(n: number | null | undefined) {
 }
 
 // ─── SVG Line Chart ───────────────────────────────────────────────────────────
-function SecurityRow({
-  label,
-  value,
-  ok,
-}: {
-  label: string;
-  value: string;
-  ok: boolean;
-}) {
-  return (
-    <div className="td-security-row">
-      <span className="td-security-row__label">{label}</span>
-      <span className="td-security-row__value">{value}</span>
-      {ok && (
-        <svg
-          viewBox="0 0 12 12"
-          fill="none"
-          width="12"
-          height="12"
-          className="td-security-row__check"
-        >
-          <circle cx="6" cy="6" r="5.5" stroke="var(--tc-accent-up)" />
-          <path
-            d="M3.5 6l2 2 3-3"
-            stroke="var(--tc-accent-up)"
-            strokeLinecap="round"
-          />
-        </svg>
-      )}
-    </div>
-  );
-}
-// ─── Markets Table ──────────────────────────────────────────────────────────
-function MarketTable({ markets }: { markets: AssetMarket[] }) {
-  if (!markets.length) return null;
 
-  return (
-    <section className="td-section">
-      <h2 className="td-section__title">Markets</h2>
-      <div className="td-table-wrapper">
-        <table className="td-table">
-          <thead>
-            <tr>
-              <th className="text-left">Pair</th>
-              <th className="text-right">Liquidity</th>
-              <th className="text-right">24h Volume</th>
-            </tr>
-          </thead>
-          <tbody>
-            {markets.map((m) => (
-              <tr key={m.address}>
-                <td>
-                  <div className="td-pair">
-                    <TokenAvatar
-                      src={m.base.icon ?? null}
-                      name={m.base.symbol}
-                      size={24}
-                    />
-                    <span className="td-pair__name">
-                      {m.base.symbol} / {m.quote.symbol}
-                    </span>
-                    <span className="td-badge--small">{m.source}</span>
-                  </div>
-                </td>
-                <td className="text-right">{fmtCompact(m.liquidity)}</td>
-                <td className="text-right">{fmtCompact(m.volume24h)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function VariantGroup({
-  title,
-  variants,
-}: {
-  title: string;
-  variants: AssetMarket[];
-}) {
-  if (!variants.length) return null;
-
-  return (
-    <div className="td-variant-group">
-      <div className="td-variant-header">
-        <h3 className="td-variant-title">{title}</h3>
-        <span className="td-variant-count">
-          {variants.length} variant{variants.length > 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="td-table-wrapper">
-        <table className="td-table--simple">
-          <thead>
-            <tr>
-              <th className="text-left">Token</th>
-              <th className="text-right">Price</th>
-              <th className="text-right">Liquidity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {variants.map((v) => (
-              <tr key={v?.address}>
-                <td>
-                  <div className="td-token-cell">
-                    <span className="td-token-name">{v?.name}</span>
-                    <code className="td-addr-mini">
-                      {v?.address.slice(0, 8)}...
-                    </code>
-                  </div>
-                </td>
-                <td className="text-right">{fmtPrice(v?.price)}</td>
-                <td className="text-right">{fmtCompact(v.liquidity)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ─── OHLCV Chart ──────────────────────────────────────────────────────────────
 function OHLCVChart({
   candles,
   isLoading,
@@ -470,11 +347,8 @@ export default function TokenDetailPage({
   const { assetId } = use(params);
   const router = useRouter();
 
-  const [rawResponse, setRawResponse] = useState<AssetsResolveResponse | null>(
-    null,
-  );
   const [pageData, setPageData] = useState<TokenPageData | null>(null);
-  const [risk1, setRisk] = useState<AssetRisk | null>(null);
+  const [risk, setRisk] = useState<AssetRisk | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const { tokens } = useTokens();
   const {
@@ -485,23 +359,7 @@ export default function TokenDetailPage({
     setTimeframe,
     setInterval,
   } = useOHLCV(assetId);
-  useEffect(() => {
-    async function load() {
-      setIsLoadingPage(true);
-      try {
-        const res: AssetsResolveResponse = await tokenRequest.getAsset(
-          assetId,
-          true,
-        );
-        setRawResponse(res);
-      } catch (e) {
-        console.error("Failed to load token detail", e);
-      } finally {
-        setIsLoadingPage(false);
-      }
-    }
-    load();
-  }, [assetId]);
+
   useEffect(() => {
     async function load() {
       setIsLoadingPage(true);
@@ -545,20 +403,7 @@ export default function TokenDetailPage({
     }
     load();
   }, [assetId, tokens]);
-  const { asset, includes } = rawResponse || {};
-  const profile = includes?.profile?.data;
-  const risk: AssetRisk | null = includes?.risk?.data ?? null;
-  const markets = includes?.markets?.data.markets ?? [];
 
-  // Logic to separate variants (Simplified for LSTs/Yield based on your screenshot)
-  const yieldVariants: AssetMarket[] = markets.filter(
-    (m: AssetMarket): boolean =>
-      m.name.toLowerCase().includes("sol") &&
-      m.price > (profile?.price ?? 0) * 1.01,
-  );
-  const spotVariants: AssetMarket[] = markets
-    .filter((m: AssetMarket) => !yieldVariants.includes(m))
-    .slice(0, 1);
   if (isLoadingPage) {
     return (
       <div className="td-page">
@@ -633,8 +478,8 @@ export default function TokenDetailPage({
               </div>
             </div>
             <div className="td-header__price-block">
-              <div className="td-header__price">{fmtPrice(profile?.price)}</div>
-              <ChangeChip value={profile?.priceChange24h} />
+              <div className="td-header__price">{fmtPrice(d?.price)}</div>
+              <ChangeChip value={d?.change24h} />
             </div>
           </div>
 
@@ -648,13 +493,6 @@ export default function TokenDetailPage({
               onInterval={setInterval}
             />
           </div>
-          <MarketTable markets={markets} />
-
-          <section className="td-section">
-            <h2 className="td-section__title">Variants</h2>
-            <VariantGroup title="Spot tokens" variants={spotVariants} />
-            <VariantGroup title="Yield" variants={yieldVariants} />
-          </section>
 
           {/* Stats grid */}
           <section className="td-section">
@@ -715,14 +553,38 @@ export default function TokenDetailPage({
                 grade={risk.marketScore.grade}
                 label={risk.marketScore.label}
               />
-              {/* Additional logic to show checked rows for Liquidity/Trading */}
               <div className="td-security-rows">
-                <SecurityRow
-                  label="Liquidity"
-                  value={fmtCompact(profile?.volume24h)}
-                  ok={risk.marketScore.components.liquidity?.hasData}
-                />
-                <SecurityRow label="Holders" value="Established" ok={true} />
+                {[
+                  { label: "Liquidity", value: fmtCompact(d?.liquidity) },
+                  { label: "Trading", value: fmtCompact(d?.volume) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="td-security-row">
+                    <span className="td-security-row__label">{label}</span>
+                    <span className="td-security-row__value">{value}</span>
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      width="12"
+                      height="12"
+                      className="td-security-row__check"
+                    >
+                      <circle
+                        cx="6"
+                        cy="6"
+                        r="5.5"
+                        stroke="var(--tc-accent-up)"
+                        strokeWidth="1"
+                      />
+                      <path
+                        d="M3.5 6l2 2 3-3"
+                        stroke="var(--tc-accent-up)"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                ))}
               </div>
             </div>
           )}
