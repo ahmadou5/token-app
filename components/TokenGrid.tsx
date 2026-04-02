@@ -1,9 +1,46 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useTokens } from "@/hooks/useToken";
-import { TokenCard } from "@/components/TokenCard";
+import { TokenCard, ListHeader } from "@/components/TokenCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { AnyToken } from "@/hooks/useToken";
+import type { ViewMode } from "@/components/TokenCard";
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" width="15" height="15">
+      <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" />
+      <rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" />
+      <rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" />
+      <rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" width="15" height="15">
+      <rect x="1" y="2" width="14" height="2.5" rx="1.25" fill="currentColor" />
+      <rect
+        x="1"
+        y="6.75"
+        width="14"
+        height="2.5"
+        rx="1.25"
+        fill="currentColor"
+      />
+      <rect
+        x="1"
+        y="11.5"
+        width="14"
+        height="2.5"
+        rx="1.25"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 function CategoryTabs({
   categories,
@@ -42,18 +79,16 @@ function SearchBar({
   isSearching: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         ref.current?.focus();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, []);
-
   return (
     <div className="tg-search">
       <svg className="tg-search__icon" viewBox="0 0 16 16" fill="none">
@@ -75,20 +110,14 @@ function SearchBar({
         ref={ref}
         className="tg-search__input"
         type="text"
-        placeholder="Search tokens on Solana…"
+        placeholder="Search tokens…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Search tokens"
       />
-      {isSearching && (
-        <span className="tg-search__spinner" aria-label="Searching" />
-      )}
+      {isSearching && <span className="tg-search__spinner" />}
       {value && !isSearching && (
-        <button
-          className="tg-search__clear"
-          onClick={() => onChange("")}
-          aria-label="Clear search"
-        >
+        <button className="tg-search__clear" onClick={() => onChange("")}>
           ✕
         </button>
       )}
@@ -113,6 +142,14 @@ function SkeletonCard() {
           <div key={i} className="tg-skeleton__stat" />
         ))}
       </div>
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="tg-skeleton-row">
+      <div className="tg-skeleton-row__bar" />
     </div>
   );
 }
@@ -142,9 +179,7 @@ function EmptyState({ query }: { query: string }) {
         />
       </svg>
       <p className="tg-empty__text">
-        {query
-          ? `No tokens found for "${query}"`
-          : "No tokens in this category"}
+        {query ? `No results for "${query}"` : "No tokens in this category"}
       </p>
     </div>
   );
@@ -155,6 +190,7 @@ export interface TokenGridProps {
 }
 
 export function TokenGrid({ onTokenClick }: TokenGridProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const {
     filtered,
     categories,
@@ -170,21 +206,73 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
 
   return (
     <div className="tg">
-      <header className="tg-header">
-        <h1 className="tg-header__title">Tokens on Solana</h1>
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          isSearching={isSearching}
-        />
-      </header>
+      {/* Top nav */}
+      <div className="tg-topbar">
+        <div className="tg-topbar__left">
+          <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
+            <circle
+              cx="10"
+              cy="10"
+              r="8"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M6 10h8M10 6v8"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="tg-topbar__brand">Tokens</span>
+        </div>
+        <div className="tg-topbar__center">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            isSearching={isSearching}
+          />
+        </div>
+        <div className="tg-topbar__right">
+          <ThemeToggle />
+        </div>
+      </div>
 
+      {/* Hero */}
+      <div className="tg-hero">
+        <h1 className="tg-hero__title">Tokens on Solana</h1>
+        <p className="tg-hero__sub">
+          Real-time prices, liquidity &amp; market data
+        </p>
+      </div>
+
+      {/* Controls */}
       {!isLoading && !error && (
-        <CategoryTabs
-          categories={categories}
-          active={activeCategory}
-          onChange={setActiveCategory}
-        />
+        <div className="tg-controls">
+          <div className="tg-controls__tabs">
+            <CategoryTabs
+              categories={categories}
+              active={activeCategory}
+              onChange={setActiveCategory}
+            />
+          </div>
+          <div className="tg-controls__view">
+            <button
+              className={`tg-view-btn ${viewMode === "grid" ? "tg-view-btn--active" : ""}`}
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+            >
+              <GridIcon />
+            </button>
+            <button
+              className={`tg-view-btn ${viewMode === "list" ? "tg-view-btn--active" : ""}`}
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+            >
+              <ListIcon />
+            </button>
+          </div>
+        </div>
       )}
 
       {error && (
@@ -196,24 +284,47 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
         </div>
       )}
 
-      <div className="tg-grid">
-        {isLoading ? (
-          Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : filtered.length === 0 ? (
-          <div className="tg-grid__empty">
-            <EmptyState query={searchQuery} />
-          </div>
-        ) : (
-          filtered.map((token, i) => (
+      {!isLoading && !error && viewMode === "list" && filtered.length > 0 && (
+        <ListHeader />
+      )}
+
+      {isLoading ? (
+        <div className={viewMode === "grid" ? "tg-grid" : "tg-list"}>
+          {Array.from({ length: 8 }).map((_, i) =>
+            viewMode === "grid" ? (
+              <SkeletonCard key={i} />
+            ) : (
+              <SkeletonRow key={i} />
+            ),
+          )}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState query={searchQuery} />
+      ) : viewMode === "grid" ? (
+        <div className="tg-grid">
+          {filtered.map((token, i) => (
             <TokenCard
               key={token.assetId ?? i}
               token={token}
               onClick={onTokenClick}
               index={i}
+              viewMode="grid"
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tg-list">
+          {filtered.map((token, i) => (
+            <TokenCard
+              key={token.assetId ?? i}
+              token={token}
+              onClick={onTokenClick}
+              index={i}
+              viewMode="list"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
