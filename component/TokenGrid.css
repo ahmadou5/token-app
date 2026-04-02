@@ -1,0 +1,293 @@
+/* ═══════════════════════════════════════════════
+   TokenGrid layout styles
+   (depends on TokenCard.css CSS vars being loaded)
+   ═══════════════════════════════════════════════ */
+
+/* ─── Root container ───────────────────────────── */
+.tg {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  font-family: var(--tc-font-sans);
+}
+
+/* ─── Header ───────────────────────────────────── */
+.tg-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.tg-header__title {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  color: var(--tc-text-primary);
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin: 0;
+}
+
+/* ─── Search bar ───────────────────────────────── */
+.tg-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 480px;
+  background: var(--tc-surface);
+  border: 1px solid var(--tc-border);
+  border-radius: 40px;
+  padding: 0 14px;
+  height: 48px;
+  gap: 10px;
+  transition: border-color var(--tc-transition), box-shadow var(--tc-transition);
+}
+
+.tg-search:focus-within {
+  border-color: var(--tc-border-hover);
+  box-shadow: 0 0 0 3px var(--tc-badge-t1-bg);
+}
+
+.tg-search__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--tc-text-muted);
+}
+
+.tg-search__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--tc-font-sans);
+  font-size: 14px;
+  color: var(--tc-text-primary);
+  min-width: 0;
+}
+
+.tg-search__input::placeholder {
+  color: var(--tc-text-muted);
+}
+
+.tg-search__spinner {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--tc-border);
+  border-top-color: var(--tc-badge-t1-text);
+  border-radius: 50%;
+  animation: tgSpin 0.7s linear infinite;
+}
+
+@keyframes tgSpin {
+  to { transform: rotate(360deg); }
+}
+
+.tg-search__clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--tc-text-muted);
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color var(--tc-transition);
+  line-height: 1;
+}
+
+.tg-search__clear:hover { color: var(--tc-text-primary); }
+
+.tg-search__kbd {
+  flex-shrink: 0;
+  font-family: var(--tc-font-mono);
+  font-size: 10px;
+  color: var(--tc-text-muted);
+  background: var(--tc-border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ─── Category tabs ────────────────────────────── */
+.tg-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.tg-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 40px;
+  border: 1px solid var(--tc-border);
+  background: transparent;
+  font-family: var(--tc-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tc-text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--tc-transition),
+    border-color var(--tc-transition),
+    color var(--tc-transition);
+  white-space: nowrap;
+}
+
+.tg-tab:hover {
+  background: var(--tc-bg-hover);
+  border-color: var(--tc-border-hover);
+  color: var(--tc-text-primary);
+}
+
+.tg-tab--active {
+  background: var(--tc-text-primary);
+  border-color: var(--tc-text-primary);
+  color: var(--tc-bg);
+}
+
+.tg-tab--active:hover {
+  opacity: 0.88;
+}
+
+.tg-tab__count {
+  font-family: var(--tc-font-mono);
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+/* ─── Grid ─────────────────────────────────────── */
+.tg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.tg-grid__empty {
+  grid-column: 1 / -1;
+}
+
+/* ─── Skeleton card ────────────────────────────── */
+.tg-skeleton {
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-border);
+  border-radius: var(--tc-radius);
+  padding: 18px 20px 16px;
+  animation: tgPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tgPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.tg-skeleton__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tg-skeleton__circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--tc-border);
+  flex-shrink: 0;
+}
+
+.tg-skeleton__lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tg-skeleton__line {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--tc-border);
+}
+
+.tg-skeleton__line--name { width: 60%; }
+.tg-skeleton__line--sym  { width: 30%; }
+
+.tg-skeleton__price {
+  height: 26px;
+  width: 55%;
+  border-radius: 6px;
+  background: var(--tc-border);
+  margin-bottom: 16px;
+}
+
+.tg-skeleton__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tg-skeleton__stat {
+  height: 30px;
+  border-radius: 6px;
+  background: var(--tc-border);
+}
+
+/* ─── Error ────────────────────────────────────── */
+.tg-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--tc-text-secondary);
+  font-size: 14px;
+}
+
+.tg-error__retry {
+  background: var(--tc-text-primary);
+  color: var(--tc-bg);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-family: var(--tc-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--tc-transition);
+}
+
+.tg-error__retry:hover { opacity: 0.8; }
+
+/* ─── Empty state ──────────────────────────────── */
+.tg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 24px;
+  color: var(--tc-text-muted);
+}
+
+.tg-empty__icon {
+  width: 48px;
+  height: 48px;
+  color: var(--tc-border-hover);
+}
+
+.tg-empty__text {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ─── Responsive ───────────────────────────────── */
+@media (max-width: 600px) {
+  .tg { padding: 24px 16px 60px; }
+  .tg-grid { grid-template-columns: 1fr; }
+}

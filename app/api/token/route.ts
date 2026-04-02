@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   try {
     const response = await axios.get(
-      `https://api.tokens.xyz/api/v1${endpoint}`,
+      `${process.env.TOKEN_API_BASE_URL}${endpoint}`,
       {
         headers: {
           "x-api-key": process.env.TOKEN_API_KEY,
