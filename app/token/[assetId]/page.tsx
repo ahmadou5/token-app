@@ -376,7 +376,7 @@ export default function TokenDetailPage({
           name: r?.asset?.name ?? null,
           symbol: r?.asset?.symbol ?? null,
           category: r?.asset?.category ?? "",
-          imageUrl: data?.imageUrl ?? null,
+          imageUrl: r.includes.markets?.data.markets[0]?.base.icon ?? null,
           price: profile?.price ?? null,
           change24h: profile?.priceChange24h ?? null,
           change1h: data?.stats?.priceChange1hPercent ?? null,
