@@ -1,6 +1,12 @@
 "use client";
 import { TokenGrid } from "@/components/TokenGrid";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return <TokenGrid onTokenClick={(t) => console.log(t)} />;
+  const router = useRouter();
+
+  const handleNavigate = (assetId: string) => {
+    router.push(`/tokens/${assetId}`);
+  };
+  return <TokenGrid onTokenClick={(id) => handleNavigate(id.assetId)} />;
 }
