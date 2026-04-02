@@ -34,7 +34,7 @@ function TierPill({ tier }: { tier: string }) {
 
 function VarRow({ row }: { row: VariantRow }) {
   const initials = row.symbol?.slice(0, 2).toUpperCase() ?? "??";
-  const truncMint = `${row.mint.slice(0, 4)}…${row.mint.slice(-4)}`;
+  const truncMint = `${row.mint?.slice(0, 4)}…${row.mint?.slice(-4)}`;
 
   return (
     <div className="var-row">
