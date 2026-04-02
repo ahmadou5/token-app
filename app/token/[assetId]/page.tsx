@@ -126,16 +126,16 @@ function VariantGroup({
           </thead>
           <tbody>
             {variants.map((v) => (
-              <tr key={v.address}>
+              <tr key={v?.address}>
                 <td>
                   <div className="td-token-cell">
-                    <span className="td-token-name">{v.name}</span>
+                    <span className="td-token-name">{v?.name}</span>
                     <code className="td-addr-mini">
-                      {v.address.slice(0, 8)}...
+                      {v?.address.slice(0, 8)}...
                     </code>
                   </div>
                 </td>
-                <td className="text-right">{fmtPrice(v.price)}</td>
+                <td className="text-right">{fmtPrice(v?.price)}</td>
                 <td className="text-right">{fmtCompact(v.liquidity)}</td>
               </tr>
             ))}
