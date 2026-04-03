@@ -4,10 +4,27 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkline } from "@/components/Sparkline";
 import type { AnyToken } from "@/hooks/useToken";
-import Image from "next/image";
+
+// ─── Safe string helpers ──────────────────────────────────────────────────────
+
+function safeSlice(
+  str: string | null | undefined,
+  start: number,
+  end?: number,
+): string {
+  if (!str || typeof str !== "string") return "";
+  return str.slice(start, end);
+}
+
+function safeInitials(str: string | null | undefined): string {
+  if (!str || typeof str !== "string" || str.length === 0) return "?";
+  return str.slice(0, 2).toUpperCase();
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
 export function fmtPrice(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null || isNaN(n)) return "—";
   if (n >= 1000)
     return `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
   if (n >= 1) return `$${n.toFixed(2)}`;
@@ -16,16 +33,18 @@ export function fmtPrice(n: number | null | undefined): string {
 }
 
 export function fmtCompact(n: number | null | undefined): string {
-  if (n == null) return "—";
+  if (n == null || isNaN(n)) return "—";
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
   return `$${n.toFixed(2)}`;
 }
 
+// ─── Data extraction ──────────────────────────────────────────────────────────
+
 export function extractToken(token: AnyToken) {
   const name = token.name ?? token.primaryVariant?.name ?? "Unknown";
-  const symbol = token.symbol ?? token.primaryVariant?.symbol ?? "?";
+  const symbol = token.symbol ?? token.primaryVariant?.symbol ?? "";
   const category = token.category ?? "";
   const imageUrl: string | null =
     "imageUrl" in token
@@ -42,7 +61,7 @@ export function extractToken(token: AnyToken) {
   const liquidity = stats?.liquidity ?? market?.liquidity ?? null;
   const mcap = stats?.marketCap ?? market?.marketCap ?? null;
   const trustTier = token.primaryVariant?.trustTier ?? null;
-  const assetId = token.assetId;
+  const assetId = token.assetId ?? "";
   return {
     name,
     symbol,
@@ -59,28 +78,36 @@ export function extractToken(token: AnyToken) {
   };
 }
 
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
 export function TokenAvatar({
   src,
   name,
   size = 40,
 }: {
-  src: string | null;
-  name: string;
+  src: string | null | undefined;
+  name: string | null | undefined;
   size?: number;
 }) {
-  const initials = name.slice(0, 2).toUpperCase();
+  const safeName = name && typeof name === "string" ? name : "?";
+  const initials = safeInitials(safeName);
   const style = { width: size, height: size, minWidth: size };
-  if (src) {
+
+  if (src && typeof src === "string") {
     return (
       <div className="tc-avatar" style={style}>
         <img
           src={src}
-          alt={name}
+          alt={safeName}
           className="tc-avatar__img"
           onError={(e) => {
-            e.currentTarget.style.display = "none";
-            if (e.currentTarget.parentElement)
-              e.currentTarget.parentElement.textContent = initials;
+            const img = e.currentTarget;
+            img.style.display = "none";
+            const parent = img.parentElement;
+            if (parent) {
+              parent.classList.add("tc-avatar--fallback");
+              parent.textContent = initials;
+            }
           }}
         />
       </div>
@@ -93,8 +120,10 @@ export function TokenAvatar({
   );
 }
 
-export function TrustBadge({ tier }: { tier: string | null }) {
-  if (!tier) return null;
+// ─── Trust badge ──────────────────────────────────────────────────────────────
+
+export function TrustBadge({ tier }: { tier: string | null | undefined }) {
+  if (!tier || typeof tier !== "string") return null;
   const cls =
     tier === "tier1"
       ? "tc-badge--t1"
@@ -105,6 +134,8 @@ export function TrustBadge({ tier }: { tier: string | null }) {
   return <span className={`tc-badge ${cls}`}>{label}</span>;
 }
 
+// ─── Change chip ──────────────────────────────────────────────────────────────
+
 export function ChangeChip({
   value,
   size = "md",
@@ -112,7 +143,7 @@ export function ChangeChip({
   value: number | null | undefined;
   size?: "sm" | "md";
 }) {
-  if (value == null)
+  if (value == null || isNaN(value))
     return <span className="tc-change tc-change--neutral">—</span>;
   const up = value >= 0;
   return (
@@ -124,21 +155,86 @@ export function ChangeChip({
   );
 }
 
-function makeSparkData(
-  price: number | null,
-  change24h: number | null,
-): number[] {
-  if (!price) return [];
-  const seed = change24h ?? 0;
-  return Array.from({ length: 20 }, (_, i) => {
-    const t = i / 19;
-    return (
-      price * (1 - seed / 100) +
-      price * (seed / 100) * t +
-      Math.sin(i * 0.8) * price * 0.005
-    );
+// ─── Sparkline — no fixed width, uses viewBox + preserveAspectRatio ──────────
+
+function InlineSparkline({
+  price,
+  change24h,
+}: {
+  price: number | null;
+  change24h: number | null;
+}) {
+  const data = useMemo(() => {
+    if (!price || price <= 0) return [];
+    const seed = change24h ?? 0;
+    return Array.from({ length: 20 }, (_, i) => {
+      const t = i / 19;
+      return (
+        price * (1 - seed / 100) +
+        price * (seed / 100) * t +
+        Math.sin(i * 0.8) * price * 0.005
+      );
+    });
+  }, [price, change24h]);
+
+  if (data.length < 2) return <div className="tc-spark-placeholder" />;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const W = 80;
+  const H = 36;
+
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
+
+  const pathD = `M ${pts.join(" L ")}`;
+  const areaD = `M 0,${H} L ${pts.join(" L ")} L ${W},${H} Z`;
+
+  const up = (data[data.length - 1] ?? 0) >= (data[0] ?? 0);
+  const color = up ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
+  const areaColor = up ? "var(--tc-accent-up-bg)" : "var(--tc-accent-down-bg)";
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="tc-spark-svg"
+      aria-hidden
+    >
+      <path d={areaD} fill={areaColor} opacity="0.6" />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
+
+// ─── List header ──────────────────────────────────────────────────────────────
+
+export function ListHeader() {
+  return (
+    <div className="tc-list-header">
+      <span>Token</span>
+      <span>7d</span>
+      <span>Price</span>
+      <span>24h</span>
+      <span>Volume</span>
+      <span>Liquidity</span>
+      <span>Mkt Cap</span>
+    </div>
+  );
+}
+
+// ─── Grid card ────────────────────────────────────────────────────────────────
 
 function GridCard({
   token,
@@ -150,15 +246,11 @@ function GridCard({
   onClick: () => void;
 }) {
   const d = useMemo(() => extractToken(token), [token]);
-  const sparkData = useMemo(
-    () => makeSparkData(d.price, d.change24h),
-    [d.price, d.change24h],
-  );
 
   return (
     <article
       className="tc-grid-card"
-      style={{ animationDelay: `${index * 35}ms` }}
+      style={{ animationDelay: `${Math.min(index * 35, 600)}ms` }}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -168,18 +260,26 @@ function GridCard({
         <TokenAvatar src={d.imageUrl} name={d.name} />
         <div className="tc-grid-card__identity">
           <span className="tc-grid-card__name">{d.name}</span>
-          <span className="tc-grid-card__symbol">${d.symbol}</span>
+          {d.symbol && (
+            <span className="tc-grid-card__symbol">${d.symbol}</span>
+          )}
         </div>
         <TrustBadge tier={d.trustTier} />
       </div>
+
+      {/* Price + sparkline row — sparkline is fluid, never forces card wider */}
       <div className="tc-grid-card__chart-row">
-        <div>
+        <div className="tc-grid-card__price-col">
           <div className="tc-grid-card__price">{fmtPrice(d.price)}</div>
           <ChangeChip value={d.change24h} />
         </div>
-        <Sparkline data={sparkData} width={80} height={36} />
+        <div className="tc-grid-card__spark">
+          <InlineSparkline price={d.price} change24h={d.change24h} />
+        </div>
       </div>
+
       <div className="tc-grid-card__divider" />
+
       <div className="tc-grid-card__stats">
         <div className="tc-stat">
           <span className="tc-stat__label">Vol 24h</span>
@@ -200,6 +300,7 @@ function GridCard({
           </span>
         </div>
       </div>
+
       {d.category && (
         <div className="tc-grid-card__footer">
           <span className="tc-grid-card__cat">{d.category}</span>
@@ -218,6 +319,8 @@ function GridCard({
   );
 }
 
+// ─── List row ─────────────────────────────────────────────────────────────────
+
 function ListRow({
   token,
   index,
@@ -228,15 +331,24 @@ function ListRow({
   onClick: () => void;
 }) {
   const d = useMemo(() => extractToken(token), [token]);
-  const sparkData = useMemo(
-    () => makeSparkData(d.price, d.change24h),
-    [d.price, d.change24h],
-  );
+
+  const sparkData = useMemo(() => {
+    if (!d.price || d.price <= 0) return [];
+    const seed = d.change24h ?? 0;
+    return Array.from({ length: 16 }, (_, i) => {
+      const t = i / 15;
+      return (
+        d.price! * (1 - seed / 100) +
+        d.price! * (seed / 100) * t +
+        Math.sin(i * 0.9) * d.price! * 0.004
+      );
+    });
+  }, [d.price, d.change24h]);
 
   return (
     <div
       className="tc-list-row"
-      style={{ animationDelay: `${index * 25}ms` }}
+      style={{ animationDelay: `${Math.min(index * 25, 500)}ms` }}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -246,7 +358,7 @@ function ListRow({
         <TokenAvatar src={d.imageUrl} name={d.name} size={36} />
         <div>
           <div className="tc-list-row__name">{d.name}</div>
-          <div className="tc-list-row__symbol">${d.symbol}</div>
+          {d.symbol && <div className="tc-list-row__symbol">${d.symbol}</div>}
         </div>
         <TrustBadge tier={d.trustTier} />
       </div>
@@ -264,19 +376,7 @@ function ListRow({
   );
 }
 
-export function ListHeader() {
-  return (
-    <div className="tc-list-header">
-      <span>Token</span>
-      <span>7d</span>
-      <span>Price</span>
-      <span>24h</span>
-      <span>Volume</span>
-      <span>Liquidity</span>
-      <span>Mkt Cap</span>
-    </div>
-  );
-}
+// ─── Main export ──────────────────────────────────────────────────────────────
 
 export type ViewMode = "grid" | "list";
 
@@ -294,10 +394,15 @@ export function TokenCard({
   onClick,
 }: TokenCardProps) {
   const router = useRouter();
+
+  // Guard: skip rendering if token has no assetId
+  if (!token || !token.assetId) return null;
+
   const handleClick = () => {
     if (onClick) onClick(token);
     else router.push(`/token/${token.assetId}`);
   };
+
   if (viewMode === "list")
     return <ListRow token={token} index={index} onClick={handleClick} />;
   return <GridCard token={token} index={index} onClick={handleClick} />;

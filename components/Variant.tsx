@@ -16,34 +16,35 @@ export interface VariantRow {
   logoURI?: string | null;
 }
 
-// ─── Card-style variant row (matches screenshot 2) ────────────────────────────
+function safe(str: string | null | undefined, fallback = "?") {
+  return str && typeof str === "string" && str.length > 0 ? str : fallback;
+}
 
 function VarCard({ row }: { row: VariantRow }) {
-  const initials = row.symbol?.slice(0, 2).toUpperCase() ?? "??";
+  const sym = safe(row.symbol, "?");
+  const name = safe(row.name, sym);
+  const mint = safe(row.mint, "");
+  const initials = sym.slice(0, 2).toUpperCase();
   const truncMint =
-    row.mint.length > 12
-      ? `${row.mint.slice(0, 4)}…${row.mint.slice(-4)}`
-      : row.mint;
+    mint.length > 12 ? `${mint.slice(0, 4)}…${mint.slice(-4)}` : mint;
+  const tags = Array.isArray(row.tags) ? row.tags : [];
 
   const isYield =
-    row.kind === "yield" ||
-    row.tags?.includes("yield") ||
-    row.tags?.includes("lst");
-  const isNative = row.kind === "spot" && !isYield;
+    row.kind === "yield" || tags.includes("yield") || tags.includes("lst");
+  const isNative = !isYield;
 
   return (
     <div className="varc-card">
-      {/* Left: avatar + identity */}
       <div className="varc-left">
         <div className="varc-avatar">
-          {row.logoURI ? (
+          {row.logoURI && typeof row.logoURI === "string" ? (
             <img
               src={row.logoURI}
-              alt={row.symbol}
+              alt={sym}
               onError={(e) => {
                 e.currentTarget.style.display = "none";
-                if (e.currentTarget.parentElement)
-                  e.currentTarget.parentElement.textContent = initials;
+                const p = e.currentTarget.parentElement;
+                if (p) p.textContent = initials;
               }}
             />
           ) : (
@@ -52,19 +53,19 @@ function VarCard({ row }: { row: VariantRow }) {
         </div>
         <div className="varc-identity">
           <div className="varc-identity__top">
-            <strong className="varc-name">{row.name || row.symbol}</strong>
-            <span className="varc-sym">{row.symbol}</span>
+            <strong className="varc-name">{name}</strong>
+            <span className="varc-sym">{sym}</span>
             {isNative && (
               <span className="varc-tag varc-tag--native">Native</span>
             )}
             {isYield && <span className="varc-tag varc-tag--yield">Yield</span>}
-            <span className="varc-tag varc-tag--tier">{row.trustTier}</span>
+            {row.trustTier && (
+              <span className="varc-tag varc-tag--tier">{row.trustTier}</span>
+            )}
           </div>
-          <div className="varc-mint">{truncMint}</div>
+          {truncMint && <div className="varc-mint">{truncMint}</div>}
         </div>
       </div>
-
-      {/* Right: stats */}
       <div className="varc-stats">
         <div className="varc-stat">
           <span className="varc-stat__label">Price</span>
@@ -89,7 +90,7 @@ interface VariantsSectionProps {
 }
 
 export function VariantsSection({ assetName, variants }: VariantsSectionProps) {
-  if (!variants.length) return null;
+  if (!Array.isArray(variants) || variants.length === 0) return null;
   return (
     <section className="td-section">
       <h2 className="td-section__title">Variants</h2>
@@ -100,7 +101,7 @@ export function VariantsSection({ assetName, variants }: VariantsSectionProps) {
       )}
       <div className="varc-list">
         {variants.map((row, i) => (
-          <VarCard key={`${row.mint}-${i}`} row={row} />
+          <VarCard key={`${row?.mint ?? i}-${i}`} row={row} />
         ))}
       </div>
     </section>

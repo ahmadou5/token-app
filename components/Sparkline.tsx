@@ -9,48 +9,46 @@ interface SparklineProps {
 
 export function Sparkline({
   data,
-  width = 80,
-  height = 32,
+  width = 72,
+  height = 28,
   positive,
 }: SparklineProps) {
-  if (!data || data.length < 2) return null;
+  if (!data || !Array.isArray(data) || data.length < 2) return null;
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  // Filter out bad values
+  const clean = data.filter((v) => typeof v === "number" && isFinite(v));
+  if (clean.length < 2) return null;
+
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
   const range = max - min || 1;
 
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
+  const pts = clean.map((v, i) => {
+    const x = (i / (clean.length - 1)) * width;
     const y = height - ((v - min) / range) * (height - 4) - 2;
-    return `${x},${y}`;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
 
-  const pathD = `M ${points.join(" L ")}`;
-  const areaD = `M 0,${height} L ${points.join(" L ")} L ${width},${height} Z`;
+  const pathD = `M ${pts.join(" L ")}`;
+  const areaD = `M 0,${height} L ${pts.join(" L ")} L ${width},${height} Z`;
 
-  const color =
-    positive === false
-      ? "var(--tc-accent-down)"
-      : positive === true
-        ? "var(--tc-accent-up)"
-        : data[data.length - 1] >= data[0]
-          ? "var(--tc-accent-up)"
-          : "var(--tc-accent-down)";
+  const up =
+    positive !== undefined
+      ? positive
+      : (clean[clean.length - 1] ?? 0) >= (clean[0] ?? 0);
 
-  const areaColor =
-    positive === false
-      ? "var(--tc-accent-down-bg)"
-      : data[data.length - 1] >= data[0]
-        ? "var(--tc-accent-up-bg)"
-        : "var(--tc-accent-down-bg)";
+  const color = up ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
+  const areaColor = up ? "var(--tc-accent-up-bg)" : "var(--tc-accent-down-bg)";
 
   return (
     <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
       width={width}
       height={height}
-      viewBox={`0 0 ${width} ${height}`}
       fill="none"
       className="sparkline"
+      aria-hidden
     >
       <path d={areaD} fill={areaColor} opacity="0.5" />
       <path

@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { fmtCompact } from "@/components/TokenCard";
 import type { VariantRow } from "@/components/Variant";
 
-interface VariantPickerProps {
-  currentMint?: string;
-  variants: VariantRow[];
-  assetId: string;
+function safe(str: string | null | undefined, fallback = "") {
+  return str && typeof str === "string" ? str : fallback;
 }
 
 function VariantGroup({
@@ -25,22 +23,26 @@ function VariantGroup({
     <div className="vpick-group">
       <div className="vpick-group__label">{title}</div>
       {rows.map((row, i) => {
-        const initials = row.symbol?.slice(0, 2).toUpperCase() ?? "??";
+        const sym = safe(row?.symbol, "?");
+        const name = safe(row?.name, sym) || sym;
+        const initials = sym.slice(0, 2).toUpperCase() || "??";
+        const logoURI = row?.logoURI;
+
         return (
           <div
-            key={`${row.mint}-${i}`}
+            key={`${safe(row?.mint)}-${i}`}
             className="vpick-row"
             onClick={() => onSelect(row)}
           >
             <div className="vpick-row__avatar">
-              {row.logoURI ? (
+              {logoURI && typeof logoURI === "string" ? (
                 <img
-                  src={row.logoURI}
-                  alt={row.symbol}
+                  src={logoURI}
+                  alt={sym}
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
-                    if (e.currentTarget.parentElement)
-                      e.currentTarget.parentElement.textContent = initials;
+                    const p = e.currentTarget.parentElement;
+                    if (p) p.textContent = initials;
                   }}
                 />
               ) : (
@@ -48,10 +50,10 @@ function VariantGroup({
               )}
             </div>
             <div className="vpick-row__info">
-              <span className="vpick-row__name">{row.name || row.symbol}</span>
-              <span className="vpick-row__sym">${row.symbol}</span>
+              <span className="vpick-row__name">{name}</span>
+              <span className="vpick-row__sym">${sym}</span>
             </div>
-            <div className="vpick-row__liq">{fmtCompact(row.liquidity)}</div>
+            <div className="vpick-row__liq">{fmtCompact(row?.liquidity)}</div>
             <svg
               viewBox="0 0 12 12"
               fill="none"
@@ -74,6 +76,12 @@ function VariantGroup({
   );
 }
 
+interface VariantPickerProps {
+  currentMint?: string;
+  variants: VariantRow[];
+  assetId: string;
+}
+
 export function VariantPicker({
   currentMint,
   variants,
@@ -82,6 +90,25 @@ export function VariantPicker({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const safeVariants = Array.isArray(variants) ? variants.filter(Boolean) : [];
+  const tags = (row: VariantRow) => (Array.isArray(row?.tags) ? row.tags : []);
+
+  const spotRows = safeVariants.filter(
+    (v) =>
+      v.kind !== "yield" &&
+      !tags(v).includes("yield") &&
+      !tags(v).includes("lst"),
+  );
+  const yieldRows = safeVariants.filter(
+    (v) =>
+      v.kind === "yield" ||
+      tags(v).includes("yield") ||
+      tags(v).includes("lst"),
+  );
+
+  const count = safeVariants.length;
+  const label = count > 1 ? `${count}+ VARIANTS` : `${count} VARIANT`;
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -92,26 +119,13 @@ export function VariantPicker({
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  const spotRows = variants.filter(
-    (v) =>
-      v.kind !== "yield" &&
-      !v.tags?.includes("yield") &&
-      !v.tags?.includes("lst"),
-  );
-  const yieldRows = variants.filter(
-    (v) =>
-      v.kind === "yield" ||
-      v.tags?.includes("yield") ||
-      v.tags?.includes("lst"),
-  );
-  const count = variants.length;
-  const label = count > 1 ? `${count}+ VARIANTS` : "VARIANTS";
-
   function handleSelect(row: VariantRow) {
     setOpen(false);
-    // Navigate to same asset with mint param
-    router.push(`/token/${assetId}?mint=${row.mint}`);
+    const mint = safe(row?.mint);
+    if (mint) router.push(`/token/${safe(assetId)}?mint=${mint}`);
   }
+
+  if (count === 0) return null;
 
   return (
     <div className="vpick" ref={ref}>
