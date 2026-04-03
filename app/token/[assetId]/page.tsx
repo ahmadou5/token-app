@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { tokenRequest } from "@/lib/token";
 import {
@@ -19,6 +19,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { MarketsSection } from "@/components/Market";
 import { SecuritySection } from "@/components/Secuirity";
 import { VariantsSection, type VariantRow } from "@/components/Variant";
+import { ExpandableDescription } from "@/components/ExpandableDescription";
+import { BuyButton } from "@/components/BuyButton";
+import { VariantPicker } from "@/components/VariantPicker";
 import type { AssetRisk, AssetMarket, AssetProfile } from "@/types";
 import { useTokens } from "@/hooks/useToken";
 
@@ -26,6 +29,8 @@ function fmtPct(n: number | null | undefined) {
   if (n == null) return "—";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
+
+// ─── OHLCV Chart ──────────────────────────────────────────────────────────────
 
 function OHLCVChart({
   candles,
@@ -94,7 +99,7 @@ function OHLCVChart({
   if (!candles.length)
     return (
       <div className="td-chart td-chart--empty">
-        <span>No chart data available</span>
+        <span>No price data to display</span>
       </div>
     );
 
@@ -206,6 +211,8 @@ function ChartControls({
   );
 }
 
+// ─── Page data ────────────────────────────────────────────────────────────────
+
 interface TokenPageData {
   name: string | null;
   symbol: string | null;
@@ -219,12 +226,118 @@ interface TokenPageData {
   mcap: number | null;
   fdv: number | null;
   supply: number | null;
+  totalSupply: number | null;
   holders: number | null;
   trustTier: string | null;
   description: string | null;
   website: string | null;
   twitter: string | null;
+  reddit: string | null;
+  currentMint: string | null;
 }
+
+// ─── Page skeleton ────────────────────────────────────────────────────────────
+
+function PageSkeleton({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="td-page">
+      <div className="td-topbar">
+        <div className="td-topbar__left">
+          <button className="td-back" onClick={onBack}>
+            <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+              <path
+                d="M10 3L5 8l5 5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Tokens
+          </button>
+        </div>
+        <ThemeToggle />
+      </div>
+      <div className="td-layout">
+        <div className="td-main">
+          {/* Header skeleton */}
+          <div className="td-header td-skel-header">
+            <div
+              className="td-skel td-skel--circle"
+              style={{ width: 56, height: 56 }}
+            />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div
+                className="td-skel td-skel--line"
+                style={{ width: 160, height: 22 }}
+              />
+              <div
+                className="td-skel td-skel--line"
+                style={{ width: 100, height: 14 }}
+              />
+            </div>
+          </div>
+          {/* Chart skeleton */}
+          <div className="td-chart-section">
+            <div className="td-chart td-chart--loading">
+              <div className="td-chart__shimmer" />
+            </div>
+            <div className="td-chart-controls" style={{ marginTop: 16 }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="td-skel td-skel--btn" />
+              ))}
+            </div>
+          </div>
+          {/* Stats skeleton */}
+          <section className="td-section">
+            <div
+              className="td-skel td-skel--line"
+              style={{ width: 60, height: 18, marginBottom: 14 }}
+            />
+            <div className="td-stats-grid">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="td-stat-cell">
+                  <div
+                    className="td-skel td-skel--line"
+                    style={{ width: 60, height: 12, marginBottom: 6 }}
+                  />
+                  <div
+                    className="td-skel td-skel--line"
+                    style={{ width: 80, height: 18 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+        <aside className="td-sidebar">
+          <div className="td-card">
+            <div
+              className="td-skel td-skel--line"
+              style={{ width: 80, height: 14, marginBottom: 12 }}
+            />
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="td-skel td-skel--line"
+                style={{ height: 13, marginBottom: 6 }}
+              />
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function TokenDetailPage({
   params,
@@ -235,6 +348,7 @@ export default function TokenDetailPage({
   const router = useRouter();
   const { tokens } = useTokens();
 
+  // Start with null — means we haven't loaded yet (shows skeleton immediately)
   const [pageData, setPageData] = useState<TokenPageData | null>(null);
   const [risk, setRisk] = useState<AssetRisk | null>(null);
   const [markets, setMarkets] = useState<AssetMarket[]>([]);
@@ -252,8 +366,14 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
+    // Reset to loading state whenever assetId changes
+    setIsLoadingPage(true);
+    setPageData(null);
+    setRisk(null);
+    setMarkets([]);
+    setVariants([]);
+
     async function load() {
-      setIsLoadingPage(true);
       try {
         const raw = await tokenRequest.getAsset(assetId, true);
         const curatedMatch = tokens.find((t) => t.assetId === assetId);
@@ -276,12 +396,15 @@ export default function TokenDetailPage({
           liquidity: market0?.liquidity ?? null,
           mcap: profile?.marketCap ?? null,
           fdv: profile?.fdv ?? null,
-          supply: profile?.totalSupply ?? null,
+          supply: profile?.circulatingSupply ?? null,
+          totalSupply: profile?.totalSupply ?? null,
           holders: null,
           trustTier: curatedMatch?.primaryVariant?.trustTier ?? null,
           description: profile?.description ?? null,
           website: profile?.links?.website ?? null,
           twitter: profile?.links?.twitter ?? null,
+          reddit: profile?.links?.reddit ?? null,
+          currentMint: curatedMatch?.primaryVariant?.mint ?? null,
         });
 
         if (riskData) setRisk(riskData);
@@ -290,6 +413,7 @@ export default function TokenDetailPage({
           raw?.includes?.markets?.data?.total ?? marketsData.length,
         );
 
+        // Build variants array
         const variantRows: VariantRow[] = [];
         if (curatedMatch?.primaryVariant) {
           const pv = curatedMatch.primaryVariant;
@@ -315,38 +439,18 @@ export default function TokenDetailPage({
       }
     }
     load();
-  }, [assetId, tokens]);
+  }, [assetId]); // intentionally exclude tokens to avoid re-fetching
 
-  if (isLoadingPage) {
-    return (
-      <div className="td-page">
-        <div className="td-topbar">
-          <button className="td-back" onClick={() => router.back()}>
-            <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-              <path
-                d="M10 3L5 8l5 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Tokens
-          </button>
-          <ThemeToggle />
-        </div>
-        <div className="td-loading">
-          <div className="td-loading__spinner" />
-          <span>Loading token data…</span>
-        </div>
-      </div>
-    );
+  // Show skeleton until data is ready
+  if (isLoadingPage || !pageData) {
+    return <PageSkeleton onBack={() => router.back()} />;
   }
 
   const d = pageData;
 
   return (
     <div className="td-page">
+      {/* Top nav */}
       <div className="td-topbar">
         <div className="td-topbar__left">
           <button className="td-back" onClick={() => router.back()}>
@@ -361,40 +465,172 @@ export default function TokenDetailPage({
             </svg>
             Tokens
           </button>
-          <span className="td-topbar__breadcrumb">/ {d?.name ?? assetId}</span>
+          <nav className="td-breadcrumb">
+            <span className="td-breadcrumb__sep">›</span>
+            <span className="td-breadcrumb__item">{d.name}</span>
+            {d.currentMint && (
+              <>
+                <span className="td-breadcrumb__sep">›</span>
+                <span className="td-breadcrumb__item td-breadcrumb__item--mint">
+                  ${d.symbol}
+                </span>
+              </>
+            )}
+          </nav>
         </div>
         <ThemeToggle />
       </div>
 
       <div className="td-layout">
         <div className="td-main">
-          {/* Header */}
+          {/* ── Token header ── */}
           <div className="td-header">
-            <TokenAvatar
-              src={d?.imageUrl ?? null}
-              name={d?.name ?? assetId}
-              size={56}
-            />
+            <TokenAvatar src={d.imageUrl} name={d.name ?? assetId} size={52} />
             <div className="td-header__info">
+              {/* Name row */}
               <div className="td-header__row">
-                <h1 className="td-header__name">{d?.name ?? assetId}</h1>
-                <TrustBadge tier={d?.trustTier ?? null} />
+                <h1 className="td-header__name">{d.name ?? assetId}</h1>
+                {/* Verified check */}
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  width="16"
+                  height="16"
+                  className="td-header__verified"
+                >
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="8"
+                    fill="var(--tc-badge-t1-c)"
+                    opacity="0.15"
+                  />
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="7"
+                    stroke="var(--tc-badge-t1-c)"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M5 8l2 2 4-4"
+                    stroke="var(--tc-badge-t1-c)"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
-              <div className="td-header__meta">
-                <span className="td-header__symbol">${d?.symbol}</span>
-                {d?.category && (
-                  <span className="td-header__cat">{d.category}</span>
+              {/* Pills row */}
+              <div className="td-header__pills">
+                {/* Current symbol pill */}
+                {d.symbol && (
+                  <span className="td-pill td-pill--sym">
+                    ${d.symbol}
+                    <button className="td-pill__x" aria-label="Remove filter">
+                      ×
+                    </button>
+                  </span>
+                )}
+                {/* Variants picker */}
+                {variants.length > 0 && (
+                  <VariantPicker
+                    variants={variants}
+                    assetId={assetId}
+                    currentMint={d.currentMint ?? undefined}
+                  />
+                )}
+                {/* Mint address */}
+                {d.currentMint && (
+                  <span className="td-pill td-pill--mint">
+                    <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                      <rect
+                        x="1"
+                        y="1"
+                        width="10"
+                        height="10"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                      />
+                      <path
+                        d="M3.5 6h5M6 3.5v5"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {d.currentMint.slice(0, 4)}…{d.currentMint.slice(-4)}
+                  </span>
                 )}
               </div>
             </div>
-            <div className="td-header__price-block">
-              <div className="td-header__price">{fmtPrice(d?.price)}</div>
-              <ChangeChip value={d?.change24h} />
+            {/* Right icons */}
+            <div className="td-header__actions">
+              <button className="td-icon-btn" aria-label="Search">
+                <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+                  <circle
+                    cx="6.5"
+                    cy="6.5"
+                    r="4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M10.5 10.5L14 14"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button className="td-icon-btn" aria-label="Website">
+                <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="6.5"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                  <path
+                    d="M8 1.5C8 1.5 10.5 4 10.5 8s-2.5 6.5-2.5 6.5M8 1.5C8 1.5 5.5 4 5.5 8s2.5 6.5 2.5 6.5M1.5 8h13"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button className="td-icon-btn" aria-label="Share">
+                <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+                  <path
+                    d="M8 2v8M5 5L8 2l3 3"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3 10v4h10v-4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
-          {/* Chart */}
+          {/* ── Chart ── */}
           <div className="td-chart-section">
+            {/* Price label inside chart area */}
+            <div className="td-chart-label">
+              <span className="td-chart-label__sym">{d.symbol}</span>
+              <span className="td-chart-label__text"> price is currently</span>
+              <div className="td-chart-label__price">{fmtPrice(d.price)}</div>
+              <ChangeChip value={d.change24h} />
+              <span className="td-chart-label__period"> 24h</span>
+            </div>
             <OHLCVChart candles={candles} isLoading={chartLoading} />
             <ChartControls
               timeframe={timeframe}
@@ -404,31 +640,31 @@ export default function TokenDetailPage({
             />
           </div>
 
-          {/* Stats */}
+          {/* ── Stats ── */}
           <section className="td-section">
             <h2 className="td-section__title">Stats</h2>
             <div className="td-stats-grid">
               {[
-                { label: "Market Cap", value: fmtCompact(d?.mcap) },
-                { label: "Liquidity", value: fmtCompact(d?.liquidity) },
-                { label: "24H Volume", value: fmtCompact(d?.volume) },
+                { label: "Market Cap", value: fmtCompact(d.mcap) },
+                { label: "Liquidity", value: fmtCompact(d.liquidity) },
+                { label: "24H Volume", value: fmtCompact(d.volume) },
                 {
                   label: "Supply",
-                  value: d?.supply ? `${(d.supply / 1e6).toFixed(2)}M` : "—",
+                  value: d.supply ? `${(d.supply / 1e6).toFixed(2)}M` : "—",
                 },
-                { label: "Price", value: fmtPrice(d?.price) },
+                { label: "Price", value: fmtPrice(d.price) },
                 {
                   label: "24H Change",
-                  value: fmtPct(d?.change24h),
+                  value: fmtPct(d.change24h),
                   colored: true,
-                  val: d?.change24h,
+                  val: d.change24h,
                 },
-                { label: "FDV", value: fmtCompact(d?.fdv) },
+                { label: "FDV", value: fmtCompact(d.fdv) },
                 {
-                  label: "1H Change",
-                  value: fmtPct(d?.change1h),
-                  colored: true,
-                  val: d?.change1h,
+                  label: "Total Supply",
+                  value: d.totalSupply
+                    ? `${(d.totalSupply / 1e6).toFixed(2)}M`
+                    : "—",
                 },
               ].map(({ label, value, colored, val }) => (
                 <div key={label} className="td-stat-cell">
@@ -449,42 +685,30 @@ export default function TokenDetailPage({
           {risk && (
             <SecuritySection
               risk={risk}
-              liquidity={d?.liquidity}
-              volume={d?.volume}
-              holders={d?.holders}
+              liquidity={d.liquidity}
+              volume={d.volume}
+              holders={d.holders}
             />
           )}
           {variants.length > 0 && (
-            <VariantsSection assetName={d?.name} variants={variants} />
+            <VariantsSection assetName={d.name} variants={variants} />
           )}
         </div>
 
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <aside className="td-sidebar">
-          {d?.description && (
-            <div className="td-card">
-              <h3 className="td-card__title">About {d.name}</h3>
-              <p className="td-card__desc">{d.description}</p>
-            </div>
+          <BuyButton tokenName={d.name} tokenSymbol={d.symbol} />
+
+          {d.description && (
+            <ExpandableDescription
+              text={d.description}
+              tokenName={d.name}
+              maxChars={220}
+            />
           )}
-          {risk && (
-            <div className="td-card">
-              <h3 className="td-card__title">Security score</h3>
-              <div className="td-sidebar-score">
-                <span className="td-sidebar-score__num">
-                  {risk.marketScore.score}
-                </span>
-                <span className="td-sidebar-score__max">/100</span>
-                <span className="td-sidebar-score__grade">
-                  Grade {risk.marketScore.grade}
-                </span>
-              </div>
-              <p className="td-sidebar-score__label">
-                {risk.marketScore.label}
-              </p>
-            </div>
-          )}
-          {(d?.website || d?.twitter) && (
+
+          {/* Official links */}
+          {(d.website || d.twitter || d.reddit) && (
             <div className="td-card">
               <h3 className="td-card__title">Official links</h3>
               <div className="td-links">
@@ -495,22 +719,17 @@ export default function TokenDetailPage({
                     rel="noopener noreferrer"
                     className="td-link"
                   >
-                    <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                      <circle
-                        cx="8"
-                        cy="8"
-                        r="6.5"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                      />
-                      <path
-                        d="M8 1.5C8 1.5 10.5 4 10.5 8s-2.5 6.5-2.5 6.5M8 1.5C8 1.5 5.5 4 5.5 8s2.5 6.5 2.5 6.5M1.5 8h13"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
                     Website
+                  </a>
+                )}
+                {d.reddit && (
+                  <a
+                    href={`https://reddit.com/r/${d.reddit}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="td-link"
+                  >
+                    Reddit
                   </a>
                 )}
                 {d.twitter && (
@@ -523,12 +742,12 @@ export default function TokenDetailPage({
                     <svg
                       viewBox="0 0 16 16"
                       fill="currentColor"
-                      width="13"
-                      height="13"
+                      width="11"
+                      height="11"
                     >
-                      <path d="M12.6 2h2.2L9.9 7.3 15.6 14h-4.3l-3.5-4.5L3.7 14H1.5l5.3-5.7L1 2h4.4l3.2 4.1L12.6 2zm-.8 10.8h1.2L4.3 3.2H3l8.8 11.6z" />
+                      <path d="M12.6 2h2.2L9.9 7.3 15.6 14h-4.3l-3.5-4.5L3.7 14H1.5l5.3-5.7L1 2h4.4l3.2 4.1L12.6 2z" />
                     </svg>
-                    X / Twitter
+                    X
                   </a>
                 )}
               </div>
