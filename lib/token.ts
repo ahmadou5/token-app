@@ -52,6 +52,15 @@ export const tokenRequest = {
     return data as AssetsResolveResponse;
   },
 
+  getAssetMarket: async (mint: string) => {
+    const { data } = await localClient.get("/", {
+      params: {
+        endpoint: `/assets/solana?include=markets&mint=${mint}&marketsOffset=0&marketsLimit=50`,
+      },
+    });
+    return data;
+  },
+
   getOHLCV: async (assetId: string, interval: string, limit: number) => {
     const { data } = await localClient.get("/", {
       params: {
