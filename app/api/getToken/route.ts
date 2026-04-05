@@ -2,12 +2,17 @@ import axios from "axios";
 import type {
   TokenAssetResponse,
   AssetVariant,
+  AssetProfile,
+  AssetRisk,
   VariantGroups,
+  VariantKind,
+  RawVariant,
   MarketEntry,
+  CanonicalMarket,
+  AssetStats,
 } from "@/types/token.types"; // adjust to your actual path
 
-// ─── Raw shapes returned by the upstream API ─────────────────────────────────
-// (kept private to this file — callers only see TokenAssetResponse)
+// ─── Raw shapes from the upstream API ────────────────────────────────────────
 
 interface RawAsset {
   assetId: string;
@@ -17,18 +22,16 @@ interface RawAsset {
   aliases: string[];
   symbols: string[];
   imageUrl: string;
-  stats: TokenAssetResponse["stats"];
-  canonicalMarket: TokenAssetResponse["canonicalMarket"];
+  stats: AssetStats;
+  canonicalMarket: CanonicalMarket;
   primaryVariant: AssetVariant;
   variantGroups: VariantGroups;
 }
 
-interface RawMarketsResponse {
-  asset: {
-    assetId: string;
-  };
+interface RawCanonicalResponse {
+  asset: RawAsset;
   includes: {
-    markets: {
+    markets?: {
       ok: boolean;
       data: {
         markets: MarketEntry[];
@@ -37,18 +40,49 @@ interface RawMarketsResponse {
         limit: number;
       };
     };
+    profile?: {
+      ok: boolean;
+      data: AssetProfile;
+    };
+    risk?: {
+      ok: boolean;
+      data: AssetRisk;
+    };
   };
+}
+
+interface RawVariantsResponse {
+  assetId: string;
+  variants: RawVariant[];
+}
+
+// ─── Helper: group flat variants[] into { spot, etf, yield, leveraged } ──────
+
+const KIND_TO_GROUP: Record<VariantKind, keyof VariantGroups> = {
+  native: "spot",
+  yield: "yield",
+  etf: "etf",
+  leveraged: "leveraged",
+};
+
+function groupVariants(variants: RawVariant[]): VariantGroups {
+  const groups: VariantGroups = { spot: [], etf: [], yield: [], leveraged: [] };
+  for (const variant of variants) {
+    const group = KIND_TO_GROUP[variant.kind] ?? "spot";
+    groups[group].push(variant);
+  }
+  return groups;
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export const GET = async (request: Request): Promise<Response> => {
   const { searchParams } = new URL(request.url);
-  const mint = searchParams.get("mint");
+  const assetId = searchParams.get("assetId");
 
-  if (!mint) {
+  if (!assetId) {
     return new Response(
-      JSON.stringify({ error: "Missing required query param: mint" }),
+      JSON.stringify({ error: "Missing required query param: assetId" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
@@ -60,32 +94,31 @@ export const GET = async (request: Request): Promise<Response> => {
   };
 
   try {
-    // 1️⃣  Fetch the canonical asset (gives us assetId + stats + variants)
-    const canonicalRes = await axios.get<{ asset: RawAsset }>(
-      `${base}/assets/${mint}`,
-      { headers },
-    );
-
-    const { asset } = canonicalRes.data;
-    const assetId = asset.assetId; // ← derived here, not from the caller
-
-    // 2️⃣  Fetch live markets (needs mint for filtering, assetId for the context)
-    const [marketsRes, variantsRes] = await Promise.all([
-      axios.get<RawMarketsResponse>(
-        `${base}/assets/solana?include=markets&mint=${mint}&marketsOffset=0&marketsLimit=50`,
+    // 2 parallel fetches:
+    // 1. Canonical asset + all includes (markets, profile, risk) in one request
+    // 2. Variants endpoint (separate path, can't be included)
+    const [canonicalRes, variantsRes] = await Promise.all([
+      axios.get<RawCanonicalResponse>(
+        `${base}/assets/${assetId}?include=markets&include=profile&include=risk&marketsOffset=0&marketsLimit=50`,
         { headers },
       ),
-      axios.get<{ asset: RawAsset }>(
+      axios.get<RawVariantsResponse>(
         `${base}/assets/${assetId}/variants?groupBy=asset`,
         { headers },
       ),
     ]);
 
-    const marketsData = marketsRes.data.includes.markets;
-    const variantGroups =
-      variantsRes.data.asset.variantGroups ?? asset.variantGroups;
+    const { asset, includes } = canonicalRes.data;
 
-    // 3️⃣  Merge into a single flat response
+    const marketsData = includes.markets?.data;
+    const profile = includes.profile?.data ?? null;
+    const risk = includes.risk?.data ?? null;
+
+    // Group the flat variants[] by kind, fall back to what canonical embeds
+    const variantGroups: VariantGroups = variantsRes.data.variants?.length
+      ? groupVariants(variantsRes.data.variants)
+      : asset.variantGroups;
+
     const merged: TokenAssetResponse = {
       // Identity
       assetId: asset.assetId,
@@ -101,14 +134,18 @@ export const GET = async (request: Request): Promise<Response> => {
       canonicalMarket: asset.canonicalMarket,
       primaryVariant: asset.primaryVariant,
 
-      // Variants (prefer the dedicated variants endpoint, fall back to canonical)
+      // Variants
       variantGroups,
 
+      // Profile & risk
+      profile,
+      risk,
+
       // Markets
-      markets: marketsData.data.markets,
-      marketsTotal: marketsData.data.total,
-      marketsOffset: marketsData.data.offset,
-      marketsLimit: marketsData.data.limit,
+      markets: marketsData?.markets ?? [],
+      marketsTotal: marketsData?.total ?? 0,
+      marketsOffset: marketsData?.offset ?? 0,
+      marketsLimit: marketsData?.limit ?? 50,
     };
 
     return new Response(JSON.stringify(merged), {

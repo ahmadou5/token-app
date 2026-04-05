@@ -1,6 +1,6 @@
 "use client";
 
-import type { AssetRisk } from "@/types";
+import type { AssetRisk } from "@/types/token.types";
 import { fmtCompact } from "@/components/TokenCard";
 
 function LabelIcon({ tone, color }: { tone: string; color: string }) {
@@ -43,7 +43,7 @@ function Gauge({
   score: number;
   grade: string;
   label: string;
-  tone: string;
+  tone: "safe" | "warning" | "danger";
 }) {
   const pct = Math.min(1, Math.max(0, score / 100));
   const r = 54;
@@ -83,8 +83,6 @@ function Gauge({
       : tone === "warning"
         ? "rgba(245,158,11,0.12)"
         : "rgba(220,38,38,0.12)";
-
-  // Icon for label is rendered with LabelIcon component defined outside render
 
   return (
     <div className="sec-gauge">
@@ -225,6 +223,19 @@ function MetricRow({
   );
 }
 
+// ─── Helpers to derive RowStatus from AssetRiskComponent ─────────────────────
+
+function componentStatus(
+  components: AssetRisk["marketScore"]["components"],
+  key: string,
+): RowStatus {
+  const c = components?.[key];
+  if (!c || !c.hasData) return "na";
+  if (c.status === "good") return "ok";
+  if (c.status === "warning") return "warn";
+  return "info";
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 interface SecuritySectionProps {
@@ -242,16 +253,36 @@ export function SecuritySection({
 }: SecuritySectionProps) {
   const { score, grade, label, tone, components } = risk.marketScore;
 
-  const liqStatus: RowStatus = (liquidity ?? 0) > 500_000 ? "ok" : "warn";
+  // Derive statuses — prefer component data from API, fall back to value thresholds
+  const liqStatus: RowStatus =
+    componentStatus(components, "liquidity") !== "na"
+      ? componentStatus(components, "liquidity")
+      : (liquidity ?? 0) > 500_000
+        ? "ok"
+        : "warn";
+
   const tradingStatus: RowStatus =
-    (volume ?? 0) === 0 ? "info" : (volume ?? 0) > 10_000 ? "ok" : "warn";
+    componentStatus(components, "trading") !== "na"
+      ? componentStatus(components, "trading")
+      : (volume ?? 0) === 0
+        ? "info"
+        : (volume ?? 0) > 10_000
+          ? "ok"
+          : "warn";
+
+  const distStatus: RowStatus =
+    componentStatus(components, "distribution") !== "na"
+      ? componentStatus(components, "distribution")
+      : "ok";
+
   const holdersStatus: RowStatus =
-    holders == null ? "na" : holders > 500 ? "ok" : "warn";
-  const distStatus: RowStatus = components?.distribution?.hasData
-    ? components.distribution.status === "good"
-      ? "ok"
-      : "warn"
-    : "ok"; // distribution check passes even without data (matches screenshot)
+    componentStatus(components, "holders") !== "na"
+      ? componentStatus(components, "holders")
+      : holders == null
+        ? "na"
+        : holders > 500
+          ? "ok"
+          : "warn";
 
   return (
     <section className="td-section">
@@ -263,7 +294,15 @@ export function SecuritySection({
             value={fmtCompact(liquidity)}
             status={liqStatus}
           />
-          <MetricRow label="Distribution" value="—" status={distStatus} />
+          <MetricRow
+            label="Distribution"
+            value={
+              components?.distribution?.score != null
+                ? `${components.distribution.score}/100`
+                : "—"
+            }
+            status={distStatus}
+          />
           <MetricRow
             label="Trading"
             value={volume != null ? fmtCompact(volume) : "—"}

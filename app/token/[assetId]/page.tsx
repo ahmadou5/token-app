@@ -2,7 +2,6 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { tokenRequest } from "@/lib/token";
 import {
   useOHLCV,
   type OHLCVInterval,
@@ -10,7 +9,6 @@ import {
 } from "@/hooks/useOHLCV";
 import {
   TokenAvatar,
-  TrustBadge,
   ChangeChip,
   fmtPrice,
   fmtCompact,
@@ -22,8 +20,7 @@ import { VariantsSection, type VariantRow } from "@/components/Variant";
 import { ExpandableDescription } from "@/components/ExpandableDescription";
 import { BuyButton } from "@/components/BuyButton";
 import { VariantPicker } from "@/components/VariantPicker";
-import type { AssetRisk, AssetMarket, AssetProfile } from "@/types";
-import { useTokens } from "@/hooks/useToken";
+import type { TokenAssetResponse, RawVariant } from "@/types/token.types";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -224,26 +221,7 @@ function ChartControls({
   );
 }
 
-// ─── Build VariantRow from any raw variant object ─────────────────────────────
-
-interface RawVariant {
-  mint?: string;
-  variantId?: string;
-  name?: string;
-  label?: string;
-  symbol?: string;
-  trustTier?: string;
-  market?: {
-    price?: number | null;
-    liquidity?: number | null;
-    volume24hUSD?: number | null;
-    volume24h?: number | null;
-    logoURI?: string | null;
-  };
-  kind?: string;
-  tags?: string[];
-  issuer?: string;
-}
+// ─── Build VariantRow from a RawVariant ───────────────────────────────────────
 
 function buildVariantRow(
   v: RawVariant,
@@ -251,22 +229,43 @@ function buildVariantRow(
   assetSymbol?: string | null,
 ): VariantRow | null {
   if (!v || typeof v !== "object") return null;
-  const mint = safe(v.mint ?? v.variantId);
+  const mint = safe(v.mint);
   if (!mint) return null;
 
   return {
-    name: safe(v.name ?? v.label ?? assetName),
-    symbol: safe(v.symbol ?? assetSymbol),
+    name: safe(v.label ?? assetName),
+    symbol: safe(assetSymbol),
     mint,
     trustTier: safe(v.trustTier ?? "unknown"),
-    price: v.market?.price ?? null,
-    liquidity: v.market?.liquidity ?? null,
-    volume24h: v.market?.volume24hUSD ?? v.market?.volume24h ?? null,
+    price: null, // RawVariant has no market data — variants endpoint is lightweight
+    liquidity: null,
+    volume24h: null,
     kind: safe(v.kind ?? "spot"),
     tags: Array.isArray(v.tags) ? v.tags : [],
     issuer: safe(v.issuer),
-    logoURI: v.market?.logoURI ?? null,
+    logoURI: null,
   };
+}
+
+// ─── Flatten variantGroups into a single VariantRow[] ────────────────────────
+
+function flattenVariantGroups(data: TokenAssetResponse): VariantRow[] {
+  const { variantGroups, name, symbol } = data;
+  const rows: VariantRow[] = [];
+
+  const allVariants = [
+    ...variantGroups.spot,
+    ...variantGroups.yield,
+    ...variantGroups.etf,
+    ...variantGroups.leveraged,
+  ];
+
+  for (const v of allVariants) {
+    const row = buildVariantRow(v, name, symbol);
+    if (row) rows.push(row);
+  }
+
+  return rows;
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -293,7 +292,6 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
       </div>
       <div className="td-skel-page">
         <div className="td-skel-page__main">
-          {/* Header */}
           <div className="td-skel-row" style={{ marginBottom: 24 }}>
             <div
               className="td-skel td-skel--circle"
@@ -327,7 +325,6 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
               style={{ width: 100, height: 36, borderRadius: 20 }}
             />
           </div>
-          {/* Chart */}
           <div className="td-chart-section" style={{ marginBottom: 24 }}>
             <div className="td-chart td-chart--loading">
               <div className="td-chart__shimmer" />
@@ -345,7 +342,6 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
               ))}
             </div>
           </div>
-          {/* Stats */}
           <div
             className="td-skel td-skel--line"
             style={{ width: 60, height: 18, marginBottom: 14 }}
@@ -394,31 +390,6 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ─── Page data ────────────────────────────────────────────────────────────────
-
-interface TokenPageData {
-  name: string | null;
-  symbol: string | null;
-  category: string;
-  imageUrl: string | null;
-  price: number | null;
-  change24h: number | null;
-  change1h: number | null;
-  volume: number | null;
-  liquidity: number | null;
-  mcap: number | null;
-  fdv: number | null;
-  supply: number | null;
-  totalSupply: number | null;
-  holders: number | null;
-  trustTier: string | null;
-  description: string | null;
-  website: string | null;
-  twitter: string | null;
-  reddit: string | null;
-  currentMint: string | null;
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function TokenDetailPage({
@@ -428,12 +399,8 @@ export default function TokenDetailPage({
 }) {
   const { assetId } = use(params);
   const router = useRouter();
-  const { tokens } = useTokens();
 
-  const [pageData, setPageData] = useState<TokenPageData | null>(null);
-  const [risk, setRisk] = useState<AssetRisk | null>(null);
-  const [markets, setMarkets] = useState<AssetMarket[]>([]);
-  const [marketsTotal, setMarketsTotal] = useState(0);
+  const [data, setData] = useState<TokenAssetResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
@@ -447,107 +414,24 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
-    // Immediately reset — shows skeleton right away on navigation
     setIsLoadingPage(true);
-    setPageData(null);
-    setRisk(null);
-    setMarkets([]);
+    setData(null);
     setVariants([]);
 
     let cancelled = false;
 
     async function load() {
       try {
-        const raw = await tokenRequest.getAsset(assetId, true);
+        const res = await fetch(`/api/token?assetId=${assetId}`);
+        if (!res.ok) throw new Error(`Token API error: ${res.status}`);
+
+        const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
 
-        const curatedMatch = tokens.find((t) => t?.assetId === assetId);
-        const marketsArr: AssetMarket[] =
-          raw?.includes?.markets?.data?.markets ?? [];
-        const market0 = marketsArr[0] ?? null;
-        const profile: AssetProfile | null =
-          raw?.includes?.profile?.data ?? null;
-        const riskData: AssetRisk | null = raw?.includes?.risk?.data ?? null;
-
-        const assetName = raw?.asset?.name ?? null;
-        const assetSym = raw?.asset?.symbol ?? null;
-
-        setPageData({
-          name: assetName,
-          symbol: assetSym,
-          category: safe(raw?.asset?.category),
-          imageUrl:
-            (market0 as { base?: { icon?: string } })?.base?.icon ??
-            curatedMatch?.imageUrl ??
-            null,
-          price: profile?.price ?? null,
-          change24h: profile?.priceChange24h ?? null,
-          change1h: curatedMatch?.stats?.priceChange1hPercent ?? null,
-          volume: profile?.volume24h ?? null,
-          liquidity: curatedMatch?.stats?.liquidity ?? null,
-          mcap: profile?.marketCap ?? null,
-          fdv: profile?.fdv ?? null,
-          supply: profile?.circulatingSupply ?? null,
-          totalSupply: profile?.totalSupply ?? null,
-          holders: null,
-          trustTier: curatedMatch?.primaryVariant?.trustTier ?? null,
-          description: profile?.description ?? null,
-          website: profile?.links?.website ?? null,
-          twitter: profile?.links?.twitter ?? null,
-          reddit: profile?.links?.reddit ?? null,
-          currentMint: curatedMatch?.primaryVariant?.mint ?? null,
-        });
-
-        if (riskData) setRisk(riskData);
-        setMarkets(marketsArr);
-        setMarketsTotal(
-          raw?.includes?.markets?.data?.total ?? marketsArr.length,
-        );
-
-        // ── Build variants list ──────────────────────────────────────────────
-        // Priority order: full variants array from API > primaryVariant from curated
-        const variantRows: VariantRow[] = [];
-
-        // 1. Try to get variants from the full API response
-        const rawVariants = Array.isArray(raw?.variant) ? raw.variant : [];
-
-        if (Array.isArray(rawVariants) && rawVariants.length > 0) {
-          for (const v of rawVariants) {
-            const row = buildVariantRow(v, assetName, assetSym);
-            if (row) variantRows.push(row);
-          }
-        }
-
-        // 2. If no variants from API, use the curated primaryVariant as a fallback
-        if (variantRows.length === 0 && curatedMatch?.primaryVariant) {
-          const pv = curatedMatch.primaryVariant;
-          const rawVariant: RawVariant = {
-            mint: pv.mint,
-            variantId: pv.variantId,
-            name: pv.name ?? pv.label ?? assetName ?? undefined,
-            label: pv.label,
-            symbol: pv.symbol ?? assetSym ?? undefined,
-            trustTier: pv.trustTier,
-            market: pv.market
-              ? {
-                  price: pv.market.price,
-                  liquidity: pv.market.liquidity,
-                  volume24hUSD: pv.market.volume24hUSD,
-                  volume24h: pv.market.volume24hUSD,
-                  logoURI: pv.market.logoURI,
-                }
-              : undefined,
-            kind: pv.kind,
-            tags: pv.tags,
-            issuer: pv.issuer,
-          };
-          const row = buildVariantRow(rawVariant, assetName, assetSym);
-          if (row) variantRows.push(row);
-        }
-
-        setVariants(variantRows);
+        setData(json);
+        setVariants(flattenVariantGroups(json));
       } catch (e) {
-        console.error("Failed to load token detail:", e);
+        console.error("[TokenDetailPage] Failed to load:", e);
       } finally {
         if (!cancelled) setIsLoadingPage(false);
       }
@@ -557,17 +441,36 @@ export default function TokenDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [assetId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [assetId]);
 
-  // Show full skeleton until data arrives
-  if (isLoadingPage || !pageData) {
+  if (isLoadingPage || !data) {
     return <PageSkeleton onBack={() => router.back()} />;
   }
 
-  const d = pageData;
-  const mintDisplay = d.currentMint
-    ? `${d.currentMint.slice(0, 4)}…${d.currentMint.slice(-4)}`
+  const profile = data.profile;
+  const risk = data.risk;
+
+  const price = profile?.price ?? data.stats.price ?? null;
+  const change24h =
+    profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
+  const change1h = data.stats.priceChange1hPercent ?? null;
+  const volume = profile?.volume24h ?? data.stats.volume24hUSD ?? null;
+  const liquidity = data.stats.liquidity ?? null;
+  const mcap = profile?.marketCap ?? data.stats.marketCap ?? null;
+  const fdv = profile?.fdv ?? null;
+  const supply = profile?.circulatingSupply ?? null;
+  const totalSupply = profile?.totalSupply ?? null;
+  const description = profile?.description ?? null;
+  const website = profile?.links?.website ?? null;
+  const twitter = profile?.links?.twitter ?? null;
+  const reddit = profile?.links?.reddit ?? null;
+
+  const currentMint = data.primaryVariant?.mint ?? null;
+  const mintDisplay = currentMint
+    ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
+
+  const imageUrl = data.markets[0]?.base?.icon ?? data.imageUrl ?? null;
 
   return (
     <div className="td-page">
@@ -588,12 +491,12 @@ export default function TokenDetailPage({
           </button>
           <nav className="td-breadcrumb">
             <span className="td-breadcrumb__sep">›</span>
-            <span className="td-breadcrumb__item">{d.name}</span>
-            {d.symbol && (
+            <span className="td-breadcrumb__item">{data.name}</span>
+            {data.symbol && (
               <>
                 <span className="td-breadcrumb__sep">›</span>
                 <span className="td-breadcrumb__item td-breadcrumb__item--mint">
-                  ${d.symbol}
+                  ${data.symbol}
                 </span>
               </>
             )}
@@ -607,10 +510,10 @@ export default function TokenDetailPage({
         <div className="td-main">
           {/* Token header */}
           <div className="td-header">
-            <TokenAvatar src={d.imageUrl} name={d.name} size={52} />
+            <TokenAvatar src={imageUrl} name={data.name} size={52} />
             <div className="td-header__info">
               <div className="td-header__row">
-                <h1 className="td-header__name">{d.name ?? assetId}</h1>
+                <h1 className="td-header__name">{data.name ?? assetId}</h1>
                 <svg
                   viewBox="0 0 16 16"
                   fill="none"
@@ -642,14 +545,14 @@ export default function TokenDetailPage({
                 </svg>
               </div>
               <div className="td-header__pills">
-                {d.symbol && (
-                  <span className="td-pill td-pill--sym">${d.symbol}</span>
+                {data.symbol && (
+                  <span className="td-pill td-pill--sym">${data.symbol}</span>
                 )}
                 {variants.length > 0 && (
                   <VariantPicker
                     variants={variants}
                     assetId={assetId}
-                    currentMint={d.currentMint ?? undefined}
+                    currentMint={currentMint ?? undefined}
                   />
                 )}
                 {mintDisplay && (
@@ -694,9 +597,9 @@ export default function TokenDetailPage({
                   />
                 </svg>
               </button>
-              {d.website && (
+              {website && (
                 <a
-                  href={d.website}
+                  href={website}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="td-icon-btn"
@@ -719,9 +622,9 @@ export default function TokenDetailPage({
                   </svg>
                 </a>
               )}
-              {d.twitter && (
+              {twitter && (
                 <a
-                  href={`https://x.com/${d.twitter}`}
+                  href={`https://x.com/${twitter}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="td-icon-btn"
@@ -743,10 +646,10 @@ export default function TokenDetailPage({
           {/* Chart */}
           <div className="td-chart-section">
             <div className="td-chart-label">
-              <span className="td-chart-label__sym">{d.symbol}</span>
+              <span className="td-chart-label__sym">{data.symbol}</span>
               <span className="td-chart-label__text"> price is currently</span>
-              <div className="td-chart-label__price">{fmtPrice(d.price)}</div>
-              <ChangeChip value={d.change24h} />
+              <div className="td-chart-label__price">{fmtPrice(price)}</div>
+              <ChangeChip value={change24h} />
               <span className="td-chart-label__period"> 24h</span>
             </div>
             <OHLCVChart candles={candles} isLoading={chartLoading} />
@@ -763,25 +666,25 @@ export default function TokenDetailPage({
             <h2 className="td-section__title">Stats</h2>
             <div className="td-stats-grid">
               {[
-                { label: "Market Cap", value: fmtCompact(d.mcap) },
-                { label: "Liquidity", value: fmtCompact(d.liquidity) },
-                { label: "24H Volume", value: fmtCompact(d.volume) },
+                { label: "Market Cap", value: fmtCompact(mcap) },
+                { label: "Liquidity", value: fmtCompact(liquidity) },
+                { label: "24H Volume", value: fmtCompact(volume) },
                 {
                   label: "Supply",
-                  value: d.supply ? `${(d.supply / 1e6).toFixed(2)}M` : "—",
+                  value: supply ? `${(supply / 1e6).toFixed(2)}M` : "—",
                 },
-                { label: "Price", value: fmtPrice(d.price) },
+                { label: "Price", value: fmtPrice(price) },
                 {
                   label: "24H Change",
-                  value: fmtPct(d.change24h),
+                  value: fmtPct(change24h),
                   colored: true,
-                  val: d.change24h,
+                  val: change24h,
                 },
-                { label: "FDV", value: fmtCompact(d.fdv) },
+                { label: "FDV", value: fmtCompact(fdv) },
                 {
                   label: "Total Supply",
-                  value: d.totalSupply
-                    ? `${(d.totalSupply / 1e6).toFixed(2)}M`
+                  value: totalSupply
+                    ? `${(totalSupply / 1e6).toFixed(2)}M`
                     : "—",
                 },
               ].map(({ label, value, colored, val }) => (
@@ -803,43 +706,43 @@ export default function TokenDetailPage({
             </div>
           </section>
 
-          {markets.length > 0 && (
-            <MarketsSection markets={markets} total={marketsTotal} />
+          {data.markets.length > 0 && (
+            <MarketsSection markets={data.markets} total={data.marketsTotal} />
           )}
 
           {risk && (
             <SecuritySection
               risk={risk}
-              liquidity={d.liquidity}
-              volume={d.volume}
-              holders={d.holders}
+              liquidity={liquidity}
+              volume={volume}
+              holders={null}
             />
           )}
 
           {variants.length > 0 && (
-            <VariantsSection assetName={d.name} variants={variants} />
+            <VariantsSection assetName={data.name} variants={variants} />
           )}
         </div>
 
         {/* ── Sidebar ── */}
         <aside className="td-sidebar">
-          <BuyButton tokenName={d.name} tokenSymbol={d.symbol} />
+          <BuyButton tokenName={data.name} tokenSymbol={data.symbol} />
 
-          {d.description && (
+          {description && (
             <ExpandableDescription
-              text={d.description}
-              tokenName={d.name}
+              text={description}
+              tokenName={data.name}
               maxChars={220}
             />
           )}
 
-          {(d.website || d.twitter || d.reddit) && (
+          {(website || twitter || reddit) && (
             <div className="td-card">
               <h3 className="td-card__title">Official links</h3>
               <div className="td-links">
-                {d.website && (
+                {website && (
                   <a
-                    href={d.website}
+                    href={website}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="td-link"
@@ -847,9 +750,9 @@ export default function TokenDetailPage({
                     Website
                   </a>
                 )}
-                {d.reddit && (
+                {reddit && (
                   <a
-                    href={`https://reddit.com/r/${d.reddit}`}
+                    href={`https://reddit.com/r/${reddit}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="td-link"
@@ -857,9 +760,9 @@ export default function TokenDetailPage({
                     Reddit
                   </a>
                 )}
-                {d.twitter && (
+                {twitter && (
                   <a
-                    href={`https://x.com/${d.twitter}`}
+                    href={`https://x.com/${twitter}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="td-link"

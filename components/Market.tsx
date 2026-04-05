@@ -1,36 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { AssetMarket } from "@/types";
+import type { MarketEntry } from "@/types/token.types";
 import { fmtCompact } from "@/components/TokenCard";
 
-interface AssetToken {
-  symbol?: string;
-  icon?: string;
-}
-
-interface ExtendedAssetMarket extends AssetMarket {
-  trades24h?: number;
-  trades24hChange?: number;
-  wallets24h?: number;
-  wallets24hChange?: number;
-}
-
-// ─── Safe helpers ─────────────────────────────────────────────────────────────
-
-function safeStr(s: unknown): string {
-  return s && typeof s === "string" ? s : "";
-}
-
-function safeInitials(s: unknown): string {
-  const str = safeStr(s);
-  return str.length > 0 ? str.slice(0, 2).toUpperCase() : "??";
-}
-
 function truncateMint(mint: unknown): string {
-  const m = safeStr(mint);
+  const m = mint && typeof mint === "string" ? mint : "";
   if (m.length <= 10) return m;
   return `${m.slice(0, 4)}…${m.slice(-4)}`;
+}
+
+function safeInitials(s: string | undefined): string {
+  return s && s.length > 0 ? s.slice(0, 2).toUpperCase() : "??";
 }
 
 // ─── Pair icon stack ──────────────────────────────────────────────────────────
@@ -43,21 +24,19 @@ function PairIcons({
 }: {
   baseIcon?: string | null;
   quoteIcon?: string | null;
-  baseSymbol?: string | null;
-  quoteSymbol?: string | null;
+  baseSymbol?: string;
+  quoteSymbol?: string;
 }) {
-  const bSym = safeStr(baseSymbol);
-  const qSym = safeStr(quoteSymbol);
-  const bInit = safeInitials(bSym);
-  const qInit = safeInitials(qSym);
+  const bInit = safeInitials(baseSymbol);
+  const qInit = safeInitials(quoteSymbol);
 
   return (
     <div className="mkt-pair-icons">
       <div className="mkt-icon mkt-icon--base">
-        {baseIcon && typeof baseIcon === "string" ? (
+        {baseIcon ? (
           <img
             src={baseIcon}
-            alt={bSym}
+            alt={baseSymbol}
             className="mkt-icon__img"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -70,10 +49,10 @@ function PairIcons({
         )}
       </div>
       <div className="mkt-icon mkt-icon--quote">
-        {quoteIcon && typeof quoteIcon === "string" ? (
+        {quoteIcon ? (
           <img
             src={quoteIcon}
-            alt={qSym}
+            alt={quoteSymbol}
             className="mkt-icon__img"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -128,7 +107,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 const PAGE_SIZES = [10, 25, 50];
 
 interface MarketsSectionProps {
-  markets: AssetMarket[];
+  markets: MarketEntry[];
   total: number;
 }
 
@@ -138,7 +117,6 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   const [sortKey, setSortKey] = useState<SortKey>("liquidity");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // Guard: ensure markets is a valid array
   const safeMarkets = Array.isArray(markets) ? markets.filter(Boolean) : [];
 
   const handleSort = (key: SortKey) => {
@@ -151,8 +129,8 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   };
 
   const sorted = [...safeMarkets].sort((a, b) => {
-    const va = (a as Record<SortKey, number | undefined>)[sortKey] ?? 0;
-    const vb = (b as Record<SortKey, number | undefined>)[sortKey] ?? 0;
+    const va = a[sortKey] ?? 0;
+    const vb = b[sortKey] ?? 0;
     return sortDir === "desc" ? vb - va : va - vb;
   });
 
@@ -188,17 +166,13 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
 
         {/* Rows */}
         {pageItems.map((mkt, i) => {
-          const base = mkt?.base ?? {};
-          const quote = mkt?.quote ?? {};
-          const bSym = safeStr((base as AssetToken).symbol);
-          const qSym = safeStr((quote as AssetToken).symbol);
-          const bIcon = (base as AssetToken).icon ?? null;
-          const qIcon = (quote as AssetToken).icon ?? null;
-          const source = safeStr(mkt?.source);
-          const addr = safeStr(mkt?.address);
+          const bSym = mkt.base?.symbol;
+          const qSym = mkt.quote?.symbol;
+          const bIcon = mkt.base?.icon ?? null;
+          const qIcon = mkt.quote?.icon ?? null;
 
           return (
-            <div key={`${addr}-${i}`} className="mkt-row">
+            <div key={`${mkt.address}-${i}`} className="mkt-row">
               {/* Pair */}
               <div className="mkt-col--pair mkt-pair">
                 <PairIcons
@@ -209,16 +183,16 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
                 />
                 <div className="mkt-pair__info">
                   <div className="mkt-pair__name">
-                    <span className="mkt-pair__base">{bSym}</span>
+                    <span className="mkt-pair__base">{bSym ?? "—"}</span>
                     <span className="mkt-pair__slash"> / </span>
-                    <span className="mkt-pair__quote">{qSym}</span>
-                    {source && (
-                      <span className="mkt-pair__source">{source}</span>
+                    <span className="mkt-pair__quote">{qSym ?? "—"}</span>
+                    {mkt.source && (
+                      <span className="mkt-pair__source">{mkt.source}</span>
                     )}
                   </div>
-                  {addr && (
+                  {mkt.address && (
                     <div className="mkt-pair__addr">
-                      {truncateMint(addr)}
+                      {truncateMint(mkt.address)}
                       <svg
                         viewBox="0 0 12 12"
                         fill="none"
@@ -241,55 +215,42 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
 
               {/* Liquidity */}
               <div className="mkt-col--liq mkt-num">
-                {fmtCompact(mkt?.liquidity)}
+                {fmtCompact(mkt.liquidity)}
               </div>
+
               {/* Volume */}
               <div className="mkt-col--vol mkt-num">
-                {fmtCompact(mkt?.volume24h)}
+                {fmtCompact(mkt.volume24h)}
               </div>
-              {/* Trades — use real field if available, fallback to — */}
+
+              {/* Trades */}
               <div className="mkt-col--trades mkt-num-stack">
                 <span className="mkt-num">
-                  {(mkt as ExtendedAssetMarket)?.trades24h != null
-                    ? Number(
-                        (mkt as ExtendedAssetMarket).trades24h,
-                      ).toLocaleString()
-                    : "—"}
+                  {mkt.trade24h != null ? mkt.trade24h.toLocaleString() : "—"}
                 </span>
-                {(mkt as ExtendedAssetMarket)?.trades24hChange != null && (
+                {mkt.trade24hChangePercent != null && (
                   <span
-                    className={`mkt-pct ${(mkt as ExtendedAssetMarket).trades24hChange! >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    className={`mkt-pct ${mkt.trade24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
                   >
-                    {(mkt as ExtendedAssetMarket).trades24hChange! >= 0
-                      ? "+"
-                      : ""}
-                    {Number(
-                      (mkt as ExtendedAssetMarket).trades24hChange!,
-                    ).toFixed(2)}
-                    %
+                    {mkt.trade24hChangePercent >= 0 ? "+" : ""}
+                    {mkt.trade24hChangePercent.toFixed(2)}%
                   </span>
                 )}
               </div>
+
               {/* Wallets */}
               <div className="mkt-col--wallets mkt-num-stack">
                 <span className="mkt-num">
-                  {(mkt as ExtendedAssetMarket)?.wallets24h != null
-                    ? Number(
-                        (mkt as ExtendedAssetMarket).wallets24h,
-                      ).toLocaleString()
+                  {mkt.uniqueWallet24h != null
+                    ? mkt.uniqueWallet24h.toLocaleString()
                     : "—"}
                 </span>
-                {(mkt as ExtendedAssetMarket)?.wallets24hChange != null && (
+                {mkt.uniqueWallet24hChangePercent != null && (
                   <span
-                    className={`mkt-pct ${(mkt as ExtendedAssetMarket).wallets24hChange! >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    className={`mkt-pct ${mkt.uniqueWallet24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
                   >
-                    {(mkt as ExtendedAssetMarket).wallets24hChange! >= 0
-                      ? "+"
-                      : ""}
-                    {Number(
-                      (mkt as ExtendedAssetMarket).wallets24hChange!,
-                    ).toFixed(2)}
-                    %
+                    {mkt.uniqueWallet24hChangePercent >= 0 ? "+" : ""}
+                    {mkt.uniqueWallet24hChangePercent.toFixed(2)}%
                   </span>
                 )}
               </div>

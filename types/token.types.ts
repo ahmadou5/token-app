@@ -25,7 +25,7 @@ export interface CanonicalMarket {
   providerLastUpdatedAt: number;
 }
 
-// ─── Asset-level stats (top-level summary) ────────────────────────────────────
+// ─── Asset-level stats ────────────────────────────────────────────────────────
 
 export interface AssetStats {
   price: number;
@@ -36,7 +36,7 @@ export interface AssetStats {
   priceChange1hPercent: number;
 }
 
-// ─── Variant (spot / yield token) ────────────────────────────────────────────
+// ─── Variant ──────────────────────────────────────────────────────────────────
 
 export type TrustTier = "tier1" | "tier2" | "tier3";
 export type VariantKind = "native" | "yield" | "etf" | "leveraged";
@@ -54,16 +54,70 @@ export interface AssetVariant {
   rank: number;
 }
 
-// ─── Variant groups (grouped by category) ────────────────────────────────────
-
-export interface VariantGroups {
-  spot: AssetVariant[];
-  etf: AssetVariant[];
-  yield: AssetVariant[];
-  leveraged: AssetVariant[];
+// Shape returned by the flat variants endpoint: { assetId, variants[] }
+export interface RawVariant {
+  mint: string;
+  chain: string;
+  kind: VariantKind;
+  trustTier: TrustTier;
+  tags: string[];
+  issuer?: string;
+  issuerUrl?: string;
+  label?: string;
 }
 
-// ─── Market entry (from the includes.markets list) ───────────────────────────
+// ─── Variant groups (built by grouping flat variants[] by kind) ───────────────
+
+export interface VariantGroups {
+  spot: RawVariant[];
+  etf: RawVariant[];
+  yield: RawVariant[];
+  leveraged: RawVariant[];
+}
+
+// ─── Profile (from ?include=profile) ─────────────────────────────────────────
+
+export interface AssetProfileLinks {
+  website?: string;
+  twitter?: string;
+  reddit?: string;
+  telegram?: string;
+  discord?: string;
+  github?: string;
+  coingecko?: string;
+}
+
+export interface AssetProfile {
+  price?: number;
+  priceChange24h?: number;
+  volume24h?: number;
+  marketCap?: number;
+  fdv?: number;
+  circulatingSupply?: number;
+  totalSupply?: number;
+  description?: string;
+  links?: AssetProfileLinks;
+}
+
+// ─── Risk (from ?include=risk) ────────────────────────────────────────────────
+
+export interface AssetRiskComponent {
+  score: number;
+  status: string;
+  hasData: boolean;
+}
+
+export interface AssetRisk {
+  marketScore: {
+    score: number;
+    grade: string;
+    label: string;
+    tone: "safe" | "warning" | "danger";
+    components: Record<string, AssetRiskComponent>;
+  };
+}
+
+// ─── Market entry (from ?include=markets) ────────────────────────────────────
 
 export interface MarketTokenRef {
   address: string;
@@ -88,18 +142,7 @@ export interface MarketEntry {
   uniqueWallet24hChangePercent: number;
 }
 
-export interface MarketsResult {
-  ok: boolean;
-  data: {
-    markets: MarketEntry[];
-    total: number;
-    offset: number;
-    limit: number;
-  };
-}
-
 // ─── Merged / flat token response ────────────────────────────────────────────
-// This is what the route returns after merging the three API calls.
 
 export interface TokenAssetResponse {
   // Identity
@@ -111,19 +154,19 @@ export interface TokenAssetResponse {
   symbols: string[];
   imageUrl: string;
 
-  // Aggregated market stats
+  // Stats
   stats: AssetStats;
-
-  // Canonical price source (e.g. CoinGecko)
   canonicalMarket: CanonicalMarket;
-
-  // The primary tradeable variant (e.g. wSOL for Solana)
   primaryVariant: AssetVariant;
 
-  // All variants grouped by type
+  // Variants grouped by kind
   variantGroups: VariantGroups;
 
-  // Live markets for this asset
+  // Profile & risk
+  profile: AssetProfile | null;
+  risk: AssetRisk | null;
+
+  // Markets
   markets: MarketEntry[];
   marketsTotal: number;
   marketsOffset: number;
