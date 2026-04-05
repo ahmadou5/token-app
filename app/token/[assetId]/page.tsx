@@ -21,6 +21,8 @@ import { ExpandableDescription } from "@/components/ExpandableDescription";
 import { BuyButton } from "@/components/BuyButton";
 import { VariantPicker } from "@/components/VariantPicker";
 import type { TokenAssetResponse, RawVariant } from "@/types/token.types";
+import { tokenRequest } from "@/lib/token";
+import { AssetsResolveResponse } from "@/types";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -401,6 +403,7 @@ export default function TokenDetailPage({
   const router = useRouter();
 
   const [data, setData] = useState<TokenAssetResponse | null>(null);
+  const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
 
@@ -424,10 +427,10 @@ export default function TokenDetailPage({
       try {
         const res = await fetch(`/api/getToken?assetId=${assetId}`);
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
-
+        const otherData = await tokenRequest.getAsset(assetId);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
-
+        setOther(otherData);
         setData(json);
         setVariants(flattenVariantGroups(json));
       } catch (e) {
@@ -447,8 +450,8 @@ export default function TokenDetailPage({
     return <PageSkeleton onBack={() => router.back()} />;
   }
 
-  const profile = data.profile;
-  const risk = data.risk;
+  const profile = other?.includes.profile?.data;
+  const risk = other?.includes.risk?.data;
 
   const price = profile?.price ?? data.stats.price ?? null;
   const change24h =
