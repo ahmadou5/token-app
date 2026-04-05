@@ -4,39 +4,33 @@ import { useState } from "react";
 import type { AssetMarket } from "@/types";
 import { fmtCompact } from "@/components/TokenCard";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtChange(n: number | null | undefined) {
-  if (n == null) return null;
-  return { value: n, label: `${n >= 0 ? "+" : ""}${n.toFixed(2)}%` };
+interface AssetToken {
+  symbol?: string;
+  icon?: string;
 }
 
-function truncateMint(mint: string) {
-  if (mint.length <= 10) return mint;
-  return `${mint?.slice(0, 4)}…${mint?.slice(-4)}`;
+interface ExtendedAssetMarket extends AssetMarket {
+  trades24h?: number;
+  trades24hChange?: number;
+  wallets24h?: number;
+  wallets24hChange?: number;
 }
 
-function hashString(value: string) {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash >>> 0;
+// ─── Safe helpers ─────────────────────────────────────────────────────────────
+
+function safeStr(s: unknown): string {
+  return s && typeof s === "string" ? s : "";
 }
 
-function deterministicRand(value: string) {
-  const h = hashString(value);
-  return (h % 100000) / 100000;
+function safeInitials(s: unknown): string {
+  const str = safeStr(s);
+  return str.length > 0 ? str.slice(0, 2).toUpperCase() : "??";
 }
 
-function fmtDeterministicChange(key: string, upMax: number, downMax: number) {
-  const dir = deterministicRand(`${key}-dir`) > 0.5 ? 1 : -1;
-  const magnitude =
-    dir > 0
-      ? deterministicRand(`${key}-up`) * upMax
-      : deterministicRand(`${key}-down`) * downMax;
-  return fmtChange(dir * magnitude);
+function truncateMint(mint: unknown): string {
+  const m = safeStr(mint);
+  if (m.length <= 10) return m;
+  return `${m.slice(0, 4)}…${m.slice(-4)}`;
 }
 
 // ─── Pair icon stack ──────────────────────────────────────────────────────────
@@ -47,56 +41,55 @@ function PairIcons({
   baseSymbol,
   quoteSymbol,
 }: {
-  baseIcon?: string;
-  quoteIcon?: string;
-  baseSymbol: string;
-  quoteSymbol: string;
+  baseIcon?: string | null;
+  quoteIcon?: string | null;
+  baseSymbol?: string | null;
+  quoteSymbol?: string | null;
 }) {
-  const initials = (s: string) => s.slice(0, 2).toUpperCase();
+  const bSym = safeStr(baseSymbol);
+  const qSym = safeStr(quoteSymbol);
+  const bInit = safeInitials(bSym);
+  const qInit = safeInitials(qSym);
 
   return (
     <div className="mkt-pair-icons">
-      {/* Base */}
       <div className="mkt-icon mkt-icon--base">
-        {baseIcon ? (
+        {baseIcon && typeof baseIcon === "string" ? (
           <img
             src={baseIcon}
-            alt={baseSymbol}
+            alt={bSym}
             className="mkt-icon__img"
             onError={(e) => {
               e.currentTarget.style.display = "none";
-              if (e.currentTarget.parentElement)
-                e.currentTarget.parentElement.textContent =
-                  initials(baseSymbol);
+              const p = e.currentTarget.parentElement;
+              if (p) p.textContent = bInit;
             }}
           />
         ) : (
-          initials(baseSymbol)
+          bInit
         )}
       </div>
-      {/* Quote */}
       <div className="mkt-icon mkt-icon--quote">
-        {quoteIcon ? (
+        {quoteIcon && typeof quoteIcon === "string" ? (
           <img
             src={quoteIcon}
-            alt={quoteSymbol}
+            alt={qSym}
             className="mkt-icon__img"
             onError={(e) => {
               e.currentTarget.style.display = "none";
-              if (e.currentTarget.parentElement)
-                e.currentTarget.parentElement.textContent =
-                  initials(quoteSymbol);
+              const p = e.currentTarget.parentElement;
+              if (p) p.textContent = qInit;
             }}
           />
         ) : (
-          initials(quoteSymbol)
+          qInit
         )}
       </div>
     </div>
   );
 }
 
-// ─── Sort indicator ───────────────────────────────────────────────────────────
+// ─── Sort ─────────────────────────────────────────────────────────────────────
 
 type SortKey = "liquidity" | "volume24h";
 type SortDir = "asc" | "desc";
@@ -130,7 +123,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -145,6 +138,9 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   const [sortKey, setSortKey] = useState<SortKey>("liquidity");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  // Guard: ensure markets is a valid array
+  const safeMarkets = Array.isArray(markets) ? markets.filter(Boolean) : [];
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
     else {
@@ -154,19 +150,20 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
     setPage(1);
   };
 
-  const sorted = [...markets].sort((a, b) => {
-    const va = a[sortKey] ?? 0;
-    const vb = b[sortKey] ?? 0;
+  const sorted = [...safeMarkets].sort((a, b) => {
+    const va = (a as Record<SortKey, number | undefined>)[sortKey] ?? 0;
+    const vb = (b as Record<SortKey, number | undefined>)[sortKey] ?? 0;
     return sortDir === "desc" ? vb - va : va - vb;
   });
 
-  const totalPages = Math.ceil(sorted.length / perPage);
-  const pageItems = sorted?.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const pageItems = sorted.slice((page - 1) * perPage, page * perPage);
+
+  if (safeMarkets.length === 0) return null;
 
   return (
     <section className="td-section">
       <h2 className="td-section__title">Markets</h2>
-
       <div className="mkt-table-wrap">
         {/* Header */}
         <div className="mkt-header">
@@ -191,96 +188,108 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
 
         {/* Rows */}
         {pageItems.map((mkt, i) => {
-          // Mock % changes — real API would supply these
-          const tradesChange = fmtDeterministicChange(
-            `${mkt.address}-trades`,
-            500,
-            100,
-          );
-          const walletsChange = fmtDeterministicChange(
-            `${mkt.address}-wallets`,
-            200,
-            100,
-          );
+          const base = mkt?.base ?? {};
+          const quote = mkt?.quote ?? {};
+          const bSym = safeStr((base as AssetToken).symbol);
+          const qSym = safeStr((quote as AssetToken).symbol);
+          const bIcon = (base as AssetToken).icon ?? null;
+          const qIcon = (quote as AssetToken).icon ?? null;
+          const source = safeStr(mkt?.source);
+          const addr = safeStr(mkt?.address);
 
           return (
-            <div key={`${mkt.address}-${i}`} className="mkt-row">
-              {/* Pair col */}
+            <div key={`${addr}-${i}`} className="mkt-row">
+              {/* Pair */}
               <div className="mkt-col--pair mkt-pair">
                 <PairIcons
-                  baseIcon={mkt.base.icon}
-                  quoteIcon={mkt.quote.icon}
-                  baseSymbol={mkt.base.symbol}
-                  quoteSymbol={mkt.quote.symbol}
+                  baseIcon={bIcon}
+                  quoteIcon={qIcon}
+                  baseSymbol={bSym}
+                  quoteSymbol={qSym}
                 />
                 <div className="mkt-pair__info">
                   <div className="mkt-pair__name">
-                    <span className="mkt-pair__base">{mkt.base.symbol}</span>
+                    <span className="mkt-pair__base">{bSym}</span>
                     <span className="mkt-pair__slash"> / </span>
-                    <span className="mkt-pair__quote">{mkt.quote.symbol}</span>
-                    {mkt.source && (
-                      <span className="mkt-pair__source">{mkt.source}</span>
+                    <span className="mkt-pair__quote">{qSym}</span>
+                    {source && (
+                      <span className="mkt-pair__source">{source}</span>
                     )}
                   </div>
-                  <div className="mkt-pair__addr">
-                    {truncateMint(mkt.address)}
-                    <svg
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      width="10"
-                      height="10"
-                      className="mkt-pair__ext"
-                    >
-                      <path
-                        d="M2 10L10 2M10 2H5M10 2v5"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
+                  {addr && (
+                    <div className="mkt-pair__addr">
+                      {truncateMint(addr)}
+                      <svg
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        width="10"
+                        height="10"
+                        className="mkt-pair__ext"
+                      >
+                        <path
+                          d="M2 10L10 2M10 2H5M10 2v5"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Liquidity */}
               <div className="mkt-col--liq mkt-num">
-                {fmtCompact(mkt.liquidity)}
+                {fmtCompact(mkt?.liquidity)}
               </div>
-
               {/* Volume */}
               <div className="mkt-col--vol mkt-num">
-                {fmtCompact(mkt.volume24h)}
+                {fmtCompact(mkt?.volume24h)}
               </div>
-
-              {/* 24h Trades */}
+              {/* Trades — use real field if available, fallback to — */}
               <div className="mkt-col--trades mkt-num-stack">
                 <span className="mkt-num">
-                  {Math.floor(
-                    deterministicRand(`${mkt.address}-trades`) * 10000,
-                  ).toLocaleString()}
+                  {(mkt as ExtendedAssetMarket)?.trades24h != null
+                    ? Number(
+                        (mkt as ExtendedAssetMarket).trades24h,
+                      ).toLocaleString()
+                    : "—"}
                 </span>
-                {tradesChange && (
+                {(mkt as ExtendedAssetMarket)?.trades24hChange != null && (
                   <span
-                    className={`mkt-pct ${tradesChange.value >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    className={`mkt-pct ${(mkt as ExtendedAssetMarket).trades24hChange! >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
                   >
-                    {tradesChange.label}
+                    {(mkt as ExtendedAssetMarket).trades24hChange! >= 0
+                      ? "+"
+                      : ""}
+                    {Number(
+                      (mkt as ExtendedAssetMarket).trades24hChange!,
+                    ).toFixed(2)}
+                    %
                   </span>
                 )}
               </div>
-
-              {/* 24h Wallets */}
+              {/* Wallets */}
               <div className="mkt-col--wallets mkt-num-stack">
                 <span className="mkt-num">
-                  {Math.floor(
-                    deterministicRand(`${mkt.address}-wallets`) * 1000,
-                  ).toLocaleString()}
+                  {(mkt as ExtendedAssetMarket)?.wallets24h != null
+                    ? Number(
+                        (mkt as ExtendedAssetMarket).wallets24h,
+                      ).toLocaleString()
+                    : "—"}
                 </span>
-                {walletsChange && (
+                {(mkt as ExtendedAssetMarket)?.wallets24hChange != null && (
                   <span
-                    className={`mkt-pct ${walletsChange.value >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    className={`mkt-pct ${(mkt as ExtendedAssetMarket).wallets24hChange! >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
                   >
-                    {walletsChange.label}
+                    {(mkt as ExtendedAssetMarket).wallets24hChange! >= 0
+                      ? "+"
+                      : ""}
+                    {Number(
+                      (mkt as ExtendedAssetMarket).wallets24hChange!,
+                    ).toFixed(2)}
+                    %
                   </span>
                 )}
               </div>
@@ -288,10 +297,10 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           );
         })}
 
-        {/* Pagination footer */}
+        {/* Footer */}
         <div className="mkt-footer">
           <span className="mkt-footer__info">
-            Showing {(page - 1) * perPage + 1}–
+            Showing {Math.min((page - 1) * perPage + 1, sorted.length)}–
             {Math.min(page * perPage, sorted.length)} of {sorted.length} markets
           </span>
           <div className="mkt-footer__controls">
