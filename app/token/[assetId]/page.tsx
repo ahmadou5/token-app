@@ -467,7 +467,7 @@ export default function TokenDetailPage({
           {/* Header */}
           <div className="td-header">
             <TokenAvatar
-              src={data.imageUrl || fallbackToken?.imageUrl}
+              src={fallbackToken?.imageUrl}
               name={data.name}
               size={52}
             />
