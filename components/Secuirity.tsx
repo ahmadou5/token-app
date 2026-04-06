@@ -50,32 +50,33 @@ function Gauge({
   tone: string;
 }) {
   const tone = resolveTone(rawTone);
-  const r = 40;
-  const cx = 60,
-    cy = 60;
+  const r = 42;
+  const cx = 64,
+    cy = 64;
   const circ = 2 * Math.PI * r;
   const half = circ / 2;
-  const fill = half * (score / 100);
+  const filled = half * (score / 100);
 
-  // Start at left (9 o'clock), fill clockwise toward right (3 o'clock)
-  const offset = -((circ * 3) / 4);
+  // offset = half → moves dash start from 3-o'clock to 9-o'clock (left)
+  // fill then grows clockwise left → right ✓
+  const offset = half;
 
   const colors = {
     safe: {
       stroke: "#16a34a",
-      track: "rgba(22,163,74,0.15)",
+      track: "rgba(22,163,74,0.18)",
       badge: "rgba(22,163,74,0.12)",
       text: "#16a34a",
     },
     warning: {
       stroke: "#f59e0b",
-      track: "rgba(245,158,11,0.15)",
+      track: "rgba(245,158,11,0.18)",
       badge: "rgba(245,158,11,0.12)",
-      text: "#f59e0b",
+      text: "#d97706",
     },
     danger: {
       stroke: "#dc2626",
-      track: "rgba(220,38,38,0.15)",
+      track: "rgba(220,38,38,0.18)",
       badge: "rgba(220,38,38,0.12)",
       text: "#dc2626",
     },
@@ -84,8 +85,12 @@ function Gauge({
   return (
     <div className="sec-gauge">
       <div className="sec-gauge__card">
-        <svg width="120" height="70" viewBox="0 0 120 70">
-          {/* Track */}
+        <svg
+          width="128"
+          height="72"
+          viewBox="0 0 128 72"
+          style={{ overflow: "visible" }}
+        >
           <circle
             cx={cx}
             cy={cy}
@@ -93,11 +98,10 @@ function Gauge({
             fill="none"
             stroke={colors.track}
             strokeWidth="10"
+            strokeLinecap="round"
             strokeDasharray={`${half} ${circ - half}`}
             strokeDashoffset={offset}
-            strokeLinecap="round"
           />
-          {/* Fill */}
           <circle
             cx={cx}
             cy={cy}
@@ -105,15 +109,15 @@ function Gauge({
             fill="none"
             stroke={colors.stroke}
             strokeWidth="10"
-            strokeDasharray={`${fill} ${circ - fill}`}
-            strokeDashoffset={offset}
             strokeLinecap="round"
+            strokeDasharray={`${filled} ${circ - filled}`}
+            strokeDashoffset={offset}
           />
           <text
             x={cx}
-            y={cy - 6}
+            y={cy - 10}
             textAnchor="middle"
-            fontSize="22"
+            fontSize="24"
             fontWeight="500"
             fill="var(--tc-text-primary)"
             fontFamily="var(--tc-font-mono)"
@@ -121,8 +125,8 @@ function Gauge({
             {score}
           </text>
           <text
-            x={cx + 18}
-            y={cy - 8}
+            x={cx + 19}
+            y={cy - 12}
             textAnchor="start"
             fontSize="10"
             fill="var(--tc-text-muted)"
@@ -132,7 +136,7 @@ function Gauge({
           </text>
           <text
             x={cx}
-            y={cy + 10}
+            y={cy + 6}
             textAnchor="middle"
             fontSize="9"
             fill="var(--tc-text-muted)"
