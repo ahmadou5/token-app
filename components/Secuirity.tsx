@@ -32,43 +32,43 @@ function LabelIcon({ tone, color }: { tone: string; color: string }) {
   );
 }
 
+// Map whatever the API sends → your three visual tones
+function resolveTone(tone: string): "safe" | "warning" | "danger" {
+  if (tone === "safe" || tone === "success" || tone === "info") return "safe";
+  if (tone === "warning") return "warning";
+  return "danger";
+}
+
 function Gauge({
   score,
   grade,
   label,
-  tone,
+  tone: rawTone,
 }: {
   score: number;
   grade: string;
   label: string;
-  tone: "safe" | "warning" | "danger";
+  tone: string; // accept any string from API
 }) {
+  const tone = resolveTone(rawTone); // normalize before use
   const pct = Math.min(1, Math.max(0, score / 100));
   const r = 50;
   const cx = 72;
   const cy = 68;
 
-  // Sweep from left to right OVER the top (counter-clockwise in math = clockwise in SVG)
-  // Start angle = 180° (left), End angle = 0° (right)
-  // fillAngle goes from 180° down to 0° as pct goes 0→1
-  const startAngle = Math.PI; // left point
-  const fillAngle = Math.PI * (1 - pct); // 0% → π (left), 100% → 0 (right)
+  const startAngle = Math.PI;
+  const fillAngle = Math.PI * (1 - pct);
 
-  const sx = cx + r * Math.cos(startAngle); // always left: cx - r
-  const sy = cy + r * Math.sin(startAngle); // always cy (sin(π) = 0)
-  const ex = cx + r; // always right: cx + r
+  const sx = cx + r * Math.cos(startAngle);
+  const sy = cy + r * Math.sin(startAngle);
+  const ex = cx + r;
   const ey = cy;
-
   const fx = cx + r * Math.cos(fillAngle);
   const fy = cy + r * Math.sin(fillAngle);
 
-  // largeArc=1 when fill covers more than half the semicircle (pct > 0.5)
   const largeArc = pct > 0.5 ? 1 : 0;
 
-  // Track: full semicircle left → right, sweep clockwise (flag=1), large arc (flag=1)
   const trackD = `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 1 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
-
-  // Fill: partial arc from left → fillEnd, same sweep direction
   const fillD =
     pct <= 0
       ? null
@@ -76,7 +76,6 @@ function Gauge({
         ? trackD
         : `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${fx.toFixed(2)} ${fy.toFixed(2)}`;
 
-  // Single source of truth for each tone — track is just opacity of same color
   const colors = {
     safe: {
       stroke: "#16a34a",
@@ -102,7 +101,6 @@ function Gauge({
     <div className="sec-gauge">
       <div className="sec-gauge__card">
         <svg viewBox="0 0 144 82" className="sec-gauge__svg">
-          {/* Track — always full semicircle, same color family as fill */}
           <path
             d={trackD}
             fill="none"
@@ -110,7 +108,6 @@ function Gauge({
             strokeWidth="10"
             strokeLinecap="round"
           />
-          {/* Fill — partial arc proportional to score */}
           {fillD && (
             <path
               d={fillD}
@@ -120,7 +117,6 @@ function Gauge({
               strokeLinecap="round"
             />
           )}
-          {/* Score */}
           <text
             x={cx}
             y={cy - 10}
@@ -132,7 +128,6 @@ function Gauge({
           >
             {score}
           </text>
-          {/* /100 */}
           <text
             x={cx + 20}
             y={cy - 12}
@@ -143,7 +138,6 @@ function Gauge({
           >
             /100
           </text>
-          {/* Grade */}
           <text
             x={cx}
             y={cy + 6}
