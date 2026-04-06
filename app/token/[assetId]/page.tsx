@@ -430,6 +430,7 @@ export default function TokenDetailPage({
         const otherData = await tokenRequest.getAsset(assetId);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
+        console.log("Loaded token data:", { json, otherData });
         setOther(otherData);
         setData(json);
         setVariants(flattenVariantGroups(json));
@@ -451,6 +452,7 @@ export default function TokenDetailPage({
   }
 
   const profile = other?.includes.profile?.data;
+
   const risk = other?.includes.risk?.data;
 
   const price = profile?.price ?? data.stats.price ?? null;
