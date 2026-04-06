@@ -38,7 +38,6 @@ function resolveTone(tone: string): "safe" | "warning" | "danger" {
   if (tone === "warning") return "warning";
   return "danger";
 }
-
 function Gauge({
   score,
   grade,
@@ -48,33 +47,34 @@ function Gauge({
   score: number;
   grade: string;
   label: string;
-  tone: string; // accept any string from API
+  tone: string;
 }) {
-  const tone = resolveTone(rawTone); // normalize before use
+  const tone = resolveTone(rawTone);
   const pct = Math.min(1, Math.max(0, score / 100));
+
   const r = 50;
   const cx = 72;
-  const cy = 68;
+  const cy = 70;
 
-  const startAngle = Math.PI;
-  const fillAngle = Math.PI * (1 - pct);
-
-  const sx = cx + r * Math.cos(startAngle);
-  const sy = cy + r * Math.sin(startAngle);
-  const ex = cx + r;
+  const sx = cx - r; // left point
+  const sy = cy;
+  const ex = cx + r; // right point
   const ey = cy;
+
+  const fillAngle = Math.PI * (1 - pct); // 0%→π(left), 50%→π/2(top), 100%→0(right)
   const fx = cx + r * Math.cos(fillAngle);
-  const fy = cy + r * Math.sin(fillAngle);
+  const fy = cy - r * Math.sin(fillAngle); // subtract: SVG y flipped
 
   const largeArc = pct > 0.5 ? 1 : 0;
 
-  const trackD = `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 1 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  // sweep-flag=0 = counter-clockwise = goes OVER the top from left
+  const trackD = `M ${sx} ${sy} A ${r} ${r} 0 1 0 ${ex} ${ey}`;
   const fillD =
     pct <= 0
       ? null
       : pct >= 1
         ? trackD
-        : `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${fx.toFixed(2)} ${fy.toFixed(2)}`;
+        : `M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 0 ${fx.toFixed(2)} ${fy.toFixed(2)}`;
 
   const colors = {
     safe: {
@@ -100,7 +100,8 @@ function Gauge({
   return (
     <div className="sec-gauge">
       <div className="sec-gauge__card">
-        <svg viewBox="0 0 144 82" className="sec-gauge__svg">
+        <svg viewBox="0 0 144 84" className="sec-gauge__svg">
+          {/* Track — full semicircle, dim */}
           <path
             d={trackD}
             fill="none"
@@ -108,6 +109,7 @@ function Gauge({
             strokeWidth="10"
             strokeLinecap="round"
           />
+          {/* Fill — proportional arc, vivid */}
           {fillD && (
             <path
               d={fillD}
