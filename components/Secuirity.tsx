@@ -54,11 +54,11 @@ function Gauge({
   const cx = 60,
     cy = 60;
   const circ = 2 * Math.PI * r;
-  const half = circ / 2; // only the top semicircle
-  const fill = half * (score / 100); // proportional fill
+  const half = circ / 2;
+  const fill = half * (score / 100);
 
-  // dashoffset = circ/4 rotates the start point to the left (9 o'clock)
-  const offset = circ / 4;
+  // Start at left (9 o'clock), fill clockwise toward right (3 o'clock)
+  const offset = -((circ * 3) / 4);
 
   const colors = {
     safe: {
@@ -85,7 +85,7 @@ function Gauge({
     <div className="sec-gauge">
       <div className="sec-gauge__card">
         <svg width="120" height="70" viewBox="0 0 120 70">
-          {/* Track — half circle, dimmed */}
+          {/* Track */}
           <circle
             cx={cx}
             cy={cy}
@@ -97,7 +97,7 @@ function Gauge({
             strokeDashoffset={offset}
             strokeLinecap="round"
           />
-          {/* Fill — proportional to score */}
+          {/* Fill */}
           <circle
             cx={cx}
             cy={cy}
