@@ -27,6 +27,7 @@ import { VariantPicker } from "@/components/VariantPicker";
 import type { TokenAssetResponse } from "@/types/token.types";
 import { tokenRequest } from "@/lib/token";
 import type { AssetsResolveResponse } from "@/types";
+import { useTokens } from "@/hooks/useToken";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -343,11 +344,13 @@ export default function TokenDetailPage({
 }) {
   const { assetId } = use(params);
   const router = useRouter();
+  const { tokens } = useTokens();
 
   const [data, setData] = useState<TokenAssetResponse | null>(null);
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setLoading] = useState(true);
+  const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
 
   const {
     candles,
@@ -463,7 +466,11 @@ export default function TokenDetailPage({
         <div className="td-main">
           {/* Header */}
           <div className="td-header">
-            <TokenAvatar src={data.imageUrl} name={data.name} size={52} />
+            <TokenAvatar
+              src={data.imageUrl || fallbackToken?.imageUrl}
+              name={data.name}
+              size={52}
+            />
             <div className="td-header__info">
               <div className="td-header__row">
                 <h1 className="td-header__name">{data.name ?? assetId}</h1>
