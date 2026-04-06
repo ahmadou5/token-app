@@ -50,31 +50,15 @@ function Gauge({
   tone: string;
 }) {
   const tone = resolveTone(rawTone);
-  const pct = Math.min(1, Math.max(0, score / 100));
+  const r = 40;
+  const cx = 60,
+    cy = 60;
+  const circ = 2 * Math.PI * r;
+  const half = circ / 2; // only the top semicircle
+  const fill = half * (score / 100); // proportional fill
 
-  const r = 50;
-  const cx = 72;
-  const cy = 70;
-
-  const sx = cx - r; // left point
-  const sy = cy;
-  const ex = cx + r; // right point
-  const ey = cy;
-
-  const fillAngle = Math.PI * (1 - pct); // 0%→π(left), 50%→π/2(top), 100%→0(right)
-  const fx = cx + r * Math.cos(fillAngle);
-  const fy = cy - r * Math.sin(fillAngle); // subtract: SVG y flipped
-
-  const largeArc = pct > 0.5 ? 1 : 0;
-
-  // sweep-flag=0 = counter-clockwise = goes OVER the top from left
-  const trackD = `M ${sx} ${sy} A ${r} ${r} 0 1 0 ${ex} ${ey}`;
-  const fillD =
-    pct <= 0
-      ? null
-      : pct >= 1
-        ? trackD
-        : `M ${sx} ${sy} A ${r} ${r} 0 ${largeArc} 0 ${fx.toFixed(2)} ${fy.toFixed(2)}`;
+  // dashoffset = circ/4 rotates the start point to the left (9 o'clock)
+  const offset = circ / 4;
 
   const colors = {
     safe: {
@@ -100,30 +84,36 @@ function Gauge({
   return (
     <div className="sec-gauge">
       <div className="sec-gauge__card">
-        <svg viewBox="0 0 144 84" className="sec-gauge__svg">
-          {/* Track — full semicircle, dim */}
-          <path
-            d={trackD}
+        <svg width="120" height="70" viewBox="0 0 120 70">
+          {/* Track — half circle, dimmed */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
             fill="none"
             stroke={colors.track}
             strokeWidth="10"
+            strokeDasharray={`${half} ${circ - half}`}
+            strokeDashoffset={offset}
             strokeLinecap="round"
           />
-          {/* Fill — proportional arc, vivid */}
-          {fillD && (
-            <path
-              d={fillD}
-              fill="none"
-              stroke={colors.stroke}
-              strokeWidth="10"
-              strokeLinecap="round"
-            />
-          )}
+          {/* Fill — proportional to score */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={colors.stroke}
+            strokeWidth="10"
+            strokeDasharray={`${fill} ${circ - fill}`}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
           <text
             x={cx}
-            y={cy - 10}
+            y={cy - 6}
             textAnchor="middle"
-            fontSize="26"
+            fontSize="22"
             fontWeight="500"
             fill="var(--tc-text-primary)"
             fontFamily="var(--tc-font-mono)"
@@ -131,10 +121,10 @@ function Gauge({
             {score}
           </text>
           <text
-            x={cx + 20}
-            y={cy - 12}
+            x={cx + 18}
+            y={cy - 8}
             textAnchor="start"
-            fontSize="11"
+            fontSize="10"
             fill="var(--tc-text-muted)"
             fontFamily="var(--tc-font-mono)"
           >
@@ -142,9 +132,9 @@ function Gauge({
           </text>
           <text
             x={cx}
-            y={cy + 6}
+            y={cy + 10}
             textAnchor="middle"
-            fontSize="10"
+            fontSize="9"
             fill="var(--tc-text-muted)"
             fontFamily="var(--tc-font-sans)"
           >
