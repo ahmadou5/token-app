@@ -425,9 +425,12 @@ export default function TokenDetailPage({
 
     async function load() {
       try {
-        const res = await fetch(`/api/getToken?assetId=${assetId}`);
+        const [res, otherData] = await Promise.all([
+          fetch(`/api/getToken?assetId=${assetId}`),
+          tokenRequest.getAsset(assetId, true),
+        ]);
+
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
-        const otherData = await tokenRequest.getAsset(assetId);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
         console.log("Loaded token data:", { json, otherData });
