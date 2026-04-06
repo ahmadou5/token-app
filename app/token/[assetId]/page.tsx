@@ -473,7 +473,7 @@ export default function TokenDetailPage({
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
 
-  const imageUrl = data.markets[0]?.base?.icon ?? data.imageUrl ?? null;
+  const imageUrl = data.imageUrl ?? null;
 
   return (
     <div className="td-page">

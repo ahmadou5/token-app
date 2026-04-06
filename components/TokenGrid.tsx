@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SearchModal, SearchTrigger } from "@/components/SearcModal";
 import type { AnyToken } from "@/hooks/useToken";
 import type { ViewMode } from "@/components/TokenCard";
+import { useSearch } from "@/hooks/useSearch";
 
 function GridIcon() {
   return (
@@ -132,7 +133,6 @@ export interface TokenGridProps {
 
 export function TokenGrid({ onTokenClick }: TokenGridProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const {
     filtered,
@@ -146,128 +146,102 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
   } = useTokens();
 
   return (
-    <div className="tg">
+    <div className="tg ">
       {/* Search modal */}
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* Top nav */}
-      <div className="tg-topbar">
-        <div className="tg-topbar__left">
-          <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
-            <circle
-              cx="10"
-              cy="10"
-              r="8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M6 10h8M10 6v8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="tg-topbar__brand">Tokens</span>
+      <div className="py-10 px-8">
+        {/* Hero */}
+        <div className="tg-hero px-80">
+          <h1 className="tg-hero__title">Tokens on Solana</h1>
+          <p className="tg-hero__sub">
+            Real-time prices, liquidity &amp; market data
+          </p>
         </div>
-        <div className="tg-topbar__center">
-          <SearchTrigger
-            onClick={() => setSearchOpen(true)}
-            placeholder="Find tokens..."
-          />
-        </div>
-        <div className="tg-topbar__right">
-          <ThemeToggle />
-        </div>
-      </div>
 
-      {/* Hero */}
-      <div className="tg-hero">
-        <h1 className="tg-hero__title">Tokens on Solana</h1>
-        <p className="tg-hero__sub">
-          Real-time prices, liquidity &amp; market data
-        </p>
-      </div>
-
-      {/* Controls */}
-      {!isLoading && !error && (
-        <div className="tg-controls">
-          <div className="tg-controls__tabs">
-            <CategoryTabs
-              categories={categories}
-              active={activeCategory}
-              onChange={setActiveCategory}
-            />
+        {/* Controls */}
+        {!isLoading && !error && (
+          <div className="tg-controls">
+            <div className="tg-controls__tabs">
+              <CategoryTabs
+                categories={categories}
+                active={activeCategory}
+                onChange={setActiveCategory}
+              />
+            </div>
+            <div className="tg-controls__view">
+              <button
+                className={`tg-view-btn ${viewMode === "grid" ? "tg-view-btn--active" : ""}`}
+                onClick={() => setViewMode("grid")}
+                aria-label="Grid view"
+              >
+                <GridIcon />
+              </button>
+              <button
+                className={`tg-view-btn ${viewMode === "list" ? "tg-view-btn--active" : ""}`}
+                onClick={() => setViewMode("list")}
+                aria-label="List view"
+              >
+                <ListIcon />
+              </button>
+            </div>
           </div>
-          <div className="tg-controls__view">
-            <button
-              className={`tg-view-btn ${viewMode === "grid" ? "tg-view-btn--active" : ""}`}
-              onClick={() => setViewMode("grid")}
-              aria-label="Grid view"
-            >
-              <GridIcon />
-            </button>
-            <button
-              className={`tg-view-btn ${viewMode === "list" ? "tg-view-btn--active" : ""}`}
-              onClick={() => setViewMode("list")}
-              aria-label="List view"
-            >
-              <ListIcon />
+        )}
+
+        {error && (
+          <div className="tg-error">
+            <p>Failed to load tokens.</p>
+            <button className="tg-error__retry" onClick={refetch}>
+              Retry
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="tg-error">
-          <p>Failed to load tokens.</p>
-          <button className="tg-error__retry" onClick={refetch}>
-            Retry
-          </button>
-        </div>
-      )}
+        {!isLoading && !error && viewMode === "list" && filtered.length > 0 && (
+          <ListHeader />
+        )}
 
-      {!isLoading && !error && viewMode === "list" && filtered.length > 0 && (
-        <ListHeader />
-      )}
-
-      {isLoading ? (
-        <div className={viewMode === "grid" ? "tg-grid" : "tg-list"}>
-          {Array.from({ length: 8 }).map((_, i) =>
-            viewMode === "grid" ? (
-              <SkeletonCard key={i} />
-            ) : (
-              <SkeletonRow key={i} />
-            ),
-          )}
-        </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState query={searchQuery} />
-      ) : viewMode === "grid" ? (
-        <div className="tg-grid">
-          {filtered.map((token, i) => (
-            <TokenCard
-              key={token.assetId ?? i}
-              token={token}
-              onClick={onTokenClick}
-              index={i}
-              viewMode="grid"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="tg-list">
-          {filtered.map((token, i) => (
-            <TokenCard
-              key={token.assetId ?? i}
-              token={token}
-              onClick={onTokenClick}
-              index={i}
-              viewMode="list"
-            />
-          ))}
-        </div>
-      )}
+        {isLoading ? (
+          <div
+            className={
+              viewMode === "grid" ? "tg-grid ml-auto mr-auto" : "tg-list"
+            }
+          >
+            {Array.from({ length: 14 }).map((_, i) =>
+              viewMode === "grid" ? (
+                <SkeletonCard key={i} />
+              ) : (
+                <SkeletonRow key={i} />
+              ),
+            )}
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState query={searchQuery} />
+        ) : viewMode === "grid" ? (
+          <div className="tg-grid">
+            {filtered.map((token, i) => (
+              <TokenCard
+                key={token.assetId ?? i}
+                token={token}
+                onClick={onTokenClick}
+                index={i}
+                viewMode="grid"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="tg-list">
+            {filtered.map((token, i) => (
+              <TokenCard
+                key={token.assetId ?? i}
+                token={token}
+                onClick={onTokenClick}
+                index={i}
+                viewMode="list"
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
