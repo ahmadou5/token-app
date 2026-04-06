@@ -149,7 +149,7 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
     <div className="tg ">
       {/* Search modal */}
 
-      <div className="py-10 px-8">
+      <div className="py-10 lg:px-8 px-2">
         {/* Hero */}
         <div className="tg-hero px-80">
           <h1 className="tg-hero__title">Tokens on Solana</h1>
