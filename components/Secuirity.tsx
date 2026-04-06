@@ -32,7 +32,6 @@ function LabelIcon({ tone, color }: { tone: string; color: string }) {
   );
 }
 
-// ─── Gauge ────────────────────────────────────────────────────────────────────
 function Gauge({
   score,
   grade,
@@ -45,33 +44,33 @@ function Gauge({
   tone: "safe" | "warning" | "danger";
 }) {
   const pct = Math.min(1, Math.max(0, score / 100));
-  const r = 54;
+  const r = 48;
   const cx = 72;
-  const cy = 76; // shift center down so arc sits in viewBox
+  const cy = 72;
 
-  // Fixed start (left) and end (right) points of the semicircle
-  const startX = cx - r;
-  const startY = cy;
-  const endX = cx + r;
-  const endY = cy;
+  // Gauge sweeps from left (180°) to right (0°) over the top
+  // We compute in standard math angles: 180° = left, 0° = right
+  const toXY = (deg: number) => ({
+    x: cx + r * Math.cos((deg * Math.PI) / 180),
+    y: cy - r * Math.sin((deg * Math.PI) / 180), // subtract because SVG y is flipped
+  });
 
-  // Fill endpoint — sweep from 180° to 0° clockwise (left to right)
-  const angleDeg = 180 - pct * 180; // 180 = left, 0 = right
-  const angleRad = (angleDeg * Math.PI) / 180;
-  const fillX = cx + r * Math.cos(angleRad);
-  const fillY = cy + r * Math.sin(angleRad); // sin is negative above center, but cy is bottom
+  const start = toXY(180); // left endpoint
+  const end = toXY(0); // right endpoint
+  const fillEnd = toXY(pct * 180); // 0% = left (180°→0°), 100% = right (0°)
 
-  // largeArc: 1 when the arc covers more than half the semicircle
+  // In SVG arc: sweep-flag=1 = clockwise
+  // Our arc goes left → over the top → right = clockwise in SVG coords
   const largeArc = pct > 0.5 ? 1 : 0;
 
-  const trackD = `M ${startX} ${startY} A ${r} ${r} 0 1 1 ${endX} ${endY}`;
-  // sweep-flag=0 means counter-clockwise — correct for left→right top arc
+  const trackD = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 1 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+
   const fillD =
     pct <= 0
-      ? ""
+      ? null
       : pct >= 1
-        ? trackD // exactly full — reuse track path to avoid degenerate arc
-        : `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${fillX.toFixed(2)} ${fillY.toFixed(2)}`;
+        ? trackD
+        : `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${fillEnd.x.toFixed(2)} ${fillEnd.y.toFixed(2)}`;
 
   const color =
     tone === "safe"
@@ -97,13 +96,13 @@ function Gauge({
   return (
     <div className="sec-gauge">
       <div className="sec-gauge__card">
-        <svg viewBox="0 0 144 90" className="sec-gauge__svg">
-          {/* Track */}
+        <svg viewBox="0 0 144 86" className="sec-gauge__svg">
+          {/* Track (full semicircle) */}
           <path
             d={trackD}
             fill="none"
             stroke={trackColor}
-            strokeWidth="12"
+            strokeWidth="10"
             strokeLinecap="round"
           />
           {/* Fill */}
@@ -112,16 +111,16 @@ function Gauge({
               d={fillD}
               fill="none"
               stroke={color}
-              strokeWidth="12"
+              strokeWidth="10"
               strokeLinecap="round"
             />
           )}
-          {/* Score number */}
+          {/* Score */}
           <text
             x={cx}
-            y={cy - 14}
+            y={cy - 6}
             textAnchor="middle"
-            fontSize="28"
+            fontSize="26"
             fontWeight="500"
             fill="var(--tc-text-primary)"
             fontFamily="var(--tc-font-mono)"
@@ -130,10 +129,10 @@ function Gauge({
           </text>
           {/* /100 */}
           <text
-            x={cx + 26}
-            y={cy - 16}
+            x={cx + 22}
+            y={cy - 8}
             textAnchor="start"
-            fontSize="13"
+            fontSize="12"
             fill="var(--tc-text-muted)"
             fontFamily="var(--tc-font-mono)"
           >
@@ -142,7 +141,7 @@ function Gauge({
           {/* Grade */}
           <text
             x={cx}
-            y={cy - 2}
+            y={cy + 10}
             textAnchor="middle"
             fontSize="10"
             fill="var(--tc-text-muted)"
