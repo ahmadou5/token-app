@@ -1,7 +1,5 @@
 // ─── Shared primitives ───────────────────────────────────────────────────────
 
-import { VariantGroups } from ".";
-
 export interface MarketStats {
   price: number;
   liquidity: number;
@@ -68,7 +66,39 @@ export interface RawVariant {
   label?: string;
 }
 
+export interface RawVariantMarket {
+  price: number | null;
+  liquidity: number | null;
+  volume24hUSD: number | null;
+  marketCap: number | null;
+  priceChange24hPercent: number | null;
+  priceChange1hPercent: number | null;
+  decimals: number | null;
+  logoURI: string | null;
+  lastFetchedAt: number | null;
+}
+
 // ─── Variant groups (built by grouping flat variants[] by kind) ───────────────
+export interface RawVariant {
+  variantId: string;
+  mint: string;
+  kind: VariantKind;
+  trustTier: TrustTier;
+  tags: string[];
+  issuer?: string;
+  issuerUrl?: string;
+  label?: string;
+  symbol?: string;
+  name?: string;
+  market: RawVariantMarket | null;
+}
+
+export interface VariantGroups {
+  spot: RawVariant[];
+  yield: RawVariant[];
+  etf: RawVariant[];
+  leveraged: RawVariant[];
+}
 
 // ─── Profile (from ?include=profile) ─────────────────────────────────────────
 
