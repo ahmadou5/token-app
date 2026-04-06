@@ -1,5 +1,7 @@
 // ─── Shared primitives ───────────────────────────────────────────────────────
 
+import { VariantGroups } from ".";
+
 export interface MarketStats {
   price: number;
   liquidity: number;
@@ -67,13 +69,6 @@ export interface RawVariant {
 }
 
 // ─── Variant groups (built by grouping flat variants[] by kind) ───────────────
-
-export interface VariantGroups {
-  spot: RawVariant[];
-  etf: RawVariant[];
-  yield: RawVariant[];
-  leveraged: RawVariant[];
-}
 
 // ─── Profile (from ?include=profile) ─────────────────────────────────────────
 

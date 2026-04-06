@@ -16,21 +16,21 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MarketsSection } from "@/components/Market";
 import { SecuritySection } from "@/components/Secuirity";
-import { VariantsSection, type VariantRow } from "@/components/Variant";
+import {
+  VariantsSection,
+  flattenVariantGroups,
+  type VariantRow,
+} from "@/components/Variant";
 import { ExpandableDescription } from "@/components/ExpandableDescription";
 import { BuyButton } from "@/components/BuyButton";
 import { VariantPicker } from "@/components/VariantPicker";
-import type { TokenAssetResponse, RawVariant } from "@/types/token.types";
+import type { TokenAssetResponse } from "@/types/token.types";
 import { tokenRequest } from "@/lib/token";
-import { AssetsResolveResponse } from "@/types";
+import type { AssetsResolveResponse } from "@/types";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
-}
-
-function safe(s: unknown): string {
-  return s && typeof s === "string" ? s : "";
 }
 
 // ─── OHLCV Chart ──────────────────────────────────────────────────────────────
@@ -93,8 +93,13 @@ function OHLCVChart({
       };
     });
 
-    const positive = closes[closes.length - 1] >= closes[0];
-    return { path, areaPath, yLabels, xLabels, positive };
+    return {
+      path,
+      areaPath,
+      yLabels,
+      xLabels,
+      positive: closes[closes.length - 1] >= closes[0],
+    };
   }, [candles]);
 
   if (isLoading)
@@ -223,53 +228,6 @@ function ChartControls({
   );
 }
 
-// ─── Build VariantRow from a RawVariant ───────────────────────────────────────
-
-function buildVariantRow(
-  v: RawVariant,
-  assetName?: string | null,
-  assetSymbol?: string | null,
-): VariantRow | null {
-  if (!v || typeof v !== "object") return null;
-  const mint = safe(v.mint);
-  if (!mint) return null;
-
-  return {
-    name: safe(v.label ?? assetName),
-    symbol: safe(assetSymbol),
-    mint,
-    trustTier: safe(v.trustTier ?? "unknown"),
-    price: null, // RawVariant has no market data — variants endpoint is lightweight
-    liquidity: null,
-    volume24h: null,
-    kind: safe(v.kind ?? "spot"),
-    tags: Array.isArray(v.tags) ? v.tags : [],
-    issuer: safe(v.issuer),
-    logoURI: null,
-  };
-}
-
-// ─── Flatten variantGroups into a single VariantRow[] ────────────────────────
-
-function flattenVariantGroups(data: TokenAssetResponse): VariantRow[] {
-  const { variantGroups, name, symbol } = data;
-  const rows: VariantRow[] = [];
-
-  const allVariants = [
-    ...variantGroups.spot,
-    ...variantGroups.yield,
-    ...variantGroups.etf,
-    ...variantGroups.leveraged,
-  ];
-
-  for (const v of allVariants) {
-    const row = buildVariantRow(v, name, symbol);
-    if (row) rows.push(row);
-  }
-
-  return rows;
-}
-
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function PageSkeleton({ onBack }: { onBack: () => void }) {
@@ -322,26 +280,10 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
                 />
               </div>
             </div>
-            <div
-              className="td-skel td-skel--line"
-              style={{ width: 100, height: 36, borderRadius: 20 }}
-            />
           </div>
           <div className="td-chart-section" style={{ marginBottom: 24 }}>
             <div className="td-chart td-chart--loading">
               <div className="td-chart__shimmer" />
-            </div>
-            <div
-              className="td-chart-controls"
-              style={{ marginTop: 16, gap: 6 }}
-            >
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="td-skel td-skel--line"
-                  style={{ width: 40, height: 28, borderRadius: 6 }}
-                />
-              ))}
             </div>
           </div>
           <div
@@ -392,7 +334,7 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function TokenDetailPage({
   params,
@@ -405,7 +347,7 @@ export default function TokenDetailPage({
   const [data, setData] = useState<TokenAssetResponse | null>(null);
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
-  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [isLoadingPage, setLoading] = useState(true);
 
   const {
     candles,
@@ -417,8 +359,9 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
-    setIsLoadingPage(true);
+    setLoading(true);
     setData(null);
+    setOther(null);
     setVariants([]);
 
     let cancelled = false;
@@ -429,18 +372,24 @@ export default function TokenDetailPage({
           fetch(`/api/getToken?assetId=${assetId}`),
           tokenRequest.getAsset(assetId, true),
         ]);
-
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
-        console.log("Loaded token data:", { json, otherData });
-        setOther(otherData);
+
         setData(json);
-        setVariants(flattenVariantGroups(json));
+        setOther(otherData);
+
+        // ── Build variants from variantGroups — includes full market data ──
+        const rows = flattenVariantGroups(
+          json.variantGroups,
+          json.name,
+          json.symbol,
+        );
+        setVariants(rows);
       } catch (e) {
         console.error("[TokenDetailPage] Failed to load:", e);
       } finally {
-        if (!cancelled) setIsLoadingPage(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -454,9 +403,8 @@ export default function TokenDetailPage({
     return <PageSkeleton onBack={() => router.back()} />;
   }
 
-  const profile = other?.includes.profile?.data;
-
-  const risk = other?.includes.risk?.data;
+  const profile = other?.includes?.profile?.data ?? null;
+  const risk = other?.includes?.risk?.data ?? null;
 
   const price = profile?.price ?? data.stats.price ?? null;
   const change24h =
@@ -477,8 +425,6 @@ export default function TokenDetailPage({
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
-
-  const imageUrl = data.imageUrl ?? null;
 
   return (
     <div className="td-page">
@@ -514,11 +460,10 @@ export default function TokenDetailPage({
       </div>
 
       <div className="td-layout">
-        {/* ── Main ── */}
         <div className="td-main">
-          {/* Token header */}
+          {/* Header */}
           <div className="td-header">
-            <TokenAvatar src={imageUrl} name={data.name} size={52} />
+            <TokenAvatar src={data.imageUrl} name={data.name} size={52} />
             <div className="td-header__info">
               <div className="td-header__row">
                 <h1 className="td-header__name">{data.name ?? assetId}</h1>
@@ -732,7 +677,7 @@ export default function TokenDetailPage({
           )}
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside className="td-sidebar">
           <BuyButton tokenName={data.name} tokenSymbol={data.symbol} />
 

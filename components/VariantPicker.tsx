@@ -9,6 +9,18 @@ function safe(str: string | null | undefined, fallback = "") {
   return str && typeof str === "string" ? str : fallback;
 }
 
+function isYield(row: VariantRow): boolean {
+  const tags = Array.isArray(row.tags) ? row.tags : [];
+  return (
+    row.kind === "yield" ||
+    row.kind === "lst" ||
+    tags.some(
+      (t) =>
+        typeof t === "string" && (t.includes("lst") || t.includes("yield")),
+    )
+  );
+}
+
 function VariantGroup({
   title,
   rows,
@@ -25,9 +37,8 @@ function VariantGroup({
       {rows.map((row, i) => {
         const sym = safe(row?.symbol, "?");
         const name = safe(row?.name, sym) || sym;
-        const initials = sym.slice(0, 2).toUpperCase() || "??";
+        const initials = sym.length > 0 ? sym.slice(0, 2).toUpperCase() : "??";
         const logoURI = row?.logoURI;
-
         return (
           <div
             key={`${safe(row?.mint)}-${i}`}
@@ -53,7 +64,9 @@ function VariantGroup({
               <span className="vpick-row__name">{name}</span>
               <span className="vpick-row__sym">${sym}</span>
             </div>
-            <div className="vpick-row__liq">{fmtCompact(row?.liquidity)}</div>
+            <div className="vpick-row__liq">
+              {row?.liquidity != null ? fmtCompact(row.liquidity) : "—"}
+            </div>
             <svg
               viewBox="0 0 12 12"
               fill="none"
@@ -92,20 +105,12 @@ export function VariantPicker({
   const ref = useRef<HTMLDivElement>(null);
 
   const safeVariants = Array.isArray(variants) ? variants.filter(Boolean) : [];
-  const tags = (row: VariantRow) => (Array.isArray(row?.tags) ? row.tags : []);
-
-  const spotRows = safeVariants.filter(
-    (v) =>
-      v.kind !== "yield" &&
-      !tags(v).includes("yield") &&
-      !tags(v).includes("lst"),
-  );
-  const yieldRows = safeVariants.filter(
-    (v) =>
-      v.kind === "yield" ||
-      tags(v).includes("yield") ||
-      tags(v).includes("lst"),
-  );
+  const nativeRows = safeVariants
+    .filter((v) => !isYield(v))
+    .sort((a, b) => (b.liquidity ?? 0) - (a.liquidity ?? 0));
+  const yieldRows = safeVariants
+    .filter((v) => isYield(v))
+    .sort((a, b) => (b.liquidity ?? 0) - (a.liquidity ?? 0));
 
   const count = safeVariants.length;
   const label = count > 1 ? `${count}+ VARIANTS` : `${count} VARIANT`;
@@ -157,7 +162,7 @@ export function VariantPicker({
           <div className="vpick-dropdown__list">
             <VariantGroup
               title="Native"
-              rows={spotRows}
+              rows={nativeRows}
               onSelect={handleSelect}
             />
             <VariantGroup

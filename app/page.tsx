@@ -15,7 +15,7 @@ export default function Home() {
     <div className="w-auto">
       <Navbar />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <div className="max-w-7xl tg ml-auto mr-auto">
+      <div className="lg:max-w-7xl w-[98%] tg ml-auto mr-auto">
         <TokenGrid onTokenClick={(id) => handleNavigate(id.assetId)} />
       </div>
     </div>

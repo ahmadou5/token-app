@@ -200,3 +200,86 @@ export interface AssetMarket {
   base: { symbol: string; icon?: string };
   quote: { symbol: string; icon?: string };
 }
+
+// Matches the actual variantGroups API response structure
+export interface RawVariantMarket {
+  price: number | null;
+  liquidity: number | null;
+  volume24hUSD: number | null;
+  marketCap: number | null;
+  priceChange24hPercent: number | null;
+  priceChange1hPercent: number | null;
+  decimals: number | null;
+  logoURI: string | null;
+  lastFetchedAt: number | null;
+}
+
+export interface RawVariant {
+  variantId: string;
+  mint: string;
+  kind: "native" | "yield" | "spot" | "etf" | "leveraged" | string;
+  trustTier: string;
+  tags: string[];
+  issuer?: string;
+  issuerUrl?: string;
+  label?: string;
+  symbol?: string;
+  name?: string;
+  market: RawVariantMarket | null;
+}
+
+export interface VariantGroups {
+  spot: RawVariant[];
+  yield: RawVariant[];
+  etf: RawVariant[];
+  leveraged: RawVariant[];
+}
+
+export interface TokenStats {
+  price: number | null;
+  liquidity: number | null;
+  volume24hUSD: number | null;
+  marketCap: number | null;
+  priceChange24hPercent: number | null;
+  priceChange1hPercent: number | null;
+}
+
+export interface TokenPrimaryVariant {
+  variantId: string;
+  mint: string;
+  kind: string;
+  trustTier: string;
+  tags: string[];
+  issuer?: string;
+  symbol?: string;
+  name?: string;
+  market: RawVariantMarket | null;
+}
+
+export interface AssetMarket {
+  address: string;
+  name: string;
+  price: number;
+  liquidity: number;
+  volume24h: number;
+  source: string;
+  base: { symbol: string; icon?: string };
+  quote: { symbol: string; icon?: string };
+  trades24h?: number;
+  trades24hChange?: number;
+  wallets24h?: number;
+  wallets24hChange?: number;
+}
+
+export interface TokenAssetResponse {
+  assetId: string;
+  name: string;
+  symbol: string;
+  category: string;
+  imageUrl: string | null;
+  stats: TokenStats;
+  primaryVariant: TokenPrimaryVariant | null;
+  variantGroups: VariantGroups;
+  markets: AssetMarket[];
+  marketsTotal: number;
+}
