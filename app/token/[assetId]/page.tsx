@@ -1,12 +1,8 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useOHLCV,
-  type OHLCVInterval,
-  type OHLCVTimeframe,
-} from "@/hooks/useOHLCV";
+import { useOHLCV, type OHLCVTimeframe } from "@/hooks/useOHLCV";
 import {
   TokenAvatar,
   ChangeChip,
@@ -34,7 +30,24 @@ function fmtPct(n: number | null | undefined) {
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
 
+function fmtVolTooltip(n: number | null | undefined): string {
+  if (n == null) return "—";
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
+  return `$${n.toFixed(2)}`;
+}
+
 // ─── OHLCV Chart ──────────────────────────────────────────────────────────────
+
+interface TooltipState {
+  x: number;
+  y: number;
+  price: number;
+  volume: number;
+  time: number;
+  visible: boolean;
+}
 
 function OHLCVChart({
   candles,
@@ -46,6 +59,26 @@ function OHLCVChart({
   const W = 800;
   const H = 220;
   const PAD = { top: 16, right: 16, bottom: 32, left: 56 };
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    x: 0,
+    y: 0,
+    price: 0,
+    volume: 0,
+    time: 0,
+    visible: false,
+  });
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && candles.length > 1) {
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimated(true));
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [isLoading, candles.length]); // Much simpler!
 
   const derived = useMemo(() => {
     const clean = (candles ?? []).filter(
@@ -60,12 +93,13 @@ function OHLCVChart({
     const iW = W - PAD.left - PAD.right;
     const iH = H - PAD.top - PAD.bottom;
 
-    const pts = closes.map(
-      (v, i) =>
+    const pts = clean.map(
+      (c, i) =>
         [
-          PAD.left + (i / (closes.length - 1)) * iW,
-          PAD.top + (1 - (v - minVal) / range) * iH,
-        ] as [number, number],
+          PAD.left + (i / (clean.length - 1)) * iW,
+          PAD.top + (1 - (c.close - minVal) / range) * iH,
+          c,
+        ] as [number, number, typeof c],
     );
 
     const path = pts
@@ -73,8 +107,16 @@ function OHLCVChart({
         ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`,
       )
       .join(" ");
+
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
+
+    // Approximate path length for stroke-dasharray animation
+    const pathLen = pts.reduce((acc, pt, i) => {
+      if (i === 0) return 0;
+      const prev = pts[i - 1];
+      return acc + Math.hypot(pt[0] - prev[0], pt[1] - prev[1]);
+    }, 0);
 
     const steps = 4;
     const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
@@ -94,44 +136,202 @@ function OHLCVChart({
       };
     });
 
+    const positive = closes[closes.length - 1] >= closes[0];
+    const pulsePt = pts[pts.length - 1];
+
     return {
       path,
       areaPath,
+      pathLen,
       yLabels,
       xLabels,
-      positive: closes[closes.length - 1] >= closes[0],
+      positive,
+      pulsePt,
+      pts,
+      iW,
     };
   }, [candles]);
 
-  if (isLoading)
+  // ── Tooltip mouse/touch handler ──────────────────────────────────────────
+  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (!derived || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const rawX = (e.clientX - rect.left) * scaleX;
+    const clampedX = Math.max(PAD.left, Math.min(W - PAD.right, rawX));
+
+    // Find nearest candle by x
+    const iW = W - PAD.left - PAD.right;
+    const ratio = (clampedX - PAD.left) / iW;
+    const clean = (candles ?? []).filter(
+      (c) => c && typeof c.close === "number" && isFinite(c.close),
+    );
+    const idx = Math.round(ratio * (clean.length - 1));
+    const candle = clean[Math.max(0, Math.min(idx, clean.length - 1))];
+    const pt = derived.pts[Math.max(0, Math.min(idx, derived.pts.length - 1))];
+
+    setTooltip({
+      x: pt[0],
+      y: pt[1],
+      price: candle.close,
+      volume: candle.volume,
+      time: candle.time,
+      visible: true,
+    });
+  }
+
+  function handlePointerLeave() {
+    setTooltip((t) => ({ ...t, visible: false }));
+  }
+
+  // ── Loading skeleton ─────────────────────────────────────────────────────
+  if (isLoading) {
     return (
       <div className="td-chart td-chart--loading">
-        <div className="td-chart__shimmer" />
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="td-chart__svg"
+          aria-hidden
+        >
+          {/* Shimmering fake bars */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const bH = 40 + Math.sin(i * 1.3) * 30 + 50;
+            const x = PAD.left + (i / 11) * (W - PAD.left - PAD.right);
+            return (
+              <rect
+                key={i}
+                x={x - 16}
+                y={H - PAD.bottom - bH}
+                width={28}
+                height={bH}
+                rx="4"
+                fill="var(--tc-chart-skel)"
+                className="td-chart__skel-bar"
+                style={{ animationDelay: `${i * 80}ms` }}
+              />
+            );
+          })}
+          {/* Shimmering wave line */}
+          <polyline
+            points={Array.from({ length: 20 }, (_, i) => {
+              const x = PAD.left + (i / 19) * (W - PAD.left - PAD.right);
+              const y = H / 2 + Math.sin(i * 0.8) * 24;
+              return `${x},${y}`;
+            }).join(" ")}
+            fill="none"
+            stroke="var(--tc-chart-skel)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="td-chart__skel-line"
+          />
+        </svg>
       </div>
     );
-  if (!derived)
+  }
+
+  if (!derived) {
     return (
       <div className="td-chart td-chart--empty">
-        <span>No price data to display</span>
+        <svg
+          viewBox="0 0 48 48"
+          fill="none"
+          width="40"
+          height="40"
+          className="td-chart__empty-icon"
+        >
+          <rect
+            x="4"
+            y="28"
+            width="8"
+            height="14"
+            rx="2"
+            fill="var(--tc-border-hover)"
+          />
+          <rect
+            x="16"
+            y="18"
+            width="8"
+            height="24"
+            rx="2"
+            fill="var(--tc-border-hover)"
+          />
+          <rect
+            x="28"
+            y="8"
+            width="8"
+            height="34"
+            rx="2"
+            fill="var(--tc-border-hover)"
+          />
+          <rect
+            x="40"
+            y="22"
+            width="8"
+            height="20"
+            rx="2"
+            fill="var(--tc-border-hover)"
+          />
+          <path
+            d="M6 10l10-6 10 8 10-8 10 6"
+            stroke="var(--tc-border-hover)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="td-chart__empty-text">No price data available</span>
+        <span className="td-chart__empty-pulse" aria-hidden />
       </div>
     );
+  }
 
-  const { path, areaPath, yLabels, xLabels, positive } = derived;
+  const { path, areaPath, pathLen, yLabels, xLabels, positive, pulsePt } =
+    derived;
   const lineColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
+  const pulseColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
+
+  // Tooltip positioning — keep inside chart bounds in SVG coords
+  const ttW = 140; // approximate tooltip width in SVG coords
+  const ttX = Math.min(
+    Math.max(tooltip.x - ttW / 2, PAD.left),
+    W - PAD.right - ttW,
+  );
+  const ttY = tooltip.y < H / 2 ? tooltip.y + 16 : tooltip.y - 68;
 
   return (
-    <div className="td-chart">
+    <div className="td-chart" style={{ position: "relative" }}>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="td-chart__svg"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        style={{ cursor: "crosshair" }}
       >
         <defs>
           <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.18" />
             <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
           </linearGradient>
+          <clipPath id="chartClip">
+            <rect
+              x={PAD.left}
+              y={PAD.top - 4}
+              width={animated ? W - PAD.left - PAD.right : 0}
+              height={H - PAD.top - PAD.bottom + 8}
+              style={{
+                transition: animated
+                  ? "width 900ms cubic-bezier(0.22,1,0.36,1)"
+                  : "none",
+              }}
+            />
+          </clipPath>
         </defs>
+
+        {/* Grid lines */}
         {yLabels.map(({ y }) => (
           <line
             key={y}
@@ -143,15 +343,25 @@ function OHLCVChart({
             strokeWidth="1"
           />
         ))}
-        <path d={areaPath} fill="url(#chartGrad)" />
-        <path
-          d={path}
-          fill="none"
-          stroke={lineColor}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+
+        {/* Area fill — clipped for draw animation */}
+        <g clipPath="url(#chartClip)">
+          <path d={areaPath} fill="url(#chartGrad)" />
+        </g>
+
+        {/* Line — clipped for draw animation */}
+        <g clipPath="url(#chartClip)">
+          <path
+            d={path}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+
+        {/* Y-axis labels */}
         {yLabels.map(({ y, label }) => (
           <text
             key={y}
@@ -165,6 +375,8 @@ function OHLCVChart({
             {label}
           </text>
         ))}
+
+        {/* X-axis labels */}
         {xLabels.map(({ x, label }) => (
           <text
             key={x}
@@ -178,50 +390,159 @@ function OHLCVChart({
             {label}
           </text>
         ))}
+
+        {/* Pulse dot at last price — only shown when animated and tooltip not active */}
+        {animated && !tooltip.visible && (
+          <g>
+            {/* Outer pulse ring */}
+            <circle
+              cx={pulsePt[0]}
+              cy={pulsePt[1]}
+              r="8"
+              fill={pulseColor}
+              opacity="0"
+              className="td-chart__pulse-ring"
+            />
+            {/* Inner solid dot */}
+            <circle
+              cx={pulsePt[0]}
+              cy={pulsePt[1]}
+              r="4"
+              fill={pulseColor}
+              className="td-chart__pulse-dot"
+            />
+          </g>
+        )}
+
+        {/* Tooltip crosshair + data card */}
+        {tooltip.visible && (
+          <g>
+            {/* Vertical hairline */}
+            <line
+              x1={tooltip.x}
+              y1={PAD.top}
+              x2={tooltip.x}
+              y2={H - PAD.bottom}
+              stroke="var(--tc-text-muted)"
+              strokeWidth="1"
+              strokeDasharray="3,3"
+            />
+            {/* Dot on line */}
+            <circle
+              cx={tooltip.x}
+              cy={tooltip.y}
+              r="4"
+              fill={lineColor}
+              stroke="var(--tc-bg)"
+              strokeWidth="2"
+            />
+
+            {/* Tooltip card */}
+            <g>
+              <rect
+                x={ttX}
+                y={ttY}
+                width={ttW}
+                height={60}
+                rx="6"
+                fill="var(--tc-tooltip-bg)"
+                stroke="var(--tc-tooltip-border)"
+                strokeWidth="1"
+              />
+              {/* Date */}
+              <text
+                x={ttX + 10}
+                y={ttY + 16}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                {new Date(tooltip.time).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </text>
+              {/* Price label */}
+              <text
+                x={ttX + 10}
+                y={ttY + 32}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                Price
+              </text>
+              {/* Price value */}
+              <text
+                x={ttX + ttW - 10}
+                y={ttY + 32}
+                fontSize="11"
+                fontWeight="600"
+                fill="var(--tc-text-primary)"
+                fontFamily="var(--tc-font-mono)"
+                textAnchor="end"
+              >
+                {fmtPrice(tooltip.price)}
+              </text>
+              {/* Volume label */}
+              <text
+                x={ttX + 10}
+                y={ttY + 50}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                Volume
+              </text>
+              {/* Volume value */}
+              <text
+                x={ttX + ttW - 10}
+                y={ttY + 50}
+                fontSize="11"
+                fontWeight="600"
+                fill={lineColor}
+                fontFamily="var(--tc-font-mono)"
+                textAnchor="end"
+              >
+                {fmtVolTooltip(tooltip.volume)}
+              </text>
+            </g>
+          </g>
+        )}
       </svg>
     </div>
   );
 }
 
-// ─── Chart controls ───────────────────────────────────────────────────────────
+// ─── Chart controls — Timeframe only ─────────────────────────────────────────
 
 const TIMEFRAMES: OHLCVTimeframe[] = ["24H", "7D", "30D", "90D", "1Y"];
-const INTERVALS: OHLCVInterval[] = ["1H", "4H", "1D", "1W"];
 
 function ChartControls({
   timeframe,
-  interval,
   onTimeframe,
-  onInterval,
+  isLoading,
 }: {
   timeframe: OHLCVTimeframe;
-  interval: OHLCVInterval;
   onTimeframe: (t: OHLCVTimeframe) => void;
-  onInterval: (i: OHLCVInterval) => void;
+  isLoading: boolean;
 }) {
   return (
     <div className="td-chart-controls">
       <div className="td-chart-controls__group">
-        <span className="td-chart-controls__label">Timeframe</span>
         {TIMEFRAMES.map((t) => (
           <button
             key={t}
             className={`td-ctrl-btn ${timeframe === t ? "td-ctrl-btn--active" : ""}`}
             onClick={() => onTimeframe(t)}
+            disabled={isLoading}
           >
             {t}
-          </button>
-        ))}
-      </div>
-      <div className="td-chart-controls__group">
-        <span className="td-chart-controls__label">Interval</span>
-        {INTERVALS.map((i) => (
-          <button
-            key={i}
-            className={`td-ctrl-btn ${interval === i ? "td-ctrl-btn--active" : ""}`}
-            onClick={() => onInterval(i)}
-          >
-            {i}
+            {/* Show a tiny spinner inside the active button while loading */}
+            {isLoading && timeframe === t && (
+              <span className="td-ctrl-btn__spinner" aria-hidden />
+            )}
           </button>
         ))}
       </div>
@@ -356,9 +677,7 @@ export default function TokenDetailPage({
     candles,
     isLoading: chartLoading,
     timeframe,
-    interval,
     setTimeframe,
-    setInterval,
   } = useOHLCV(assetId);
 
   useEffect(() => {
@@ -382,7 +701,6 @@ export default function TokenDetailPage({
         setData(json);
         setOther(otherData);
 
-        // ── Build variants from variantGroups — includes full market data ──
         const rows = flattenVariantGroups(
           json.variantGroups,
           json.name,
@@ -412,7 +730,6 @@ export default function TokenDetailPage({
   const price = profile?.price ?? data.stats.price ?? null;
   const change24h =
     profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
-  const change1h = data.stats.priceChange1hPercent ?? null;
   const volume = profile?.volume24h ?? data.stats.volume24hUSD ?? null;
   const liquidity = data.stats.liquidity ?? null;
   const mcap = profile?.marketCap ?? data.stats.marketCap ?? null;
@@ -466,11 +783,7 @@ export default function TokenDetailPage({
         <div className="td-main">
           {/* Header */}
           <div className="td-header">
-            <TokenAvatar
-              src={fallbackToken?.imageUrl}
-              name={data.name}
-              size={52}
-            />
+            <TokenAvatar src={data.imageUrl} name={data.name} size={52} />
             <div className="td-header__info">
               <div className="td-header__row">
                 <h1 className="td-header__name">{data.name ?? assetId}</h1>
@@ -615,9 +928,8 @@ export default function TokenDetailPage({
             <OHLCVChart candles={candles} isLoading={chartLoading} />
             <ChartControls
               timeframe={timeframe}
-              interval={interval}
               onTimeframe={setTimeframe}
-              onInterval={setInterval}
+              isLoading={chartLoading}
             />
           </div>
 
@@ -651,13 +963,7 @@ export default function TokenDetailPage({
                 <div key={label} className="td-stat-cell">
                   <span className="td-stat-cell__label">{label}</span>
                   <span
-                    className={`td-stat-cell__value ${
-                      colored
-                        ? val != null && val >= 0
-                          ? "td-stat-cell__value--up"
-                          : "td-stat-cell__value--dn"
-                        : ""
-                    }`}
+                    className={`td-stat-cell__value ${colored ? (val != null && val >= 0 ? "td-stat-cell__value--up" : "td-stat-cell__value--dn") : ""}`}
                   >
                     {value}
                   </span>

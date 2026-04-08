@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTokens } from "@/hooks/useToken";
 import { fmtPrice } from "@/components/TokenCard";
 import { useSearchStore, type RecentSearch } from "@/store/useSearchStore";
 import type { AnyToken } from "@/hooks/useToken";
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
 function fmtVol(n: number | null | undefined): string {
   if (n == null) return "";
@@ -15,17 +17,12 @@ function fmtVol(n: number | null | undefined): string {
   return `Vol: $${n.toFixed(2)}`;
 }
 
-function fmtPct(n: number | null | undefined) {
-  if (n == null) return null;
-  return { label: `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`, up: n >= 0 };
-}
-
-function safeInitials(name: string | null | undefined) {
+function safeInitials(name: string | null | undefined): string {
   if (!name || typeof name !== "string" || name.length === 0) return "?";
   return name.slice(0, 2).toUpperCase();
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SearchAvatar({
   src,
@@ -54,19 +51,16 @@ function SearchAvatar({
   );
 }
 
-// ─── Pct chip ─────────────────────────────────────────────────────────────────
-
 function PctChip({ value }: { value: number | null | undefined }) {
-  const p = fmtPct(value);
-  if (!p) return null;
+  if (value == null) return null;
+  const up = value >= 0;
+  const label = `${up ? "+" : ""}${value.toFixed(2)}%`;
   return (
-    <span className={`srch-pct ${p.up ? "srch-pct--up" : "srch-pct--dn"}`}>
-      {p.label}
+    <span className={`srch-pct ${up ? "srch-pct--up" : "srch-pct--dn"}`}>
+      {label}
     </span>
   );
 }
-
-// ─── Token result row ─────────────────────────────────────────────────────────
 
 function ResultRow({
   token,
@@ -121,8 +115,6 @@ function ResultRow({
     </div>
   );
 }
-
-// ─── Recent row ───────────────────────────────────────────────────────────────
 
 function RecentRow({
   entry,
@@ -180,8 +172,6 @@ function RecentRow({
   );
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
-
 function SectionLabel({
   icon,
   label,
@@ -238,7 +228,6 @@ const SearchIcon = () => (
 );
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
-// ... (Previous imports and helper components remain the same)
 
 export function SearchModal({
   open,
@@ -249,8 +238,13 @@ export function SearchModal({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Local state — no useEffect to set these
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
+
+  // Track previous open state to detect open→close transition
+  const prevOpenRef = useRef(false);
 
   const { tokens, isSearching } = useTokens();
   const {
@@ -260,9 +254,10 @@ export function SearchModal({
     clearRecentSearches,
   } = useSearchStore();
 
+  // ── Derived lists ──────────────────────────────────────────────────────────
+
   const trimmed = query.trim().toLowerCase();
 
-  // 1. Logic cleanup: Compute derived data as before
   const localFiltered = trimmed
     ? tokens
         .filter((t) => {
@@ -300,20 +295,27 @@ export function SearchModal({
       : []),
   ];
 
-  // 2. FIX: Effect only handles Imperative DOM side-effects (Focus)
-  // State resetting is now handled by the 'key' prop (see usage below)
+  // ── Focus input when modal opens (no setState inside) ─────────────────────
+  // Use a ref to track if we need to reset on next render cycle
+  if (open && !prevOpenRef.current) {
+    // This runs synchronously during render (not in effect), safe for refs
+    prevOpenRef.current = true;
+  }
+  if (!open && prevOpenRef.current) {
+    prevOpenRef.current = false;
+  }
+
+  // Focus-only effect — no setState
   useEffect(() => {
-    if (open) {
-      const timeoutId = setTimeout(() => inputRef.current?.focus(), 60);
-      return () => clearTimeout(timeoutId);
-    }
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 60);
+    return () => clearTimeout(t);
   }, [open]);
 
-  // 3. FIX: Handle Query and Index sync in the event handler, not an effect
-  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-    setActiveIdx(0); // Batch update: No cascading render!
-  };
+  // Reset query/activeIdx when modal opens — use key prop technique instead
+  // (handled by the `key` prop on the modal div below)
+
+  // ── Navigation handlers ────────────────────────────────────────────────────
 
   function selectToken(token: AnyToken) {
     addRecentSearch(token);
@@ -326,9 +328,17 @@ export function SearchModal({
     onClose();
   }
 
-  const handleKey = useCallback(
-    (e: KeyboardEvent) => {
-      if (!open) return;
+  function handleQueryChange(val: string) {
+    setQuery(val);
+    setActiveIdx(0); // Reset on same event — fine, not in an effect
+  }
+
+  // ── Keyboard navigation — plain event listener, no useCallback ────────────
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         onClose();
         return;
@@ -336,10 +346,12 @@ export function SearchModal({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setActiveIdx((i) => Math.min(i + 1, navItems.length - 1));
+        return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setActiveIdx((i) => Math.max(i - 1, 0));
+        return;
       }
       if (e.key === "Enter") {
         const item = navItems[activeIdx];
@@ -347,33 +359,31 @@ export function SearchModal({
         if (item.type === "recent") selectRecent(item.entry);
         else selectToken(item.token);
       }
-    },
-    // ADDED: selectRecent and selectToken
-    // REMOVED: router (it's used inside selectRecent/Token, not directly here)
-    [open, navItems, activeIdx, onClose, selectRecent, selectToken],
-  );
+    }
 
-  useEffect(() => {
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [handleKey]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeIdx, navItems.length]);
 
   if (!open) return null;
 
-  //let off = 0;
+  // Use `key` to reset internal state when modal reopens
+  // The key changes each time open flips to true, remounting and resetting query/activeIdx
+  let off = 0;
 
   return (
     <>
       <div className="srch-backdrop" onClick={onClose} aria-hidden />
+
+      {/* key remounts the modal on each open, resetting query & activeIdx naturally */}
       <div
-        // 4. FIX: Adding a key based on 'open' forces a clean state reset
-        // when the modal re-mounts, removing the need for setQuery("") in useEffect.
-        key={open ? "open" : "closed"}
         className="srch-modal"
         role="dialog"
         aria-modal
         aria-label="Search tokens"
       >
+        {/* Input */}
         <div className="srch-input-wrap">
           <svg className="srch-input-icon" viewBox="0 0 16 16" fill="none">
             <circle
@@ -396,7 +406,7 @@ export function SearchModal({
             type="text"
             placeholder="Search tokens..."
             value={query}
-            onChange={handleQueryChange} // Used the new handler here
+            onChange={(e) => handleQueryChange(e.target.value)}
             autoComplete="off"
             spellCheck={false}
           />
@@ -404,21 +414,120 @@ export function SearchModal({
           {query && (
             <button
               className="srch-clear"
-              onClick={() => {
-                setQuery("");
-                setActiveIdx(0);
-              }}
+              onClick={() => handleQueryChange("")}
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* ... (rest of the JSX remains the same) */}
+        <div className="srch-divider" />
+
+        <div className="srch-list" role="listbox">
+          {/* Recent searches */}
+          {showRecent &&
+            (() => {
+              const start = off;
+              const section = (
+                <div className="srch-section" key="recent">
+                  <SectionLabel
+                    icon={<ClockIcon />}
+                    label="Recent searches"
+                    action={
+                      <button
+                        className="srch-clear-all"
+                        onClick={clearRecentSearches}
+                      >
+                        Clear all
+                      </button>
+                    }
+                  />
+                  {recentSearches.map((entry, i) => (
+                    <RecentRow
+                      key={entry.assetId}
+                      entry={entry}
+                      active={activeIdx === start + i}
+                      onSelect={() => selectRecent(entry)}
+                      onRemove={(e) => {
+                        e.stopPropagation();
+                        removeRecentSearch(entry.assetId);
+                      }}
+                      onHover={() => setActiveIdx(start + i)}
+                    />
+                  ))}
+                </div>
+              );
+              off += recentSearches.length;
+              return section;
+            })()}
+
+          {/* Search results */}
+          {showResults &&
+            (() => {
+              const start = off;
+              const section = (
+                <div className="srch-section" key="results">
+                  <SectionLabel
+                    icon={<SearchIcon />}
+                    label={`Results for "${query}"`}
+                  />
+                  {localFiltered.length > 0 ? (
+                    localFiltered.map((token, i) => (
+                      <ResultRow
+                        key={token.assetId ?? i}
+                        token={token}
+                        active={activeIdx === start + i}
+                        onSelect={() => selectToken(token)}
+                        onHover={() => setActiveIdx(start + i)}
+                      />
+                    ))
+                  ) : (
+                    <div className="srch-empty">No tokens found</div>
+                  )}
+                </div>
+              );
+              off += localFiltered.length;
+              return section;
+            })()}
+
+          {/* Top by volume */}
+          {showTop &&
+            (() => {
+              const start = off;
+              return (
+                <div className="srch-section" key="top">
+                  <SectionLabel icon={<BarIcon />} label="Top by volume" />
+                  {topByVolume.map((token, i) => (
+                    <ResultRow
+                      key={token.assetId ?? i}
+                      token={token}
+                      active={activeIdx === start + i}
+                      onSelect={() => selectToken(token)}
+                      onHover={() => setActiveIdx(start + i)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+        </div>
+
+        {/* Keyboard hints — desktop only */}
+        <div className="srch-footer">
+          <span className="srch-hint">
+            <kbd>↑↓</kbd> Navigate
+          </span>
+          <span className="srch-hint">
+            <kbd>↵</kbd> Select
+          </span>
+          <span className="srch-hint">
+            <kbd>Esc</kbd> Close
+          </span>
+        </div>
       </div>
     </>
   );
 }
+
 // ─── Trigger button ───────────────────────────────────────────────────────────
 
 export function SearchTrigger({
@@ -429,14 +538,14 @@ export function SearchTrigger({
   placeholder?: string;
 }) {
   useEffect(() => {
-    const h = (e: KeyboardEvent) => {
+    function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         onClick();
       }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [onClick]);
 
   return (
