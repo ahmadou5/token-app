@@ -24,6 +24,7 @@ import type { TokenAssetResponse } from "@/types/token.types";
 import { tokenRequest } from "@/lib/token";
 import type { AssetsResolveResponse } from "@/types";
 import { useTokens } from "@/hooks/useToken";
+import { SpotSwap } from "@/components/Swap/SpotSwap";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -992,7 +993,12 @@ export default function TokenDetailPage({
 
         {/* Sidebar */}
         <aside className="td-sidebar">
-          <BuyButton tokenName={data.name} tokenSymbol={data.symbol} />
+          <SpotSwap
+            outputMint={currentMint ?? ""} // the token's primary mint address
+            outputSymbol={data.symbol} // e.g. "SOL", "BONK"
+            outputName={data.name} // e.g. "Bonk"
+            outputLogo={data.imageUrl ?? undefined} // token logo from your existing data
+          />
 
           {description && (
             <ExpandableDescription
