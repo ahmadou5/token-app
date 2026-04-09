@@ -992,13 +992,15 @@ export default function TokenDetailPage({
         </div>
 
         {/* Sidebar */}
-        <aside className="td-sidebar">
-          <SpotSwap
-            outputMint={currentMint ?? ""} // the token's primary mint address
-            outputSymbol={data.symbol} // e.g. "SOL", "BONK"
-            outputName={data.name} // e.g. "Bonk"
-            outputLogo={data.imageUrl ?? undefined} // token logo from your existing data
-          />
+        <aside className="td-sidebar py-20">
+          <div>
+            <SpotSwap
+              outputMint={currentMint ?? ""} // the token's primary mint address
+              outputSymbol={data.symbol} // e.g. "SOL", "BONK"
+              outputName={data.name} // e.g. "Bonk"
+              outputLogo={data.imageUrl ?? undefined} // token logo from your existing data
+            />
+          </div>
 
           {description && (
             <ExpandableDescription

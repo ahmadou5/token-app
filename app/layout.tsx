@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, DM_Mono, Instrument_Sans } from "next/font/google";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { SolanaProviders } from "./SolanaProvider";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -32,7 +33,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <SolanaProviders>
+          <ThemeProvider>{children}</ThemeProvider>
+        </SolanaProviders>
       </body>
     </html>
   );
