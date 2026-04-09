@@ -36,8 +36,8 @@ export function SolanaProviders({ children }: { children: ReactNode }) {
     ];
 
     return getDefaultConfig({
-      appName: "Pipeit - Solana Transaction Builder",
-      appUrl: "http://localhost:3000",
+      appName: "Check-it - Solana Token Explorer",
+      appUrl: process.env.APP_URL || "http://localhost:3000",
       autoConnect: true,
       enableMobile: true,
       clusters,
@@ -47,8 +47,8 @@ export function SolanaProviders({ children }: { children: ReactNode }) {
   const mobile = useMemo(
     () =>
       getDefaultMobileConfig({
-        appName: "ConnectorKit Example",
-        appUrl: "http://localhost:3000",
+        appName: "Check-it - Solana Token Explorer",
+        appUrl: process.env.APP_URL || "http://localhost:3000",
       }),
     [],
   );
