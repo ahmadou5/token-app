@@ -94,9 +94,7 @@ async function executeMetis(
   onStatus: (s: SwapExecuteStatus) => void,
 ): Promise<string> {
   const apiKey =
-    process.env.NEXT_PUBLIC_METIS_API_KEY ??
-    process.env.NEXT_PUBLIC_JUP_API_KEY ??
-    "";
+    process.env.METIS_API_KEY ?? process.env.NEXT_PUBLIC_JUP_API_KEY ?? "";
 
   // Dynamically import Pipeit — keeps bundle smaller on pages that don't swap
   const [
