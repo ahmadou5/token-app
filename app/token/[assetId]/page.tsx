@@ -744,7 +744,7 @@ export default function TokenDetailPage({
   const website = profile?.links?.website ?? null;
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
-
+  const imageUrl = fallbackToken?.imageUrl ?? data.imageUrl ?? null;
   const currentMint = data.primaryVariant?.mint ?? null;
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
@@ -787,7 +787,7 @@ export default function TokenDetailPage({
         <div className="td-main">
           {/* Header */}
           <div className="td-header">
-            <TokenAvatar src={data.imageUrl} name={data.name} size={52} />
+            <TokenAvatar src={imageUrl} name={data.name} size={52} />
             <div className="td-header__info">
               <div className="td-header__row">
                 <h1 className="td-header__name">{data.name ?? assetId}</h1>
