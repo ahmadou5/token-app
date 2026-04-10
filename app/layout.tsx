@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, DM_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SolanaProviders } from "./SolanaProvider";
+import { SwapSettingsProvider } from "@/context/SwapSettingsContext";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -34,7 +35,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SolanaProviders>
-          <ThemeProvider>{children}</ThemeProvider>
+          <SwapSettingsProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </SwapSettingsProvider>
         </SolanaProviders>
       </body>
     </html>

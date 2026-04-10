@@ -52,10 +52,19 @@ export const tokenRequest = {
     return data as AssetsResolveResponse;
   },
 
+  getVariant: async (mint: string, include?: boolean) => {
+    const { data } = await localClient.get("/", {
+      params: {
+        endpoint: `/assets/${mint}${include ? "?include=profile%2Crisk%2Cohlcv%2Cmarkets" : ""}`,
+      },
+    });
+    return data as AssetsResolveResponse;
+  },
+
   getAssetMarket: async (mint: string) => {
     const { data } = await localClient.get("/", {
       params: {
-        endpoint: `/assets/solana?include=markets&mint=${mint}&marketsOffset=0&marketsLimit=50`,
+        endpoint: `/assets/${mint}?include=markets&marketsOffset=0&marketsLimit=50`,
       },
     });
     return data;

@@ -664,9 +664,9 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
 export default function TokenDetailPage({
   params,
 }: {
-  params: Promise<{ assetId: string }>;
+  params: Promise<{ assetId: string; mint: string }>;
 }) {
-  const { assetId } = use(params);
+  const { assetId, mint } = use(params);
   const router = useRouter();
   const { tokens } = useTokens();
   const { isConnected } = useWallet();
@@ -674,8 +674,11 @@ export default function TokenDetailPage({
   const [data, setData] = useState<TokenAssetResponse | null>(null);
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<VariantRow | null>(
+    null,
+  );
   const [isLoadingPage, setLoading] = useState(true);
-  const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
+  //const fallbackToken = tokens.find((t) => t.primaryVariant?.variantId === mint) ?? null;
 
   const {
     candles,
@@ -701,7 +704,7 @@ export default function TokenDetailPage({
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
-
+        console.log("[VariantDetailPage] Loaded data:", { json, otherData });
         setData(json);
         setOther(otherData);
 
@@ -710,6 +713,8 @@ export default function TokenDetailPage({
           json.name,
           json.symbol,
         );
+        const currentRow = rows.find((r) => r.mint === mint);
+        setSelectedVariant(currentRow ?? null);
         setVariants(rows);
       } catch (e) {
         console.error("[TokenDetailPage] Failed to load:", e);
@@ -745,7 +750,7 @@ export default function TokenDetailPage({
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
 
-  const currentMint = data.primaryVariant?.mint ?? null;
+  const currentMint = selectedVariant?.mint ?? null;
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
@@ -765,16 +770,16 @@ export default function TokenDetailPage({
                 strokeLinejoin="round"
               />
             </svg>
-            Tokens
+            Variants
           </button>
           <nav className="td-breadcrumb">
             <span className="td-breadcrumb__sep">›</span>
             <span className="td-breadcrumb__item">{data.name}</span>
-            {data.symbol && (
+            {selectedVariant?.symbol && (
               <>
                 <span className="td-breadcrumb__sep">›</span>
                 <span className="td-breadcrumb__item td-breadcrumb__item--mint">
-                  ${data.symbol}
+                  ${selectedVariant.symbol}
                 </span>
               </>
             )}
@@ -787,7 +792,11 @@ export default function TokenDetailPage({
         <div className="td-main">
           {/* Header */}
           <div className="td-header">
-            <TokenAvatar src={data.imageUrl} name={data.name} size={52} />
+            <TokenAvatar
+              src={selectedVariant?.logoURI}
+              name={selectedVariant?.name}
+              size={52}
+            />
             <div className="td-header__info">
               <div className="td-header__row">
                 <h1 className="td-header__name">{data.name ?? assetId}</h1>
@@ -822,14 +831,16 @@ export default function TokenDetailPage({
                 </svg>
               </div>
               <div className="td-header__pills">
-                {data.symbol && (
-                  <span className="td-pill td-pill--sym">${data.symbol}</span>
+                {selectedVariant?.symbol && (
+                  <span className="td-pill td-pill--sym">
+                    ${selectedVariant?.symbol}
+                  </span>
                 )}
                 {variants.length > 0 && (
                   <VariantPicker
                     variants={variants}
                     assetId={assetId}
-                    currentMint={currentMint ?? undefined}
+                    currentMint={selectedVariant?.mint ?? undefined}
                   />
                 )}
                 {mintDisplay && (
@@ -990,7 +1001,11 @@ export default function TokenDetailPage({
           )}
 
           {variants.length > 0 && (
-            <VariantsSection assetName={data.name} variants={variants} />
+            <VariantsSection
+              assetName={data.name}
+              assetId={assetId}
+              variants={variants}
+            />
           )}
         </div>
 

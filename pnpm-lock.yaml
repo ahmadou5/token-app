@@ -8,6 +8,9 @@ dependencies:
   '@phosphor-icons/react':
     specifier: ^2.1.10
     version: 2.1.10(react-dom@19.2.4)(react@19.2.4)
+  '@pipeit/actions':
+    specifier: ^0.1.2
+    version: 0.1.2(@pipeit/core@0.2.7)(@solana/addresses@6.7.0)(@solana/instruction-plans@6.7.0)(@solana/instructions@6.7.0)(@solana/kit@6.7.0)(@solana/rpc-subscriptions@6.7.0)(@solana/rpc@6.7.0)(@solana/signers@6.7.0)(@solana/transactions@6.7.0)
   '@pipeit/core':
     specifier: ^0.2.7
     version: 0.2.7(@solana-program/compute-budget@0.13.0)(@solana/addresses@6.7.0)(@solana/codecs-strings@6.7.0)(@solana/errors@6.7.0)(@solana/functional@6.7.0)(@solana/instruction-plans@6.7.0)(@solana/instructions@6.7.0)(@solana/kit@6.7.0)(@solana/programs@6.7.0)(@solana/rpc-subscriptions@6.7.0)(@solana/rpc-types@6.7.0)(@solana/rpc@6.7.0)(@solana/signers@6.7.0)(@solana/transaction-messages@6.7.0)(@solana/transactions@6.7.0)
@@ -53,6 +56,9 @@ dependencies:
   lucide-react:
     specifier: ^1.7.0
     version: 1.8.0(react@19.2.4)
+  metis:
+    specifier: link:@pipeit/actions/metis
+    version: link:@pipeit/actions/metis
   motion:
     specifier: ^12.38.0
     version: 12.38.0(react-dom@19.2.4)(react@19.2.4)
@@ -68,6 +74,9 @@ dependencies:
   react-dom:
     specifier: 19.2.4
     version: 19.2.4(react@19.2.4)
+  titan:
+    specifier: link:@pipeit/actions/titan
+    version: link:@pipeit/actions/titan
   zustand:
     specifier: ^5.0.12
     version: 5.0.12(@types/react@19.2.14)(react@19.2.4)
@@ -1068,6 +1077,11 @@ packages:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  /@msgpack/msgpack@3.1.3:
+    resolution: {integrity: sha512-47XIizs9XZXvuJgoaJUIE2lFoID8ugvc0jzSHP+Ptfk8nTbnR8g788wv48N03Kx0UkAv559HWRQ3yzOgzlRNUA==}
+    engines: {node: '>= 18'}
+    dev: false
+
   /@nanostores/persistent@1.1.0(nanostores@1.0.1):
     resolution: {integrity: sha512-e6vfv7H99VkCfSoNTR/qNVMj6vXwWcsEL+LCQQamej5GK9iDefKxPCJjdOpBi1p4lNCFIQ+9VjYF1spvvc2p6A==}
     engines: {node: ^20.0.0 || >=22.0.0}
@@ -1232,6 +1246,31 @@ packages:
     dependencies:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
+    dev: false
+
+  /@pipeit/actions@0.1.2(@pipeit/core@0.2.7)(@solana/addresses@6.7.0)(@solana/instruction-plans@6.7.0)(@solana/instructions@6.7.0)(@solana/kit@6.7.0)(@solana/rpc-subscriptions@6.7.0)(@solana/rpc@6.7.0)(@solana/signers@6.7.0)(@solana/transactions@6.7.0):
+    resolution: {integrity: sha512-u3Hy7PwYpES6CvbhY/u77juAtWUEKtqyjEkPuoT0MaWz6Gcnp6J1sBH2l/MgK9uWmY/mUDIfhF4NjhpbMAoTEg==}
+    peerDependencies:
+      '@pipeit/core': ^0.2.6
+      '@solana/addresses': ^6.0.1
+      '@solana/instruction-plans': ^6.0.1
+      '@solana/instructions': ^6.0.1
+      '@solana/kit': ^6.0.1
+      '@solana/rpc': ^6.0.1
+      '@solana/rpc-subscriptions': ^6.0.1
+      '@solana/signers': ^6.0.1
+      '@solana/transactions': ^6.0.1
+    dependencies:
+      '@msgpack/msgpack': 3.1.3
+      '@pipeit/core': 0.2.7(@solana-program/compute-budget@0.13.0)(@solana/addresses@6.7.0)(@solana/codecs-strings@6.7.0)(@solana/errors@6.7.0)(@solana/functional@6.7.0)(@solana/instruction-plans@6.7.0)(@solana/instructions@6.7.0)(@solana/kit@6.7.0)(@solana/programs@6.7.0)(@solana/rpc-subscriptions@6.7.0)(@solana/rpc-types@6.7.0)(@solana/rpc@6.7.0)(@solana/signers@6.7.0)(@solana/transaction-messages@6.7.0)(@solana/transactions@6.7.0)
+      '@solana/addresses': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/instruction-plans': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/instructions': 6.7.0(typescript@5.9.3)
+      '@solana/kit': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/rpc': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/rpc-subscriptions': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/signers': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
+      '@solana/transactions': 6.7.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)
     dev: false
 
   /@pipeit/core@0.2.7(@solana-program/compute-budget@0.13.0)(@solana/addresses@6.7.0)(@solana/codecs-strings@6.7.0)(@solana/errors@6.7.0)(@solana/functional@6.7.0)(@solana/instruction-plans@6.7.0)(@solana/instructions@6.7.0)(@solana/kit@6.7.0)(@solana/programs@6.7.0)(@solana/rpc-subscriptions@6.7.0)(@solana/rpc-types@6.7.0)(@solana/rpc@6.7.0)(@solana/signers@6.7.0)(@solana/transaction-messages@6.7.0)(@solana/transactions@6.7.0):

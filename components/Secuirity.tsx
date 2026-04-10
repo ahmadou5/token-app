@@ -297,7 +297,7 @@ export function SecuritySection({
   return (
     <section className="td-section">
       <h2 className="td-section__title">Security</h2>
-      <div className="sec-card">
+      <div className="sec-card flex flex-col lg:flex-row items-center gap-8">
         <div className="sec-metrics">
           <MetricRow
             label="Liquidity"
@@ -323,7 +323,6 @@ export function SecuritySection({
             value={holders != null ? holders.toLocaleString() : "—"}
             status={holdersStatus}
           />
-          <button className="sec-details-btn">See all details</button>
         </div>
         <Gauge score={score} grade={grade} label={label} tone={tone} />
       </div>

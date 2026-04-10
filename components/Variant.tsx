@@ -2,6 +2,7 @@
 
 import { fmtPrice, fmtCompact } from "@/components/TokenCard";
 import type { RawVariant } from "@/types/index";
+import { useRouter } from "next/navigation";
 
 // ─── VariantRow — fully typed, includes all market fields ─────────────────────
 
@@ -116,7 +117,13 @@ function KindTag({ row }: { row: VariantRow }) {
 
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
-function VarCard({ row }: { row: VariantRow }) {
+function VarCard({
+  row,
+  navigateToVariant,
+}: {
+  row: VariantRow;
+  navigateToVariant: (variant: { mint: string; varId: string }) => void;
+}) {
   const sym = safe(row.symbol, "?");
   const name = safe(row.name, sym);
   const mint = safe(row.mint, "");
@@ -125,7 +132,12 @@ function VarCard({ row }: { row: VariantRow }) {
     mint.length > 12 ? `${mint.slice(0, 4)}…${mint.slice(-4)}` : mint;
 
   return (
-    <div className="varc-card">
+    <div
+      className="varc-card"
+      onClick={() =>
+        navigateToVariant({ mint: row.mint, varId: row.variantId })
+      }
+    >
       {/* Left: avatar + identity */}
       <div className="varc-left">
         <div className="varc-avatar">
@@ -181,9 +193,15 @@ function VarCard({ row }: { row: VariantRow }) {
 interface VariantsSectionProps {
   assetName?: string | null;
   variants: VariantRow[];
+  assetId?: string;
 }
 
-export function VariantsSection({ assetName, variants }: VariantsSectionProps) {
+export function VariantsSection({
+  assetName,
+  variants,
+  assetId,
+}: VariantsSectionProps) {
+  const router = useRouter();
   if (!Array.isArray(variants) || variants.length === 0) return null;
 
   // Separate into groups for display
@@ -192,9 +210,11 @@ export function VariantsSection({ assetName, variants }: VariantsSectionProps) {
   const other = variants.filter(
     (r) => !isNativeVariant(r) && !isYieldVariant(r),
   );
-
+  const navigateToVariant = (mint: string, assetId: string) => {
+    router.push(`/variant/${assetId}?mint=${mint}`);
+  };
   const groups = [
-    { title: "Spot tokens", rows: native, count: native.length },
+    { title: "Native", rows: native, count: native.length },
     { title: "Yield", rows: yielded, count: yielded.length },
     { title: "Other", rows: other, count: other.length },
   ].filter((g) => g.rows.length > 0);
@@ -209,16 +229,22 @@ export function VariantsSection({ assetName, variants }: VariantsSectionProps) {
       )}
 
       {groups.map((group) => (
-        <div key={group.title} className="varc-group">
+        <div key={group.title} className="varc-group py-2 ">
           <div className="varc-group__header">
-            <span className="varc-group__title">{group.title}</span>
-            <span className="varc-group__count">
-              {group.count} variant{group.count !== 1 ? "s" : ""}
+            <span className="varc-group__title ml-2 mr-2">{group.title}</span>
+            <span className="varc-group__count ml-1 mr-1">
+              variant{group.count !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="varc-list">
             {group.rows.map((row, i) => (
-              <VarCard key={`${row.mint}-${i}`} row={row} />
+              <VarCard
+                key={`${row.mint}-${i}`}
+                navigateToVariant={(v) =>
+                  navigateToVariant(v.mint, assetId ?? "")
+                }
+                row={row}
+              />
             ))}
           </div>
         </div>
