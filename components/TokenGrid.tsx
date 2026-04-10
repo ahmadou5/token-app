@@ -3,11 +3,8 @@
 import { useState } from "react";
 import { useTokens } from "@/hooks/useToken";
 import { TokenCard, ListHeader } from "@/components/TokenCard";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { SearchModal, SearchTrigger } from "@/components/SearcModal";
 import type { AnyToken } from "@/hooks/useToken";
 import type { ViewMode } from "@/components/TokenCard";
-import { useSearch } from "@/hooks/useSearch";
 
 function GridIcon() {
   return (

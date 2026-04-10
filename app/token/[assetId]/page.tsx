@@ -744,7 +744,7 @@ export default function TokenDetailPage({
   const website = profile?.links?.website ?? null;
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
-  const imageUrl = fallbackToken?.imageUrl ?? data.imageUrl ?? null;
+  const imageUrl = data.imageUrl ?? fallbackToken?.imageUrl ?? null;
   const currentMint = data.primaryVariant?.mint ?? null;
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
