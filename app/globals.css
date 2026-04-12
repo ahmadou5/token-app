@@ -1623,3 +1623,113 @@ body { min-height: 100vh; background: var(--background); }
     padding: 8px 10px;
   }
 }
+
+
+/* ══════════════════════════════════════════════════════
+   Settings Modal — Spot/Perp panel tabs
+   Append to globals.css
+   ══════════════════════════════════════════════════════ */
+
+/* Panel tab switcher inside modal header */
+.sw-settings-panel-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--tc-bg-hover);
+  border-radius: 8px;
+  padding: 3px;
+}
+.sw-settings-panel-tab {
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-family: var(--tc-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tc-text-muted);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.sw-settings-panel-tab:hover {
+  color: var(--tc-text-secondary);
+}
+.sw-settings-panel-tab--active {
+  background: var(--tc-bg);
+  color: var(--tc-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Section note — inline muted label after section heading */
+.sw-modal-section__note {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--tc-text-muted);
+  font-style: italic;
+}
+
+/* Dimmed section — for display-only perp settings */
+.sw-modal-section--dimmed {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Disabled executions — no hover, no cursor */
+.sw-modal-executions--disabled .sw-modal-exec,
+.sw-modal-exec--readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Disabled slippage pills — no interaction */
+.sw-modal-slippage--disabled {
+  pointer-events: none;
+}
+.sw-modal-slippage--disabled .sw-slip-pill {
+  cursor: default;
+}
+
+/* Settings note text below a section */
+.sw-settings-note {
+  font-size: 10px;
+  color: var(--tc-text-muted);
+  line-height: 1.5;
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+/* "New" badge variant on perp provider */
+.sw-modal-provider__badge--new {
+  background: rgba(16, 163, 74, 0.1);
+  color: var(--tc-accent-up);
+}
+html.dark .sw-modal-provider__badge--new {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--tc-accent-up);
+}
+
+/* Flash provider badge on the form market row */
+.sw-perp-form__market-provider--flash {
+  background: rgba(16, 163, 74, 0.1);
+  color: var(--tc-accent-up);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+html.dark .sw-perp-form__market-provider--flash {
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.sw-perp-form__market-provider-new {
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--tc-accent-up);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}

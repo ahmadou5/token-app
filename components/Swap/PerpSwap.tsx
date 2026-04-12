@@ -1,15 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import {
+  useSwapSettings,
+  PERP_PROVIDER_META,
+} from "@/context/SwapSettingsContext";
 import { usePerpQuote } from "@/hooks/usePerpQuote";
 import { usePerpExecute } from "@/hooks/usePerpExecute";
 import { PerpQuoteDetails } from "./PerpQuoteDetails";
 import { PerpMarketUnsupported } from "./PerpMarketUnsupported";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Supported markets per provider ────────────────────────────────────────────
 
 export const ADRENA_MARKETS = ["SOL", "BTC", "ETH", "BONK", "JTO"] as const;
-export type AdrenaMarket = (typeof ADRENA_MARKETS)[number];
+
+// Flash Trade supports 11 markets — listing the ones matching common symbols
+export const FLASH_MARKETS = [
+  "SOL",
+  "BTC",
+  "ETH",
+  "BONK",
+  "JTO",
+  "WIF",
+  "PYTH",
+  "JUP",
+  "TNSR",
+  "WEN",
+  "BOME",
+] as const;
+
+type AdrenaMarket = (typeof ADRENA_MARKETS)[number];
+type FlashMarket = (typeof FLASH_MARKETS)[number];
 
 const LEVERAGE_MIN = 1;
 const LEVERAGE_MAX = 50;
@@ -25,12 +46,22 @@ interface PerpSwapProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isAdrenaMarket(symbol: string): symbol is AdrenaMarket {
-  return ADRENA_MARKETS.includes(symbol.toUpperCase() as AdrenaMarket);
+function isSupportedMarket(
+  symbol: string,
+  provider: "adrena" | "flash",
+): boolean {
+  const upper = symbol.toUpperCase();
+  if (provider === "adrena")
+    return ADRENA_MARKETS.includes(upper as AdrenaMarket);
+  return FLASH_MARKETS.includes(upper as FlashMarket);
 }
 
 function getCollateralToken(side: "long" | "short", market: string): string {
   return side === "short" ? "USDC" : market;
+}
+
+function getSupportedMarkets(provider: "adrena" | "flash"): string[] {
+  return provider === "adrena" ? [...ADRENA_MARKETS] : [...FLASH_MARKETS];
 }
 
 // ── Leverage slider ───────────────────────────────────────────────────────────
@@ -86,8 +117,15 @@ export function PerpSwap({
   walletAddress,
   onConnectWallet,
 }: PerpSwapProps) {
+  const { settings } = useSwapSettings();
+  const perpProvider = settings.perpProvider;
+
   const normalizedSymbol = tokenSymbol?.toUpperCase() ?? "";
-  const isSupported = isAdrenaMarket(normalizedSymbol);
+  const isSupported = normalizedSymbol
+    ? isSupportedMarket(normalizedSymbol, perpProvider)
+    : false;
+
+  const providerMeta = PERP_PROVIDER_META[perpProvider];
 
   // Form state
   const [side, setSide] = useState<"long" | "short">("long");
@@ -101,7 +139,7 @@ export function PerpSwap({
   const collateralNum = parseFloat(collateral) || 0;
   const positionSize = collateralNum * leverage;
 
-  // Quote hook
+  // Quote — provider-aware
   const {
     quote,
     transaction,
@@ -117,9 +155,10 @@ export function PerpSwap({
     leverage,
     takeProfit: takeProfit || undefined,
     stopLoss: stopLoss || undefined,
+    perpProvider,
   });
 
-  // Execute hook — mirrors useSwapExecute pattern
+  // Execute hook (same for all providers — signs + sends base64 tx)
   const {
     open,
     status: execStatus,
@@ -133,7 +172,6 @@ export function PerpSwap({
     resetExec();
     const sig = await open(transaction);
     if (sig) {
-      // Auto-reset form after success
       setTimeout(() => {
         setCollateral("");
         setTakeProfit("");
@@ -169,7 +207,8 @@ export function PerpSwap({
       <PerpMarketUnsupported
         tokenSymbol={tokenSymbol}
         tokenName={tokenName}
-        supportedMarkets={[...ADRENA_MARKETS]}
+        supportedMarkets={getSupportedMarkets(perpProvider)}
+        providerName={providerMeta.label}
       />
     );
   }
@@ -209,8 +248,8 @@ export function PerpSwap({
           Trade {normalizedSymbol}-PERP with leverage
         </p>
         <p className="sw-perp-connect__sub">
-          Long or short {normalizedSymbol} up to {LEVERAGE_MAX}× on Adrena
-          Protocol. Connect your wallet to get started.
+          Long or short {normalizedSymbol} up to {LEVERAGE_MAX}× on{" "}
+          {providerMeta.label}. Connect your wallet to get started.
         </p>
         <button className="sw-connect-btn" onClick={onConnectWallet}>
           <svg viewBox="0 0 20 20" fill="none" width="15" height="15">
@@ -232,7 +271,7 @@ export function PerpSwap({
         </button>
         <p className="sw-perp-connect__powered">
           Powered by{" "}
-          <span className="sw-perp-connect__badge">Adrena Protocol</span>
+          <span className="sw-perp-connect__badge">{providerMeta.label}</span>
         </p>
       </div>
     );
@@ -241,12 +280,19 @@ export function PerpSwap({
   // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <div className="sw-perp-form">
-      {/* Market label */}
+      {/* Market + provider label */}
       <div className="sw-perp-form__market">
         <span className="sw-perp-form__market-name">
           {normalizedSymbol}-PERP
         </span>
-        <span className="sw-perp-form__market-provider">Adrena</span>
+        <span
+          className={`sw-perp-form__market-provider ${perpProvider === "flash" ? "sw-perp-form__market-provider--flash" : ""}`}
+        >
+          {providerMeta.label}
+          {providerMeta.badge === "New" && (
+            <span className="sw-perp-form__market-provider-new">New</span>
+          )}
+        </span>
       </div>
 
       {/* Long / Short toggle */}
@@ -445,8 +491,8 @@ export function PerpSwap({
       {/* Footer */}
       <p className="sw-perp-form__footer">
         Powered by{" "}
-        <span className="sw-perp-form__footer-badge">Adrena Protocol</span> ·
-        Quote refreshes automatically
+        <span className="sw-perp-form__footer-badge">{providerMeta.label}</span>{" "}
+        · Quote refreshes automatically
       </p>
     </div>
   );

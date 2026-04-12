@@ -4,18 +4,19 @@ interface PerpMarketUnsupportedProps {
   tokenSymbol?: string;
   tokenName: string;
   supportedMarkets: string[];
+  providerName: string;
 }
 
 export function PerpMarketUnsupported({
   tokenSymbol,
   tokenName,
   supportedMarkets,
+  providerName,
 }: PerpMarketUnsupportedProps) {
   const displayName = tokenSymbol ? `$${tokenSymbol}` : tokenName;
 
   return (
     <div className="sw-perp-unsupported">
-      {/* Icon */}
       <div className="sw-perp-unsupported__icon" aria-hidden>
         <svg viewBox="0 0 48 48" fill="none" width="40" height="40">
           <circle
@@ -36,19 +37,17 @@ export function PerpMarketUnsupported({
         </svg>
       </div>
 
-      {/* Copy */}
       <p className="sw-perp-unsupported__title">
         {displayName} perps not available
       </p>
       <p className="sw-perp-unsupported__sub">
-        Adrena Protocol only supports perpetual trading for a select set of
-        markets. {displayName} is not currently listed.
+        {providerName} does not currently support perpetual trading for{" "}
+        {displayName}. Switch provider in settings or choose a supported market.
       </p>
 
-      {/* Supported markets */}
       <div className="sw-perp-unsupported__markets">
         <span className="sw-perp-unsupported__markets-label">
-          Supported markets
+          {providerName} markets
         </span>
         <div className="sw-perp-unsupported__chips">
           {supportedMarkets.map((m) => (

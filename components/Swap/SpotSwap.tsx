@@ -14,7 +14,7 @@ import { QuoteDetails } from "./QuoteDetails";
 import { ConnectedPill } from "./ConnectedPill";
 import { SettingsModal } from "./modals/SettingsModal";
 import { WalletConnectModal } from "./modals/WalletConnectModal";
-import { PerpSwap } from "./PerpSwap"; // ← replaces PerpPlaceholder
+import { PerpSwap } from "./PerpSwap";
 import {
   DEFAULT_INPUT_OPTIONS,
   SOL_MINT,
@@ -35,7 +35,7 @@ export function SpotSwap({
   outputName,
   outputLogo,
 }: SpotSwapProps) {
-  const { isConnected, walletStatus } = useWallet();
+  const { isConnected } = useWallet();
   const connector = useConnector();
   const wallet = connector.account;
   const { settings } = useSwapSettings();
@@ -71,12 +71,12 @@ export function SpotSwap({
     logo: outputLogo,
   };
 
-  // ── Hooks ──────────────────────────────────────────────────────────────────
   const {
     quote,
     status: quoteStatus,
     error: quoteError,
   } = useSwapQuote(safeInputToken.mint, outputMint, inputAmount);
+
   const {
     swap,
     status: swapStatus,
@@ -85,7 +85,6 @@ export function SpotSwap({
     reset,
   } = useSwapExecute();
 
-  // ── Balance ────────────────────────────────────────────────────────────────
   const inputBalance = walletTokens.find((t) => t.mint === safeInputToken.mint);
   const displayBalance =
     safeInputToken.mint === SOL_MINT
@@ -117,7 +116,6 @@ export function SpotSwap({
     }
   }, [quote, swap, swapStatus, reset]);
 
-  // ── Derived display ────────────────────────────────────────────────────────
   const outDecimals =
     outputToken.symbol === "USDC" || outputToken.symbol === "USDT" ? 6 : 9;
   const outputDisplay = quote
@@ -158,18 +156,23 @@ export function SpotSwap({
     );
   };
 
-  // Wallet address string for perp (from publicKey)
   const walletAddress = wallet ?? null;
 
   return (
     <>
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {/* Portaled modals */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          activeTab={activeTab}
+        />
+      )}
       {showWalletModal && (
         <WalletConnectModal onClose={() => setShowWalletModal(false)} />
       )}
 
       <div className="sw-card">
-        {/* ── Tab bar ── */}
+        {/* ── Tab bar — gear always visible ── */}
         <div className="sw-tabs">
           {(["spot", "perp"] as const).map((tab) => (
             <button
@@ -213,23 +216,20 @@ export function SpotSwap({
             </button>
           ))}
 
-          {/* Settings gear — spot tab only */}
-          {activeTab === "spot" && (
-            <button
-              className={`sw-gear ${showSettings ? "sw-gear--active" : ""}`}
-              onClick={() => setShowSettings((s) => !s)}
-              aria-label="Swap settings"
-            >
-              {!showSettings && <span className="sw-gear__dot" aria-hidden />}
-              <GearSixIcon size={19} />
-            </button>
-          )}
+          {/* Gear — always visible, opens settings for whichever tab is active */}
+          <button
+            className={`sw-gear ${showSettings ? "sw-gear--active" : ""}`}
+            onClick={() => setShowSettings((s) => !s)}
+            aria-label="Settings"
+          >
+            {!showSettings && <span className="sw-gear__dot" aria-hidden />}
+            <GearSixIcon size={19} />
+          </button>
         </div>
 
         {/* ── Spot body ── */}
         {activeTab === "spot" && (
           <>
-            {/* Pay */}
             <div className="sw-input-group">
               <div className="sw-input-hdr">
                 <span className="sw-input-lbl">You pay</span>
@@ -264,7 +264,6 @@ export function SpotSwap({
               </div>
             </div>
 
-            {/* Flip / reset */}
             <div className="sw-flip-row">
               <div className="sw-divider" />
               <button
@@ -285,7 +284,6 @@ export function SpotSwap({
               <div className="sw-divider" />
             </div>
 
-            {/* Receive */}
             <div className="sw-output-group">
               <div className="sw-input-hdr">
                 <span className="sw-input-lbl">You receive</span>
@@ -312,7 +310,6 @@ export function SpotSwap({
               </div>
             </div>
 
-            {/* Quote breakdown */}
             {quoteStatus === "ready" && quote && (
               <QuoteDetails
                 quote={quote}
@@ -321,7 +318,6 @@ export function SpotSwap({
               />
             )}
 
-            {/* Error */}
             {(quoteError || swapError) && (
               <div className="sw-error">
                 <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
@@ -343,7 +339,6 @@ export function SpotSwap({
               </div>
             )}
 
-            {/* Success */}
             {swapStatus === "success" && txSignature && (
               <div className="sw-success">
                 <svg viewBox="0 0 14 14" fill="none" width="12" height="12">

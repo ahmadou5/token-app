@@ -970,7 +970,7 @@ export default function TokenDetailPage({
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             </div>
           )}
-          <div className="mt-[68px]">
+          <div className="mt-[26px]">
             <SpotSwap
               outputMint={currentMint ?? ""}
               outputSymbol={data.symbol}

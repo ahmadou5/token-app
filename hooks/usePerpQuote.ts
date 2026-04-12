@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { PerpProvider } from "@/context/SwapSettingsContext";
 
 export interface PerpQuote {
   collateralAmount: number;
@@ -13,19 +14,42 @@ export interface PerpQuote {
   fee: number;
   takeProfit?: number | null;
   stopLoss?: number | null;
+  // Flash-specific extras (optional — used by PerpQuoteDetails when present)
+  availableLiquidity?: string;
+  youPayUsdUi?: string;
+  youReceiveUsdUi?: string;
+  openPositionFeePercent?: string;
+  marginFeePercentage?: string;
+  takeProfitQuote?: {
+    exitPriceUi: string;
+    profitUsdUi: string;
+    lossUsdUi: string;
+    exitFeeUsdUi: string;
+    receiveUsdUi: string;
+    pnlPercentage: string;
+  } | null;
+  stopLossQuote?: {
+    exitPriceUi: string;
+    profitUsdUi: string;
+    lossUsdUi: string;
+    exitFeeUsdUi: string;
+    receiveUsdUi: string;
+    pnlPercentage: string;
+  } | null;
 }
 
 export type PerpQuoteStatus = "idle" | "loading" | "ready" | "error";
 
 interface UsePerpQuoteParams {
   wallet: string | null;
-  market: string; // e.g. "SOL"
+  market: string;
   side: "long" | "short";
-  collateral: number; // human-readable amount
-  collateralToken: string; // e.g. "USDC" or "SOL"
+  collateral: number;
+  collateralToken: string;
   leverage: number;
   takeProfit?: string;
   stopLoss?: string;
+  perpProvider: PerpProvider;
 }
 
 interface UsePerpQuoteResult {
@@ -36,16 +60,39 @@ interface UsePerpQuoteResult {
   refetch: () => void;
 }
 
-export function usePerpQuote({
-  wallet,
-  market,
-  side,
-  collateral,
-  collateralToken,
-  leverage,
-  takeProfit,
-  stopLoss,
-}: UsePerpQuoteParams): UsePerpQuoteResult {
+// ── Build request for each provider ──────────────────────────────────────────
+
+function buildAdrenaParams(params: UsePerpQuoteParams): URLSearchParams {
+  const action = params.side === "long" ? "open-long" : "open-short";
+  return new URLSearchParams({
+    action,
+    account: params.wallet!,
+    collateralAmount: String(params.collateral),
+    collateralTokenSymbol: params.collateralToken,
+    tokenSymbol: params.market,
+    leverage: String(params.leverage),
+    ...(params.takeProfit ? { takeProfit: params.takeProfit } : {}),
+    ...(params.stopLoss ? { stopLoss: params.stopLoss } : {}),
+  });
+}
+
+function buildFlashBody(params: UsePerpQuoteParams): object {
+  return {
+    inputTokenSymbol: params.collateralToken,
+    outputTokenSymbol: params.market,
+    inputAmountUi: String(params.collateral),
+    leverage: params.leverage,
+    tradeType: params.side === "long" ? "LONG" : "SHORT",
+    owner: params.wallet,
+    slippagePercentage: "0.5",
+    ...(params.takeProfit ? { takeProfit: params.takeProfit } : {}),
+    ...(params.stopLoss ? { stopLoss: params.stopLoss } : {}),
+  };
+}
+
+// ── Hook ─────────────────────────────────────────────────────────────────────
+
+export function usePerpQuote(params: UsePerpQuoteParams): UsePerpQuoteResult {
   const [quote, setQuote] = useState<PerpQuote | null>(null);
   const [transaction, setTransaction] = useState<string | null>(null);
   const [status, setStatus] = useState<PerpQuoteStatus>("idle");
@@ -55,7 +102,7 @@ export function usePerpQuote({
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchQuote = useCallback(async () => {
-    if (!wallet || !collateral || collateral <= 0) {
+    if (!params.wallet || !params.collateral || params.collateral <= 0) {
       setQuote(null);
       setTransaction(null);
       setStatus("idle");
@@ -63,7 +110,6 @@ export function usePerpQuote({
       return;
     }
 
-    // Cancel any in-flight request
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
@@ -71,21 +117,24 @@ export function usePerpQuote({
     setError(null);
 
     try {
-      const action = side === "long" ? "open-long" : "open-short";
-      const params = new URLSearchParams({
-        action,
-        account: wallet,
-        collateralAmount: String(collateral),
-        collateralTokenSymbol: collateralToken,
-        tokenSymbol: market,
-        leverage: String(leverage),
-        ...(takeProfit ? { takeProfit } : {}),
-        ...(stopLoss ? { stopLoss } : {}),
-      });
+      let res: Response;
 
-      const res = await fetch(`/api/perp/quote?${params}`, {
-        signal: abortRef.current.signal,
-      });
+      if (params.perpProvider === "flash") {
+        // Flash Trade — POST to our backend proxy
+        res = await fetch("/api/perp/flash/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildFlashBody(params)),
+          signal: abortRef.current.signal,
+        });
+      } else {
+        // Adrena — GET to existing /api/perp/adrena/quote
+        const searchParams = buildAdrenaParams(params);
+        res = await fetch(`/api/perp/adrena/quote?${searchParams}`, {
+          signal: abortRef.current.signal,
+        });
+      }
+
       const data = await res.json();
 
       if (data.ok) {
@@ -105,27 +154,16 @@ export function usePerpQuote({
       setQuote(null);
       setTransaction(null);
     }
-  }, [
-    wallet,
-    market,
-    side,
-    collateral,
-    collateralToken,
-    leverage,
-    takeProfit,
-    stopLoss,
-  ]);
+  }, [params]);
 
-  // Debounce the fetch
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(fetchQuote, 600);
+    debounceRef.current = setTimeout(fetchQuote, 13000);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [fetchQuote]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortRef.current) abortRef.current.abort();

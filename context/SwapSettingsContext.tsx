@@ -6,99 +6,156 @@ import {
   useContext,
   useEffect,
   useState,
-  type ReactNode,
 } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Spot provider types (unchanged) ─────────────────────────────────────────
 
 export type SwapProvider = "metis" | "titan";
-
 export type ExecutionStrategy = "standard" | "economical" | "fast";
 
+export const PROVIDER_META: Record<
+  SwapProvider,
+  {
+    label: string;
+    badge?: string;
+    description: string;
+    supportsExecution: boolean;
+  }
+> = {
+  metis: {
+    label: "Jupiter Metis",
+    badge: "Default",
+    description: "Best routes via Jupiter's Metis engine with Pipeit execution.",
+    supportsExecution: true,
+  },
+  titan: {
+    label: "Titan",
+    badge: "MEV",
+    description: "MEV-protected execution via Titan's private mempool.",
+    supportsExecution: true,
+  },
+};
+
+export const EXECUTION_META: Record<
+  ExecutionStrategy,
+  { label: string; description: string; icon: string }
+> = {
+  standard: {
+    label: "Standard",
+    description: "Balanced speed and cost for most trades.",
+    icon: "⚖️",
+  },
+  economical: {
+    label: "Economical",
+    description: "Lower fees, slightly slower confirmation.",
+    icon: "🪙",
+  },
+  fast: {
+    label: "Fast",
+    description: "Higher priority fee for quicker inclusion.",
+    icon: "⚡",
+  },
+};
+
+// ─── Perp provider types ──────────────────────────────────────────────────────
+
+export type PerpProvider = "adrena" | "flash";
+
+export const PERP_PROVIDER_META: Record<
+  PerpProvider,
+  {
+    label: string;
+    badge?: string;
+    description: string;
+  }
+> = {
+  adrena: {
+    label: "Adrena Protocol",
+    badge: "Default",
+    description:
+      "Decentralised perpetuals on Solana. SOL, BTC, ETH, BONK, JTO markets.",
+  },
+  flash: {
+    label: "Flash Trade",
+    badge: "New",
+    description:
+      "High-performance perps with up to 500× leverage across 11 markets.",
+  },
+};
+
+// ─── Settings shape ───────────────────────────────────────────────────────────
+
 export interface SwapSettings {
+  // Spot
   provider: SwapProvider;
   executionStrategy: ExecutionStrategy;
-  slippage: number; // in percent e.g. 0.5
+  slippage: number;
+  // Perp
+  perpProvider: PerpProvider;
 }
-
-interface SwapSettingsContextValue {
-  settings: SwapSettings;
-  setProvider: (p: SwapProvider) => void;
-  setExecutionStrategy: (s: ExecutionStrategy) => void;
-  setSlippage: (s: number) => void;
-  resetSettings: () => void;
-}
-
-// ─── Defaults ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: SwapSettings = {
   provider: "metis",
   executionStrategy: "standard",
   slippage: 0.5,
+  perpProvider: "adrena",
 };
-
-const STORAGE_KEY = "token-app:swap-settings";
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
-const SwapSettingsContext = createContext<SwapSettingsContextValue | null>(
-  null,
-);
+interface SwapSettingsContextValue {
+  settings: SwapSettings;
+  setProvider: (p: SwapProvider) => void;
+  setExecutionStrategy: (s: ExecutionStrategy) => void;
+  setSlippage: (v: number) => void;
+  setPerpProvider: (p: PerpProvider) => void;
+  resetSettings: () => void;
+}
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+const SwapSettingsContext = createContext<SwapSettingsContextValue | null>(null);
 
-export function SwapSettingsProvider({ children }: { children: ReactNode }) {
+const STORAGE_KEY = "swap_settings_v2";
+
+export function SwapSettingsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [settings, setSettings] = useState<SwapSettings>(() => {
     if (typeof window === "undefined") return DEFAULT_SETTINGS;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return DEFAULT_SETTINGS;
-      const parsed = JSON.parse(raw) as Partial<SwapSettings>;
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
     } catch {
       return DEFAULT_SETTINGS;
     }
   });
 
-  // Persist to localStorage on every change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [settings]);
 
-  const setProvider = useCallback((provider: SwapProvider) => {
-    setSettings((s) => ({
-      ...s,
-      provider,
-      // Reset execution strategy to standard when switching to Jupiter
-      // (Jupiter direct doesn't use Pipeit TransactionBuilder strategies)
-      executionStrategy:
-        provider === "metis" ? "standard" : s.executionStrategy,
-    }));
-  }, []);
-
-  const setExecutionStrategy = useCallback(
-    (executionStrategy: ExecutionStrategy) => {
-      setSettings((s) => ({ ...s, executionStrategy }));
-    },
+  const setProvider = useCallback(
+    (p: SwapProvider) => setSettings((s) => ({ ...s, provider: p })),
     [],
   );
-
-  const setSlippage = useCallback((slippage: number) => {
-    setSettings((s) => ({ ...s, slippage }));
-  }, []);
-
-  const resetSettings = useCallback(() => {
-    setSettings(DEFAULT_SETTINGS);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const setExecutionStrategy = useCallback(
+    (es: ExecutionStrategy) =>
+      setSettings((s) => ({ ...s, executionStrategy: es })),
+    [],
+  );
+  const setSlippage = useCallback(
+    (v: number) => setSettings((s) => ({ ...s, slippage: v })),
+    [],
+  );
+  const setPerpProvider = useCallback(
+    (p: PerpProvider) => setSettings((s) => ({ ...s, perpProvider: p })),
+    [],
+  );
+  const resetSettings = useCallback(() => setSettings(DEFAULT_SETTINGS), []);
 
   return (
     <SwapSettingsContext.Provider
@@ -107,6 +164,7 @@ export function SwapSettingsProvider({ children }: { children: ReactNode }) {
         setProvider,
         setExecutionStrategy,
         setSlippage,
+        setPerpProvider,
         resetSettings,
       }}
     >
@@ -115,65 +173,9 @@ export function SwapSettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
-export function useSwapSettings(): SwapSettingsContextValue {
+export function useSwapSettings() {
   const ctx = useContext(SwapSettingsContext);
   if (!ctx)
-    throw new Error(
-      "useSwapSettings must be used inside <SwapSettingsProvider>",
-    );
+    throw new Error("useSwapSettings must be used within SwapSettingsProvider");
   return ctx;
 }
-
-// ─── Provider metadata (for UI) ───────────────────────────────────────────────
-
-export const PROVIDER_META: Record<
-  SwapProvider,
-  {
-    label: string;
-    description: string;
-    badge?: string;
-    supportsExecution: boolean;
-  }
-> = {
-  metis: {
-    label: "Metis",
-    description:
-      "Jupiter API via Pipeit — advanced routing with execution strategies.",
-    badge: "Pipeit",
-    supportsExecution: true,
-  },
-  titan: {
-    label: "Titan",
-    description:
-      "Titan aggregator via Pipeit — MEV-protected routes, no API key needed.",
-    badge: "Pipeit",
-    supportsExecution: true,
-  },
-};
-
-export const EXECUTION_META: Record<
-  ExecutionStrategy,
-  {
-    label: string;
-    description: string;
-    icon: string;
-  }
-> = {
-  standard: {
-    label: "Standard",
-    description: "Default RPC submission. Reliable for most transactions.",
-    icon: "⚡",
-  },
-  economical: {
-    label: "Economical",
-    description: "Jito bundle only. Lower fees, MEV-sensitive swaps.",
-    icon: "💰",
-  },
-  fast: {
-    label: "Fast",
-    description: "Jito + parallel RPC race. Best for time-sensitive swaps.",
-    icon: "🚀",
-  },
-};
