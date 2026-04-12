@@ -20,7 +20,7 @@ export function SolanaProviders({ children }: { children: ReactNode }) {
         id: "solana:mainnet" as const,
         label: customRpcUrl ? "Mainnet (Custom RPC)" : "Mainnet",
         name: "mainnet-beta" as const,
-        url: customRpcUrl || "https://api.mainnet-beta.solana.com",
+        url: customRpcUrl,
       },
       {
         id: "solana:devnet" as const,
