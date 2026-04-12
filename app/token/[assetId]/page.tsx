@@ -891,7 +891,7 @@ export default function TokenDetailPage({
               <span className="td-chart-label__text"> price is currently</span>
               <div className="td-chart-label__price">{fmtPrice(price)}</div>
               <ChangeChip value={change24h} />
-              <span className="td-chart-label__period"> 24h</span>
+              <span className="td-chart-label__period">{timeframe}</span>
             </div>
             <OHLCVChart candles={candles} isLoading={chartLoading} />
             <ChartControls

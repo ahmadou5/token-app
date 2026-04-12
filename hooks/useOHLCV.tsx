@@ -59,7 +59,7 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
       const parsed: OHLCVCandle[] = rawArray.map((c) => {
         if (Array.isArray(c)) {
           return {
-            time: c[0] * 1000,
+            time: c[0] * 1000, // ← multiply by 1000 to convert seconds → ms
             open: c[1],
             high: c[2],
             low: c[3],
