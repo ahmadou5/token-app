@@ -11,7 +11,8 @@ import type { ReactNode } from "react";
 export function SolanaProviders({ children }: { children: ReactNode }) {
   const connectorConfig = useMemo(() => {
     // Get custom RPC URL from environment variable (for mainnet)
-    const customRpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    const customRpcUrl =
+      "https://mainnet.helius-rpc.com/?api-key=b3a714d5-f40c-40e3-9ac3-d45501030c8a";
 
     // Always provide cluster configuration with mainnet as default
     const clusters = [
