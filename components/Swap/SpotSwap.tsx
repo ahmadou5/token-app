@@ -1,4 +1,5 @@
 "use client";
+
 import { GearSixIcon } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
 import { useWallet, useBalance } from "@solana/connector";
@@ -10,10 +11,10 @@ import { useSwapExecute } from "@/hooks/useSwapExecute";
 import { TokenLogo } from "./TokenLogo";
 import { TokenSelect } from "./TokenSelect";
 import { QuoteDetails } from "./QuoteDetails";
-import { PerpPlaceholder } from "./PerpPlaceholder";
 import { ConnectedPill } from "./ConnectedPill";
 import { SettingsModal } from "./modals/SettingsModal";
 import { WalletConnectModal } from "./modals/WalletConnectModal";
+import { PerpSwap } from "./PerpSwap"; // ← replaces PerpPlaceholder
 import {
   DEFAULT_INPUT_OPTIONS,
   SOL_MINT,
@@ -34,8 +35,9 @@ export function SpotSwap({
   outputName,
   outputLogo,
 }: SpotSwapProps) {
-  const { isConnected } = useWallet();
+  const { isConnected, walletStatus } = useWallet();
   const connector = useConnector();
+  const wallet = connector.account;
   const { settings } = useSwapSettings();
   const { tokens: walletTokens, solBalance } = useBalance({
     enabled: isConnected,
@@ -56,7 +58,6 @@ export function SpotSwap({
     );
   });
 
-  // Guard against inputToken colliding with the page's outputMint
   const safeInputToken =
     inputToken.mint === outputMint
       ? (DEFAULT_INPUT_OPTIONS.find((t) => t.mint !== outputMint) ??
@@ -157,9 +158,11 @@ export function SpotSwap({
     );
   };
 
+  // Wallet address string for perp (from publicKey)
+  const walletAddress = wallet ?? null;
+
   return (
     <>
-      {/* Portaled modals */}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       {showWalletModal && (
         <WalletConnectModal onClose={() => setShowWalletModal(false)} />
@@ -204,7 +207,7 @@ export function SpotSwap({
                       strokeWidth="1.3"
                     />
                   </svg>
-                  Perp<span className="sw-tab__soon">Soon</span>
+                  Perp
                 </>
               )}
             </button>
@@ -370,8 +373,8 @@ export function SpotSwap({
                 </a>
               </div>
             )}
+
             <div className="mt-5">
-              {/* CTA */}
               {!isConnected ? (
                 <button
                   className="sw-connect-btn mt-4"
@@ -406,7 +409,6 @@ export function SpotSwap({
               )}
             </div>
 
-            {/* Powered by */}
             <div className="sw-powered">
               <span>Powered by {PROVIDER_META[settings.provider].label}</span>
               {PROVIDER_META[settings.provider].badge && (
@@ -420,7 +422,12 @@ export function SpotSwap({
 
         {/* ── Perp body ── */}
         {activeTab === "perp" && (
-          <PerpPlaceholder tokenSymbol={outputSymbol} tokenName={outputName} />
+          <PerpSwap
+            tokenSymbol={outputSymbol}
+            tokenName={outputName}
+            walletAddress={walletAddress}
+            onConnectWallet={() => setShowWalletModal(true)}
+          />
         )}
       </div>
     </>

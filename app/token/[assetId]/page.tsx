@@ -81,7 +81,7 @@ function OHLCVChart({
       });
       return () => cancelAnimationFrame(raf);
     }
-  }, [isLoading, candles.length]); // Much simpler!
+  }, [isLoading, candles.length]);
 
   const derived = useMemo(() => {
     const clean = (candles ?? []).filter(
@@ -114,7 +114,6 @@ function OHLCVChart({
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
-    // Approximate path length for stroke-dasharray animation
     const pathLen = pts.reduce((acc, pt, i) => {
       if (i === 0) return 0;
       const prev = pts[i - 1];
@@ -155,15 +154,12 @@ function OHLCVChart({
     };
   }, [candles]);
 
-  // ── Tooltip mouse/touch handler ──────────────────────────────────────────
   function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
     if (!derived || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const scaleX = W / rect.width;
     const rawX = (e.clientX - rect.left) * scaleX;
     const clampedX = Math.max(PAD.left, Math.min(W - PAD.right, rawX));
-
-    // Find nearest candle by x
     const iW = W - PAD.left - PAD.right;
     const ratio = (clampedX - PAD.left) / iW;
     const clean = (candles ?? []).filter(
@@ -172,7 +168,6 @@ function OHLCVChart({
     const idx = Math.round(ratio * (clean.length - 1));
     const candle = clean[Math.max(0, Math.min(idx, clean.length - 1))];
     const pt = derived.pts[Math.max(0, Math.min(idx, derived.pts.length - 1))];
-
     setTooltip({
       x: pt[0],
       y: pt[1],
@@ -187,7 +182,6 @@ function OHLCVChart({
     setTooltip((t) => ({ ...t, visible: false }));
   }
 
-  // ── Loading skeleton ─────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="td-chart td-chart--loading">
@@ -197,7 +191,6 @@ function OHLCVChart({
           className="td-chart__svg"
           aria-hidden
         >
-          {/* Shimmering fake bars */}
           {Array.from({ length: 12 }).map((_, i) => {
             const bH = 40 + Math.sin(i * 1.3) * 30 + 50;
             const x = PAD.left + (i / 11) * (W - PAD.left - PAD.right);
@@ -215,7 +208,6 @@ function OHLCVChart({
               />
             );
           })}
-          {/* Shimmering wave line */}
           <polyline
             points={Array.from({ length: 20 }, (_, i) => {
               const x = PAD.left + (i / 19) * (W - PAD.left - PAD.right);
@@ -290,13 +282,10 @@ function OHLCVChart({
     );
   }
 
-  const { path, areaPath, pathLen, yLabels, xLabels, positive, pulsePt } =
-    derived;
+  const { path, areaPath, yLabels, xLabels, positive, pulsePt } = derived;
   const lineColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
   const pulseColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
-
-  // Tooltip positioning — keep inside chart bounds in SVG coords
-  const ttW = 140; // approximate tooltip width in SVG coords
+  const ttW = 140;
   const ttX = Math.min(
     Math.max(tooltip.x - ttW / 2, PAD.left),
     W - PAD.right - ttW,
@@ -334,7 +323,6 @@ function OHLCVChart({
           </clipPath>
         </defs>
 
-        {/* Grid lines */}
         {yLabels.map(({ y }) => (
           <line
             key={y}
@@ -347,12 +335,9 @@ function OHLCVChart({
           />
         ))}
 
-        {/* Area fill — clipped for draw animation */}
         <g clipPath="url(#chartClip)">
           <path d={areaPath} fill="url(#chartGrad)" />
         </g>
-
-        {/* Line — clipped for draw animation */}
         <g clipPath="url(#chartClip)">
           <path
             d={path}
@@ -364,7 +349,6 @@ function OHLCVChart({
           />
         </g>
 
-        {/* Y-axis labels */}
         {yLabels.map(({ y, label }) => (
           <text
             key={y}
@@ -378,8 +362,6 @@ function OHLCVChart({
             {label}
           </text>
         ))}
-
-        {/* X-axis labels */}
         {xLabels.map(({ x, label }) => (
           <text
             key={x}
@@ -394,10 +376,8 @@ function OHLCVChart({
           </text>
         ))}
 
-        {/* Pulse dot at last price — only shown when animated and tooltip not active */}
         {animated && !tooltip.visible && (
           <g>
-            {/* Outer pulse ring */}
             <circle
               cx={pulsePt[0]}
               cy={pulsePt[1]}
@@ -406,7 +386,6 @@ function OHLCVChart({
               opacity="0"
               className="td-chart__pulse-ring"
             />
-            {/* Inner solid dot */}
             <circle
               cx={pulsePt[0]}
               cy={pulsePt[1]}
@@ -417,10 +396,8 @@ function OHLCVChart({
           </g>
         )}
 
-        {/* Tooltip crosshair + data card */}
         {tooltip.visible && (
           <g>
-            {/* Vertical hairline */}
             <line
               x1={tooltip.x}
               y1={PAD.top}
@@ -430,7 +407,6 @@ function OHLCVChart({
               strokeWidth="1"
               strokeDasharray="3,3"
             />
-            {/* Dot on line */}
             <circle
               cx={tooltip.x}
               cy={tooltip.y}
@@ -439,8 +415,6 @@ function OHLCVChart({
               stroke="var(--tc-bg)"
               strokeWidth="2"
             />
-
-            {/* Tooltip card */}
             <g>
               <rect
                 x={ttX}
@@ -452,7 +426,6 @@ function OHLCVChart({
                 stroke="var(--tc-tooltip-border)"
                 strokeWidth="1"
               />
-              {/* Date */}
               <text
                 x={ttX + 10}
                 y={ttY + 16}
@@ -466,7 +439,6 @@ function OHLCVChart({
                   year: "numeric",
                 })}
               </text>
-              {/* Price label */}
               <text
                 x={ttX + 10}
                 y={ttY + 32}
@@ -476,7 +448,6 @@ function OHLCVChart({
               >
                 Price
               </text>
-              {/* Price value */}
               <text
                 x={ttX + ttW - 10}
                 y={ttY + 32}
@@ -488,7 +459,6 @@ function OHLCVChart({
               >
                 {fmtPrice(tooltip.price)}
               </text>
-              {/* Volume label */}
               <text
                 x={ttX + 10}
                 y={ttY + 50}
@@ -498,7 +468,6 @@ function OHLCVChart({
               >
                 Volume
               </text>
-              {/* Volume value */}
               <text
                 x={ttX + ttW - 10}
                 y={ttY + 50}
@@ -518,7 +487,7 @@ function OHLCVChart({
   );
 }
 
-// ─── Chart controls — Timeframe only ─────────────────────────────────────────
+// ─── Chart controls ───────────────────────────────────────────────────────────
 
 const TIMEFRAMES: OHLCVTimeframe[] = ["24H", "7D", "30D", "90D", "1Y"];
 
@@ -542,7 +511,6 @@ function ChartControls({
             disabled={isLoading}
           >
             {t}
-            {/* Show a tiny spinner inside the active button while loading */}
             {isLoading && timeframe === t && (
               <span className="td-ctrl-btn__spinner" aria-hidden />
             )}
@@ -671,6 +639,7 @@ export default function TokenDetailPage({
   const { tokens } = useTokens();
   const { isConnected } = useWallet();
   const connector = useConnector();
+
   const [data, setData] = useState<TokenAssetResponse | null>(null);
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
@@ -689,7 +658,6 @@ export default function TokenDetailPage({
     setData(null);
     setOther(null);
     setVariants([]);
-
     let cancelled = false;
 
     async function load() {
@@ -701,16 +669,11 @@ export default function TokenDetailPage({
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
         const json: TokenAssetResponse = await res.json();
         if (cancelled) return;
-
         setData(json);
         setOther(otherData);
-
-        const rows = flattenVariantGroups(
-          json.variantGroups,
-          json.name,
-          json.symbol,
+        setVariants(
+          flattenVariantGroups(json.variantGroups, json.name, json.symbol),
         );
-        setVariants(rows);
       } catch (e) {
         console.error("[TokenDetailPage] Failed to load:", e);
       } finally {
@@ -784,6 +747,7 @@ export default function TokenDetailPage({
       </div>
 
       <div className="td-layout">
+        {/* ── Main column ── */}
         <div className="td-main">
           {/* Header */}
           <div className="td-header">
@@ -994,23 +958,25 @@ export default function TokenDetailPage({
           )}
         </div>
 
-        {/* Sidebar */}
-        <aside className="td-sidebar ">
-          {/* Connected wallet pill lives in the tab bar */}
-          <div className="h-[65px] py-1.5">
-            {isConnected && (
+        {/* ── Sidebar ── */}
+        <aside className="td-sidebar">
+          {/*
+            ConnectedPill — shown here on desktop only.
+            On mobile (≤900px) .td-sidebar-pill is hidden via CSS because
+            the pill already appears inside sw-tabs within SpotSwap.
+          */}
+          {isConnected && (
+            <div className="td-sidebar-pill">
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
-            )}
-          </div>
+            </div>
+          )}
 
-          <div>
-            <SpotSwap
-              outputMint={currentMint ?? ""} // the token's primary mint address
-              outputSymbol={data.symbol} // e.g. "SOL", "BONK"
-              outputName={data.name} // e.g. "Bonk"
-              outputLogo={data.imageUrl ?? undefined} // token logo from your existing data
-            />
-          </div>
+          <SpotSwap
+            outputMint={currentMint ?? ""}
+            outputSymbol={data.symbol}
+            outputName={data.name}
+            outputLogo={data.imageUrl ?? undefined}
+          />
 
           {description && (
             <ExpandableDescription
