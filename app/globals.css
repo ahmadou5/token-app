@@ -1760,7 +1760,7 @@ html.dark .sw-perp-form__market-provider--flash {
     height: 50px;
     border-radius: 25px;
     border: none;
-    background: var(--tc-text-primary);
+    background: var(--tc-accent);
     color: var(--tc-bg);
     font-family: var(--tc-font-sans);
     font-size: 15px;
