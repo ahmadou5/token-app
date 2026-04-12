@@ -1800,7 +1800,7 @@ html.dark .sw-perp-form__market-provider--flash {
     background: var(--tc-bg);
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
-    max-height: 92vh;
+    max-height: 98vh;
     overflow-y: auto;
     animation: tdSheetUp 240ms cubic-bezier(0.22, 1, 0.36, 1);
     padding-bottom: env(safe-area-inset-bottom, 16px);
