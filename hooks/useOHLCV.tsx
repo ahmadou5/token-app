@@ -24,20 +24,21 @@ interface UseOHLCVReturn {
   setTimeframe: (t: OHLCVTimeframe) => void;
 }
 
-// Map timeframe → how many candles back to show
-const TIMEFRAME_LIMIT: Record<OHLCVTimeframe, number> = {
-  "24H": 24,
-  "7D": 168,
-  "30D": 30,
-  "90D": 90,
-  "1Y": 365,
+// Map timeframe → appropriate interval + limit
+const TIMEFRAME_CONFIG: Record<
+  OHLCVTimeframe,
+  { interval: OHLCVInterval; limit: number }
+> = {
+  "24H": { interval: "1H", limit: 24 },
+  "7D": { interval: "4H", limit: 42 }, // 7 days × 6 candles/day
+  "30D": { interval: "1D", limit: 30 },
+  "90D": { interval: "1D", limit: 90 },
+  "1Y": { interval: "1W", limit: 52 },
 };
-
 export function useOHLCV(assetId: string | null): UseOHLCVReturn {
   const [candles, setCandles] = useState<OHLCVCandle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [interval, setIntervalState] = useState<OHLCVInterval>("1H");
   const [timeframe, setTimeframeState] = useState<OHLCVTimeframe>("7D");
 
   const fetchCandles = useCallback(async () => {
@@ -45,21 +46,16 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     setIsLoading(true);
     setError(null);
     try {
-      const limit = TIMEFRAME_LIMIT[timeframe];
+      const { interval, limit } = TIMEFRAME_CONFIG[timeframe];
       const data = await tokenRequest.getOHLCV(assetId, interval, limit);
 
       let rawArray: RawOHLCVTuple[] = [];
-
-      // 1. Extract the raw array regardless of wrapper object
       if (Array.isArray(data)) {
         rawArray = data as RawOHLCVTuple[];
       } else if (data && typeof data === "object") {
         rawArray = data.candles || data.data || [];
       }
 
-      // 2. Map Raw Tuples to Clean Objects
-      // We check if index 0 is a number to ensure we aren't mapping
-      // an already-parsed object array (safety check)
       const parsed: OHLCVCandle[] = rawArray.map((c) => {
         if (Array.isArray(c)) {
           return {
@@ -82,7 +78,7 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [assetId, interval, timeframe]);
+  }, [assetId, timeframe]);
 
   useEffect(() => {
     fetchCandles();
@@ -92,9 +88,9 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     candles,
     isLoading,
     error,
-    interval,
+    interval: TIMEFRAME_CONFIG[timeframe].interval, // derived, not state
     timeframe,
-    setInterval: setIntervalState,
+    setInterval: () => {}, // no-op, kept for interface compatibility
     setTimeframe: setTimeframeState,
   };
 }

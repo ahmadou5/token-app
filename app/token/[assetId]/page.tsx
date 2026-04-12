@@ -18,7 +18,6 @@ import {
   type VariantRow,
 } from "@/components/Variant";
 import { ExpandableDescription } from "@/components/ExpandableDescription";
-import { BuyButton } from "@/components/BuyButton";
 import { VariantPicker } from "@/components/VariantPicker";
 import type { TokenAssetResponse } from "@/types/token.types";
 import { tokenRequest } from "@/lib/token";
