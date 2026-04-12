@@ -83,7 +83,7 @@ export function usePerpQuote({
         ...(stopLoss ? { stopLoss } : {}),
       });
 
-      const res = await fetch(`/api/trade/quote?${params}`, {
+      const res = await fetch(`/api/perp/quote?${params}`, {
         signal: abortRef.current.signal,
       });
       const data = await res.json();
