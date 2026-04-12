@@ -1733,3 +1733,150 @@ html.dark .sw-perp-form__market-provider--flash {
   letter-spacing: 0.04em;
   line-height: 1.4;
 }
+
+
+/* ══════════════════════════════════════════════════════
+   Mobile Trade Bottom Sheet
+   ══════════════════════════════════════════════════════ */
+
+/* Fixed Trade button — mobile only */
+.td-trade-fab {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .td-trade-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    width: calc(100% - 48px);
+    max-width: 420px;
+    height: 50px;
+    border-radius: 25px;
+    border: none;
+    background: var(--tc-text-primary);
+    color: var(--tc-bg);
+    font-family: var(--tc-font-sans);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.12);
+    transition: opacity 160ms, transform 160ms;
+  }
+  .td-trade-fab:hover { opacity: 0.9; }
+  .td-trade-fab:active { transform: translateX(-50%) scale(0.97); }
+}
+
+/* Bottom sheet backdrop */
+.td-swap-sheet-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .td-swap-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(3px);
+    animation: swBackdropIn 180ms ease;
+  }
+
+  /* Bottom sheet container */
+  .td-swap-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 71;
+    background: var(--tc-bg);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: tdSheetUp 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  @keyframes tdSheetUp {
+    from { opacity: 0; transform: translateY(60px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Drag handle */
+  .td-swap-sheet::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--tc-border-hover);
+    border-radius: 2px;
+    margin: 12px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* Sheet header with close */
+  .td-swap-sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px 12px;
+    border-bottom: 1px solid var(--tc-border);
+  }
+
+  .td-swap-sheet__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--tc-text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .td-swap-sheet__close {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--tc-border);
+    background: var(--tc-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--tc-text-muted);
+    transition: background 130ms, color 130ms;
+  }
+  .td-swap-sheet__close:hover {
+    background: var(--tc-bg-hover);
+    color: var(--tc-text-primary);
+  }
+
+  .td-swap-sheet__body {
+    padding: 12px 12px 24px;
+  }
+
+  /* Hide the sidebar SpotSwap on mobile — it shows in the sheet instead */
+  .td-sidebar .td-swap-desktop-only {
+    display: none;
+  }
+}
+
+/* On desktop, hide the sheet-only wrapper */
+.td-swap-mobile-sheet {
+  display: none;
+}
+@media (max-width: 900px) {
+  .td-swap-mobile-sheet {
+    display: block;
+  }
+  /* Keep sidebar SpotSwap hidden on mobile */
+  .td-swap-desktop-only {
+    display: none;
+  }
+}

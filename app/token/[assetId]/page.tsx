@@ -644,6 +644,7 @@ export default function TokenDetailPage({
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setLoading] = useState(true);
+  const [showTradeSheet, setShowTradeSheet] = useState(false);
   const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
 
   const {
@@ -970,7 +971,7 @@ export default function TokenDetailPage({
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             </div>
           )}
-          <div className="mt-[26px]">
+          <div className="mt-[26px] td-swap-desktop-only">
             <SpotSwap
               outputMint={currentMint ?? ""}
               outputSymbol={data.symbol}
@@ -978,7 +979,62 @@ export default function TokenDetailPage({
               outputLogo={data.imageUrl ?? undefined}
             />
           </div>
+          {!showTradeSheet && (
+            <button
+              className="td-trade-fab"
+              onClick={() => setShowTradeSheet(true)}
+            >
+              <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+                <path
+                  d="M2 10l4-6 3 4 2-3 3 5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Trade {data.symbol ? `$${data.symbol}` : data.name}
+            </button>
+          )}
 
+          {/* Mobile Swap Bottom Sheet */}
+          {showTradeSheet && (
+            <>
+              <div
+                className="td-swap-sheet-backdrop"
+                onClick={() => setShowTradeSheet(false)}
+              />
+              <div className="td-swap-sheet">
+                <div className="td-swap-sheet__header">
+                  <span className="td-swap-sheet__title">
+                    Trade {data.symbol ? `$${data.symbol}` : data.name}
+                  </span>
+                  <button
+                    className="td-swap-sheet__close"
+                    onClick={() => setShowTradeSheet(false)}
+                    aria-label="Close"
+                  >
+                    <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+                      <path
+                        d="M2 2l10 10M12 2L2 12"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="td-swap-sheet__body">
+                  <SpotSwap
+                    outputMint={currentMint ?? ""}
+                    outputSymbol={data.symbol}
+                    outputName={data.name}
+                    outputLogo={data.imageUrl ?? undefined}
+                  />
+                </div>
+              </div>
+            </>
+          )}
           {description && (
             <ExpandableDescription
               text={description}
