@@ -59,7 +59,7 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
       const parsed: OHLCVCandle[] = rawArray.map((c) => {
         if (Array.isArray(c)) {
           return {
-            time: c[0] * 1000, // ← multiply by 1000 to convert seconds → ms
+            time: c[0] * 1000,
             open: c[1],
             high: c[2],
             low: c[3],
@@ -67,7 +67,12 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
             volume: c[5],
           };
         }
-        return c as unknown as OHLCVCandle;
+        // Object format — still needs seconds → ms conversion
+        const obj = c as unknown as OHLCVCandle;
+        return {
+          ...obj,
+          time: obj.time * 1000,
+        };
       });
 
       setCandles(parsed);
