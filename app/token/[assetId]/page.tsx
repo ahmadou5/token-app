@@ -983,16 +983,7 @@ export default function TokenDetailPage({
               className="td-trade-fab"
               onClick={() => setShowTradeSheet(true)}
             >
-              <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-                <path
-                  d="M2 10l4-6 3 4 2-3 3 5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Trade {data.symbol ? `$${data.symbol}` : data.name}
+              Trade
             </button>
           )}
 
