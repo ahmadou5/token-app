@@ -29,53 +29,18 @@ export interface UseSwapExecuteReturn {
   reset: () => void;
 }
 
-// ─── Jupiter direct execute ───────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function executeJupiter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rawQuote: any,
-  userPublicKey: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  signTransaction: (tx: any) => Promise<any>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpc: any,
-  onStatus: (s: SwapExecuteStatus) => void,
-): Promise<string> {
-  // 1. Get swap transaction from Jupiter
-  const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      quoteResponse: rawQuote,
-      userPublicKey,
-      wrapAndUnwrapSol: true,
-      dynamicComputeUnitLimit: true,
-      prioritizationFeeLamports: "auto",
-    }),
-  });
-  const swapData = await swapRes.json();
-  if (swapData.error) throw new Error(swapData.error);
+function isTemporarilyRestricted(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("5663019") ||
+    msg.includes("ProgramExecutionTemporarilyRestricted")
+  );
+}
 
-  // 2. Deserialize
-  const { VersionedTransaction } = await import("@solana/web3.js");
-  const txBytes = Buffer.from(swapData.swapTransaction, "base64");
-  const tx = VersionedTransaction.deserialize(txBytes);
-
-  // 3. Sign
-  onStatus("signing");
-  const signedTx = await signTransaction(tx);
-
-  // 4. Send
-  onStatus("sending");
-  const sig: string = await rpc
-    .sendTransaction(signedTx.serialize(), {
-      encoding: "base64",
-      skipPreflight: false,
-      maxRetries: 3,
-    })
-    .send();
-
-  return sig;
+async function waitOneSlot(): Promise<void> {
+  await new Promise((r) => setTimeout(r, 500));
 }
 
 // ─── Metis execute (Pipeit TransactionBuilder) ────────────────────────────────
@@ -94,9 +59,10 @@ async function executeMetis(
   onStatus: (s: SwapExecuteStatus) => void,
 ): Promise<string> {
   const apiKey =
-    process.env.METIS_API_KEY ?? process.env.NEXT_PUBLIC_JUP_API_KEY ?? "";
+    process.env.NEXT_PUBLIC_METIS_API_KEY ??
+    process.env.NEXT_PUBLIC_JUP_API_KEY ??
+    "";
 
-  // Dynamically import Pipeit — keeps bundle smaller on pages that don't swap
   const [
     { createMetisClient, metisInstructionToKit },
     { TransactionBuilder },
@@ -109,7 +75,6 @@ async function executeMetis(
 
   const client = createMetisClient({ apiKey });
 
-  // Get swap instructions from Metis
   const swapIxs = await client.getSwapInstructions({
     quoteResponse: rawQuote,
     userPublicKey,
@@ -117,7 +82,6 @@ async function executeMetis(
     useSharedAccounts: true,
   });
 
-  // Convert to Kit format (as per Pipeit docs)
   const instructions = [
     ...swapIxs.otherInstructions.map(metisInstructionToKit),
     ...swapIxs.setupInstructions.map(metisInstructionToKit),
@@ -131,24 +95,38 @@ async function executeMetis(
 
   onStatus("signing");
 
-  // Build and execute with Pipeit TransactionBuilder
-  const signature = await new TransactionBuilder({
-    rpc,
-    computeUnits: { strategy: "simulate", buffer: 1.1 },
-    priorityFee: { strategy: "fixed", microLamports: 200_000 },
-    lookupTableAddresses,
-  })
-    .setFeePayerSigner(signer)
-    .addInstructions(instructions)
-    .execute({
-      rpcSubscriptions,
-      commitment: "confirmed",
-      skipPreflight: true,
-      execution: executionStrategy, // 'standard' | 'economical' | 'fast'
-    });
+  let lastError: unknown;
 
-  onStatus("sending");
-  return signature;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const signature = await new TransactionBuilder({
+        rpc,
+        computeUnits: { strategy: "simulate", buffer: 1.1 },
+        priorityFee: { strategy: "fixed", microLamports: 200_000 },
+        lookupTableAddresses,
+      })
+        .setFeePayerSigner(signer)
+        .addInstructions(instructions)
+        .execute({
+          rpcSubscriptions,
+          commitment: "confirmed",
+          skipPreflight: true,
+          execution: executionStrategy,
+        });
+
+      onStatus("sending");
+      return signature;
+    } catch (err) {
+      lastError = err;
+      if (isTemporarilyRestricted(err)) {
+        await waitOneSlot();
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 }
 
 // ─── Titan execute (Pipeit getTitanSwapPlan + executePlan) ───────────────────
@@ -175,31 +153,44 @@ async function executeTitan(
     import("@pipeit/core"),
   ]);
 
-  // If quote was a Titan fallback (used Jupiter route data), we still use
-  // getTitanSwapPlan to get the actual Titan execution path
-  const { plan, lookupTableAddresses } = await getTitanSwapPlan({
-    swap: {
-      inputMint,
-      outputMint,
-      amount: inputAmount,
-      slippageBps,
-    },
-    transaction: {
-      userPublicKey,
-    },
-  });
+  let lastError: unknown;
 
-  onStatus("signing");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { plan, lookupTableAddresses } = await getTitanSwapPlan({
+        swap: {
+          inputMint,
+          outputMint,
+          amount: inputAmount,
+          slippageBps,
+        },
+        transaction: {
+          userPublicKey,
+        },
+      });
 
-  const signature = await executePlan(plan, {
-    rpc,
-    rpcSubscriptions,
-    signer,
-    lookupTableAddresses,
-  });
+      onStatus("signing");
 
-  onStatus("sending");
-  return signature;
+      const signature = await executePlan(plan, {
+        rpc,
+        rpcSubscriptions,
+        signer,
+        lookupTableAddresses,
+      });
+
+      onStatus("sending");
+      return signature;
+    } catch (err) {
+      lastError = err;
+      if (isTemporarilyRestricted(err)) {
+        await waitOneSlot();
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 }
 
 // ─── Main hook ────────────────────────────────────────────────────────────────
@@ -235,24 +226,6 @@ export function useSwapExecute(): UseSwapExecuteReturn {
         const { rpc, rpcSubscriptions } = client;
         const slippageBps = Math.round(settings.slippage * 100);
 
-        // Build a signTransaction function for Jupiter direct (web3.js VersionedTransaction)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const signTransaction = async (tx: any) => {
-          // @solana/connector's kit signer exposes modifyAndSignTransactions
-          // For VersionedTransaction we need the raw wallet signing
-          // We cast to access the underlying signTransaction if available
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const rawSigner = signer as any;
-          if (typeof rawSigner.signTransaction === "function") {
-            return rawSigner.signTransaction(tx);
-          }
-          // Fallback: try wallet standard
-          if (typeof rawSigner.wallet?.signTransaction === "function") {
-            return rawSigner.wallet.signTransaction(tx);
-          }
-          throw new Error("Wallet does not support signTransaction");
-        };
-
         let sig: string | TransactionPlanResult;
 
         switch (settings.provider) {
@@ -271,7 +244,6 @@ export function useSwapExecute(): UseSwapExecuteReturn {
           case "titan":
             sig = await executeTitan(
               quote.rawQuote,
-              // We need the mints — they're in rawQuote for both Jupiter and Titan
               quote.rawQuote.inputMint ??
                 quote.rawQuote.swapRequest?.inputMint ??
                 "",
@@ -288,12 +260,14 @@ export function useSwapExecute(): UseSwapExecuteReturn {
               setStatus,
             );
             break;
+
+          default:
+            throw new Error(`Unknown provider: ${settings.provider}`);
         }
 
         setStatus("confirming");
         setTxSignature(sig as string);
 
-        // Brief delay then mark success
         await new Promise((r) => setTimeout(r, 800));
         setStatus("success");
       } catch (err) {
