@@ -31,6 +31,16 @@ export interface UseSwapExecuteReturn {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function getSignaturesFromTransactionPlanResult(
+  result: TransactionPlanResult,
+): string[] {
+  if (result.kind === "single") {
+    if (result.status !== "successful") return [];
+    return [result.context.signature];
+  }
+
+  return result.plans.flatMap(getSignaturesFromTransactionPlanResult);
+}
 function isTemporarilyRestricted(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return (
@@ -85,34 +95,50 @@ async function executeMetis(
   const instructions = [
     ...swapIxs.otherInstructions.map(metisInstructionToKit),
     ...swapIxs.setupInstructions.map(metisInstructionToKit),
+    ...(swapIxs.tokenLedgerInstruction
+      ? [metisInstructionToKit(swapIxs.tokenLedgerInstruction)]
+      : []),
     metisInstructionToKit(swapIxs.swapInstruction),
     ...(swapIxs.cleanupInstruction
       ? [metisInstructionToKit(swapIxs.cleanupInstruction)]
       : []),
   ];
 
-  const lookupTableAddresses = swapIxs.addressLookupTableAddresses.map(address);
-
+  const lookupTableAddresses = swapIxs.addressLookupTableAddresses.map((addr) =>
+    address(addr),
+  );
+  console.log("Total instructions:", instructions.length);
+  console.log("Lookup tables:", lookupTableAddresses);
   onStatus("signing");
 
   let lastError: unknown;
-
+  // Step 4: Build and execute transaction
+  async function executeSwapOnce(): Promise<string> {
+    return new TransactionBuilder({
+      rpc: rpc,
+      // Simulate to set CU limit (and surface simulation logs if it fails).
+      computeUnits: { strategy: "simulate", buffer: 1.1 },
+      // Fixed high priority fee so it lands before blockhash expiry.
+      // 200_000 microLamports/CU = 0.2 lamports/CU.
+      priorityFee: { strategy: "fixed", microLamports: 200_000 },
+      // Don't retry the same blockhash internally; we rebuild on expiry below.
+      autoRetry: false,
+      lookupTableAddresses:
+        lookupTableAddresses.length > 0 ? lookupTableAddresses : undefined,
+    })
+      .setFeePayerSigner(signer)
+      .addInstructions(instructions)
+      .execute({
+        rpcSubscriptions: rpcSubscriptions,
+        commitment: "confirmed",
+        // We've already simulated for CU; skipping preflight reduces latency.
+        skipPreflight: true,
+      });
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
+    let signature;
     try {
-      const signature = await new TransactionBuilder({
-        rpc,
-        computeUnits: { strategy: "simulate", buffer: 1.1 },
-        priorityFee: { strategy: "fixed", microLamports: 200_000 },
-        lookupTableAddresses,
-      })
-        .setFeePayerSigner(signer)
-        .addInstructions(instructions)
-        .execute({
-          rpcSubscriptions,
-          commitment: "confirmed",
-          skipPreflight: true,
-          execution: executionStrategy,
-        });
+      signature = await executeSwapOnce();
 
       onStatus("sending");
       return signature;
@@ -147,7 +173,7 @@ async function executeTitan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rpcSubscriptions: any,
   onStatus: (s: SwapExecuteStatus) => void,
-): Promise<TransactionPlanResult> {
+): Promise<TransactionPlanResult | string> {
   const [{ getTitanSwapPlan }, { executePlan }] = await Promise.all([
     import("@pipeit/actions/titan"),
     import("@pipeit/core"),
@@ -166,17 +192,20 @@ async function executeTitan(
         },
         transaction: {
           userPublicKey,
+          createOutputTokenAccount: true,
         },
       });
 
       onStatus("signing");
 
-      const signature = await executePlan(plan, {
+      const planResult = await executePlan(plan, {
         rpc,
         rpcSubscriptions,
         signer,
         lookupTableAddresses,
       });
+      const signatures = getSignaturesFromTransactionPlanResult(planResult);
+      const signature = signatures.at(-1) ?? "";
 
       onStatus("sending");
       return signature;
