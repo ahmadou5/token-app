@@ -23,8 +23,8 @@ const CLMM_SOURCES = new Set([
   "raydium_clmm",
   "raydiumclmm",
   "Raydium CLAMM",
-  "CLMM",
-  "clmm",
+  "CLAMM",
+  "clamm",
 ]);
 
 function isCLMMMarket(market: MarketEntry): boolean {
