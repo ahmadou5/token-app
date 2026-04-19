@@ -19,10 +19,10 @@ import { AddLiquidityModal } from "@/components/Liquidity/AddLiquidityModal";
 
 // ── Raydium CLMM source identifiers (extend as needed) ───────────────────────
 const CLMM_SOURCES = new Set([
-  "raydium-clmm",
+  "raydium-clamm",
   "raydium_clmm",
   "raydiumclmm",
-  "Raydium CLMM",
+  "Raydium CLAMM",
   "CLMM",
   "clmm",
 ]);
