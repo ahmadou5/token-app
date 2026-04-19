@@ -117,11 +117,8 @@ async function executeMetis(
     return new TransactionBuilder({
       rpc: rpc,
       // Simulate to set CU limit (and surface simulation logs if it fails).
-      computeUnits: { strategy: "simulate", buffer: 1.1 },
-      // Fixed high priority fee so it lands before blockhash expiry.
-      // 200_000 microLamports/CU = 0.2 lamports/CU.
+      computeUnits: { strategy: "fixed", units: 300_000 },
       priorityFee: { strategy: "fixed", microLamports: 200_000 },
-      // Don't retry the same blockhash internally; we rebuild on expiry below.
       autoRetry: false,
       lookupTableAddresses:
         lookupTableAddresses.length > 0 ? lookupTableAddresses : undefined,
