@@ -129,7 +129,7 @@ async function executeMetis(
       .setFeePayerSigner(signer)
       .addInstructions(instructions)
       .execute({
-        rpcSubscriptions: rpcSubscriptions,
+        rpcSubscriptions,
         commitment: "confirmed",
         // We've already simulated for CU; skipping preflight reduces latency.
         skipPreflight: true,
@@ -139,7 +139,7 @@ async function executeMetis(
     let signature;
     try {
       signature = await executeSwapOnce();
-
+      console.log("signature", signature);
       onStatus("sending");
       return signature;
     } catch (err) {
