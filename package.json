@@ -12,6 +12,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@pipeit/actions": "^0.1.2",
     "@pipeit/core": "^0.2.7",
+    "@raydium-io/raydium-sdk-v2": "0.2.41-alpha",
     "@solana-program/system": "^0.12.0",
     "@solana-program/token": "^0.13.0",
     "@solana/connector": "^0.2.4",

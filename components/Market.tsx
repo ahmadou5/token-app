@@ -1,8 +1,39 @@
 "use client";
 
+/**
+ * MarketsSection — updated to include per-row "Add Liquidity" button
+ * for Raydium CLMM pools, and the AddLiquidityModal.
+ *
+ * Only change vs original:
+ *  1. Import AddLiquidityModal
+ *  2. State: activeMarket (the row that opened the modal)
+ *  3. Column header: +  "Action" col
+ *  4. Row: render <AddLiquidityButton> when source is a CLMM source
+ *  5. Render <AddLiquidityModal> at bottom of section when activeMarket set
+ */
+
 import { useState } from "react";
 import type { MarketEntry } from "@/types/token.types";
 import { fmtCompact } from "@/components/TokenCard";
+import { AddLiquidityModal } from "@/components/Liquidity/AddLiquidityModal";
+
+// ── Raydium CLMM source identifiers (extend as needed) ───────────────────────
+const CLMM_SOURCES = new Set([
+  "raydium-clmm",
+  "raydium_clmm",
+  "raydiumclmm",
+  "Raydium CLMM",
+  "CLMM",
+  "clmm",
+]);
+
+function isCLMMMarket(market: MarketEntry): boolean {
+  return !!market.source && CLMM_SOURCES.has(market.source);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Keep originals exactly as-is
+// ──────────────────────────────────────────────────────────────────────────────
 
 function truncateMint(mint: unknown): string {
   const m = mint && typeof mint === "string" ? mint : "";
@@ -13,8 +44,6 @@ function truncateMint(mint: unknown): string {
 function safeInitials(s: string | undefined): string {
   return s && s.length > 0 ? s.slice(0, 2).toUpperCase() : "??";
 }
-
-// ─── Pair icon stack ──────────────────────────────────────────────────────────
 
 function PairIcons({
   baseIcon,
@@ -68,8 +97,6 @@ function PairIcons({
   );
 }
 
-// ─── Sort ─────────────────────────────────────────────────────────────────────
-
 type SortKey = "liquidity" | "volume24h";
 type SortDir = "asc" | "desc";
 
@@ -102,8 +129,6 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
 const PAGE_SIZES = [10, 25, 50];
 
 interface MarketsSectionProps {
@@ -116,6 +141,9 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   const [perPage, setPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<SortKey>("liquidity");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // ── NEW: which market row opened the modal ───────────────────────────────
+  const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
 
   const safeMarkets = Array.isArray(markets) ? markets.filter(Boolean) : [];
 
@@ -143,8 +171,8 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
     <section className="td-section">
       <h2 className="td-section__title">Markets</h2>
       <div className="mkt-table-wrap">
-        {/* Header */}
-        <div className="mkt-header">
+        {/* Header — added Action col */}
+        <div className="mkt-header mkt-header--with-action">
           <span className="mkt-col--pair">Pair</span>
           <button
             className="mkt-col--liq mkt-sort-btn"
@@ -162,6 +190,7 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           </button>
           <span className="mkt-col--trades">24h Trades</span>
           <span className="mkt-col--wallets">24h Wallets</span>
+          <span className="mkt-col--action">Action</span>
         </div>
 
         {/* Rows */}
@@ -170,9 +199,13 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           const qSym = mkt.quote?.symbol;
           const bIcon = mkt.base?.icon ?? null;
           const qIcon = mkt.quote?.icon ?? null;
+          const isCLMM = isCLMMMarket(mkt);
 
           return (
-            <div key={`${mkt.address}-${i}`} className="mkt-row">
+            <div
+              key={`${mkt.address}-${i}`}
+              className={`mkt-row mkt-row--with-action${isCLMM ? " mkt-row--clmm" : ""}`}
+            >
               {/* Pair */}
               <div className="mkt-col--pair mkt-pair">
                 <PairIcons
@@ -254,11 +287,40 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
                   </span>
                 )}
               </div>
+
+              {/* ── NEW: Action column ── */}
+              <div className="mkt-col--action">
+                {isCLMM ? (
+                  <button
+                    className="mkt-add-liq-btn"
+                    onClick={() => setActiveMarket(mkt)}
+                    title="Add liquidity to this pool"
+                  >
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      width="10"
+                      height="10"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M6 1v10M1 6h10"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Add
+                  </button>
+                ) : (
+                  <span className="mkt-action-none">—</span>
+                )}
+              </div>
             </div>
           );
         })}
 
-        {/* Footer */}
+        {/* Footer (unchanged) */}
         <div className="mkt-footer">
           <span className="mkt-footer__info">
             Showing {Math.min((page - 1) * perPage + 1, sorted.length)}–
@@ -316,6 +378,14 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           </div>
         </div>
       </div>
+
+      {/* ── Add Liquidity Modal (portal-less, above table in DOM) ── */}
+      {activeMarket && (
+        <AddLiquidityModal
+          market={activeMarket}
+          onClose={() => setActiveMarket(null)}
+        />
+      )}
     </section>
   );
 }
