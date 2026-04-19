@@ -137,6 +137,7 @@ async function executeMetis(
   }
   let signature: string;
   try {
+    console.log("Executing transaction with Metis instructions...");
     signature = await executeSwapOnce();
     console.log("signature", signature);
     onStatus("sending");
