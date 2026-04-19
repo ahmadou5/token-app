@@ -135,21 +135,18 @@ async function executeMetis(
         skipPreflight: true,
       });
   }
-  for (let attempt = 0; attempt < 3; attempt++) {
-    let signature;
-    try {
-      signature = await executeSwapOnce();
-      console.log("signature", signature);
-      onStatus("sending");
-      return signature;
-    } catch (err) {
-      lastError = err;
-      if (isTemporarilyRestricted(err)) {
-        await waitOneSlot();
-        continue;
-      }
-      throw err;
+  let signature: string;
+  try {
+    signature = await executeSwapOnce();
+    console.log("signature", signature);
+    onStatus("sending");
+    return signature;
+  } catch (err) {
+    lastError = err;
+    if (isTemporarilyRestricted(err)) {
+      console.warn("Execution temporarily restricted, retrying once...", err);
     }
+    throw err;
   }
 
   throw lastError;
