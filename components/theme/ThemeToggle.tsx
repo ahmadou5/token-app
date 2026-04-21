@@ -1,9 +1,8 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useSyncExternalStore } from "react";
+import { startTransition, useSyncExternalStore } from "react";
 
-// Hydration guard — returns false on server, true on client
 function useIsMounted() {
   return useSyncExternalStore(
     () => () => {},
@@ -38,27 +37,31 @@ function MoonIcon() {
 }
 
 export function ThemeToggle() {
-  // resolvedTheme is always "light" or "dark" — never undefined after mount
   const { resolvedTheme, setTheme } = useTheme();
   const isMounted = useIsMounted();
 
-  // Render a same-size placeholder on server to avoid layout shift
-  if (!isMounted) {
-    return <div className="theme-toggle--placeholder" aria-hidden="true" />;
-  }
-
   const isDark = resolvedTheme === "dark";
 
+  // Must render same element type (button) on both server and client
+  // Use aria-hidden + disabled to neutralize it server-side
   return (
     <button
       className="theme-toggle"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={() => startTransition(() => setTheme(isDark ? "light" : "dark"))}
+      aria-label={
+        isMounted
+          ? `Switch to ${isDark ? "light" : "dark"} mode`
+          : "Theme toggle"
+      }
+      title={
+        isMounted ? `Switch to ${isDark ? "light" : "dark"} mode` : undefined
+      }
+      disabled={!isMounted}
+      aria-hidden={!isMounted}
     >
       <div className="theme-toggle__track">
         <span className="theme-toggle__thumb">
-          {isDark ? <MoonIcon /> : <SunIcon />}
+          {isMounted ? isDark ? <MoonIcon /> : <SunIcon /> : null}
         </span>
       </div>
     </button>

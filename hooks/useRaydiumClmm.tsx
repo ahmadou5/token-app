@@ -1,25 +1,33 @@
 "use client";
 
-/**
- * useRaydiumCLMM
- *
- * Builds and executes a Raydium CLMM openPosition transaction
- * using @solana/kit + @pipeit/core TransactionBuilder — same
- * execution pattern as your executeMetis helper.
- *
- * Dependencies (already in your project or add them):
- *   @raydium-io/raydium-sdk-v2
- *   @pipeit/core
- *   @solana/kit
- *   @solana/web3.js  (peer of raydium sdk)
- */
-
 import { useState, useCallback } from "react";
 import type {
-  AccountMeta,
-  Keypair,
+  Rpc,
+  RpcSendOptions,
+  RpcSubscriptions,
+  SignatureNotificationsApi,
+  SlotNotificationsApi,
+  SolanaRpcApi,
+  SolanaRpcSubscriptionsApi,
+  TransactionSigner,
+} from "@solana/kit";
+import { useSolanaClient } from "@solana/connector";
+import type {
   TransactionInstruction,
+  Keypair,
+  AccountMeta,
 } from "@solana/web3.js";
+
+// This matches the TransactionPayload structure from @orca-so/common-sdk
+interface OrcaTransactionPayload {
+  instructions: {
+    instruction: TransactionInstruction;
+    signers: Keypair[];
+  }[];
+}
+// ---------------------------------------------------------------------------
+// Types & Constants
+// ---------------------------------------------------------------------------
 
 export type CLMMStatus =
   | "idle"
@@ -30,136 +38,170 @@ export type CLMMStatus =
   | "error";
 
 export interface OpenPositionParams {
-  /** Pool / market address (Raydium CLMM pool id) */
   poolId: string;
-  /** Lower tick index for the position */
   tickLower: number;
-  /** Upper tick index for the position */
   tickUpper: number;
-  /** Amount of token A to deposit (in lamports / raw units) */
   amountA: bigint;
-  /** Amount of token B to deposit (in lamports / raw units) */
-  amountB: bigint;
-  /** Slippage tolerance 0–100 (percent, e.g. 1 = 1%) */
+  amountBMax: bigint;
   slippagePct: number;
-  /** User wallet public key (base58) */
   userPublicKey: string;
-  /** Solana Kit signer (from useWallet / wallet adapter) */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  signer: any;
-  /** Solana Kit RPC instance */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpc: any;
-  /** Solana Kit RPC subscriptions instance */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rpcSubscriptions: any;
+  signer: TransactionSigner;
+  rpc: unknown;
+  rpcSubscriptions: unknown;
 }
 
 export interface CLMMResult {
   signature: string;
-  positionMint: string;
+  positionMint?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Helper: The "Fix" for your Instruction Error
+// ---------------------------------------------------------------------------
+
+function toKitInstruction(
+  ix: {
+    programId: { toBase58(): string } | string;
+    keys: {
+      pubkey: { toBase58(): string } | string;
+      isSigner: boolean;
+      isWritable: boolean;
+    }[];
+    data: Uint8Array | Buffer | number[];
+  },
+  addressFn: (s: string) => `${string}`,
+) {
+  // 1. Normalize Program Address
+  const programAddress =
+    typeof ix.programId === "string"
+      ? addressFn(ix.programId)
+      : addressFn(ix.programId.toBase58());
+
+  return {
+    programAddress,
+    // 2. Normalize Account Metas
+    accounts: ix.keys.map((k) => ({
+      address:
+        typeof k.pubkey === "string"
+          ? addressFn(k.pubkey)
+          : addressFn(k.pubkey.toBase58()),
+      // Role: bitwise OR (writable = 1, signer = 2)
+      role: (k.isWritable ? 1 : 0) | (k.isSigner ? 2 : 0),
+    })),
+    // 3. Normalize Data (Ensures it's a Uint8Array for @solana/kit)
+    data: ix.data instanceof Uint8Array ? ix.data : new Uint8Array(ix.data),
+  };
+}
+
+/** Converts web3.js Keypair to @solana/kit TransactionSigner */
+async function keypairToKitSigner(kp: {
+  secretKey: Uint8Array;
+}): Promise<TransactionSigner> {
+  const { createSignerFromKeyPair } = await import("@solana/kit");
+  const privateKey = await crypto.subtle.importKey(
+    "raw",
+    kp.secretKey.slice(0, 32),
+    { name: "Ed25519" },
+    false,
+    ["sign"],
+  );
+  const publicKey = await crypto.subtle.importKey(
+    "raw",
+    kp.secretKey.slice(32, 64),
+    { name: "Ed25519" },
+    true,
+    ["verify"],
+  );
+  return createSignerFromKeyPair({ privateKey, publicKey });
+}
+
+// ---------------------------------------------------------------------------
+// Main Hook
+// ---------------------------------------------------------------------------
 
 export function useRaydiumCLMM() {
   const [status, setStatus] = useState<CLMMStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CLMMResult | null>(null);
+  const { client } = useSolanaClient();
 
   const openPosition = useCallback(
     async (params: OpenPositionParams): Promise<CLMMResult> => {
       setStatus("building");
       setError(null);
-      setResult(null);
-
       try {
-        // ── 1. Lazy-import heavy deps ──────────────────────────────────────
+        // 1. Lazy load dependencies
         const [
           { Raydium, TxVersion },
           { TransactionBuilder },
-          { address, lamports },
+          { address },
+          { Connection, PublicKey, Keypair },
+          { BN },
         ] = await Promise.all([
           import("@raydium-io/raydium-sdk-v2"),
           import("@pipeit/core"),
           import("@solana/kit"),
+          import("@solana/web3.js"),
+          import("bn.js"),
         ]);
 
-        // ── 2. Boot Raydium SDK (cluster inferred from rpc endpoint) ────────
-        //
-        // Raydium SDK still relies on @solana/web3.js Connection under the hood.
-        // We create a thin Connection from the rpc url so the SDK can fetch
-        // on-chain pool state while our TX is sent via Solana Kit.
-        const { Connection, PublicKey } = await import("@solana/web3.js");
-
-        // Extract the http endpoint from the Solana Kit rpc object.
-        // Kit rpc objects expose `__endpoint` or similar — adjust if your
-        // factory differs.
-        const rpcEndpoint: string =
-          (params.rpc as { __endpoint?: string }).__endpoint ??
+        // 2. Setup Connection
+        const rpcEndpoint =
+          process.env.NEXT_PUBLIC_SOLANA_RPC_URL ??
           "https://api.mainnet-beta.solana.com";
-
         const connection = new Connection(rpcEndpoint, "confirmed");
+        const ownerPubkey = new PublicKey(params.userPublicKey);
 
+        // 3. Initialize Raydium SDK
         const raydium = await Raydium.load({
           connection,
-          owner: new PublicKey(params.userPublicKey),
+          owner: ownerPubkey,
           disableFeatureCheck: true,
           blockhashCommitment: "confirmed",
         });
 
-        // ── 3. Fetch pool info ───────────────────────────────────────────────
-        const { clmm } = raydium;
-        const poolInfo = await clmm.getRpcClmmPoolInfo({
-          poolId: params.poolId,
-        });
+        const { poolInfo, poolKeys } = await raydium.clmm.getPoolInfoFromRpc(
+          params.poolId,
+        );
 
-        if (!poolInfo) {
-          throw new Error(`CLMM pool not found: ${params.poolId}`);
-        }
+        // 4. Handle ephemeral keypairs for the NFT position
+        const ephemeralKps: InstanceType<typeof Keypair>[] = [];
 
-        // ── 4. Build open-position instructions ─────────────────────────────
-        const slippage = params.slippagePct / 100;
-
-        const openPositionPayload = {
+        // 5. Build Raydium Instructions (Legacy mode for instruction extraction)
+        const buildData = await raydium.clmm.openPositionFromBase({
           poolInfo,
-          ownerInfo: {
-            feePayer: new PublicKey(params.userPublicKey),
-            wallet: new PublicKey(params.userPublicKey),
-            tokenAccounts: [],
-            associatedOnly: true,
-            checkCreateATAOwner: true,
-          },
+          poolKeys,
+          ownerInfo: { useSOLBalance: true },
           tickLower: params.tickLower,
           tickUpper: params.tickUpper,
           base: "MintA",
-          baseAmount: params.amountA,
-          otherAmountMax:
-            (params.amountB * BigInt(Math.round((1 + slippage) * 10000))) /
-            BigInt(10000),
+          baseAmount: new BN(params.amountA.toString()),
+          otherAmountMax: new BN(params.amountBMax.toString()),
           withMetadata: "create",
+          txVersion: TxVersion.LEGACY,
           getEphemeralSigners: async (n: number) => {
-            // Return n ephemeral keypairs from Solana Kit
-            const { generateKeyPairSigner } = await import("@solana/kit");
-            return Promise.all(
-              Array.from({ length: n }, () => generateKeyPairSigner()),
-            );
+            const kps = Array.from({ length: n }, () => Keypair.generate());
+            ephemeralKps.push(...kps);
+            return kps;
           },
-        } as unknown as Parameters<typeof clmm.openPositionFromLiquidity>[0];
+        });
 
-        const openPositionResult = (await clmm.openPositionFromLiquidity(
-          openPositionPayload,
-        )) as unknown as {
-          instructions: TransactionInstruction[];
-          signers: Keypair[];
-          extInfo?: { nftMint?: { toBase58: () => string } };
-        };
+        // ── 6. Extraction logic (Typed) ──────────────────────────────────────
+        const builtTx = await buildData.transaction;
 
-        const rawIxs = openPositionResult.instructions;
-        const { signers, extInfo } = openPositionResult;
+        // Extract the actual web3.js instructions
+        const rawIxs = builtTx.instructions;
 
-        // ── 5. Convert web3.js TransactionInstruction → Solana Kit format ───
-        //
-        // @pipeit/core's TransactionBuilder accepts Solana Kit IInstruction.
-        // We convert the old-style instructions manually.
+        // Extract and flatten all required signers (like positionMintKp)
+        const sdkSigners = buildData.signers ?? ephemeralKps; // Fallback to ephemeral if SDK doesn't return signers explicitly
+
+        const positionMint =
+          buildData.extInfo?.nftMint?.toBase58?.() ?? "unknown";
+        if (rawIxs.length === 0) {
+          throw new Error("No instructions returned from SDK");
+        }
+
+        // ── 5. Convert web3.js instructions → Solana Kit IInstruction ─────
         function web3IxToKit(ix: TransactionInstruction) {
           return {
             programAddress: address(ix.programId.toBase58()),
@@ -174,67 +216,53 @@ export function useRaydiumCLMM() {
 
         const kitInstructions = rawIxs.map(web3IxToKit);
 
-        // ── 6. Collect extra signers (position NFT mint, etc.) ───────────────
-        // These are web3.js Keypairs; wrap them as Solana Kit signers.
+        // 8. Convert Keypairs to Kit Signers
         const extraKitSigners = await Promise.all(
-          signers.map(async (kp: Keypair) => {
-            const { createSignerFromKeyPair } = await import("@solana/kit");
-            // kp.secretKey is a Uint8Array(64) — convert to CryptoKey
-            const cryptoKey = await crypto.subtle.importKey(
-              "raw",
-              kp.secretKey.slice(0, 32), // seed
-              "Ed25519",
-              false,
-              ["sign"],
-            );
-            const signerInput: Parameters<typeof createSignerFromKeyPair>[0] = {
-              privateKey: cryptoKey,
-              publicKey: cryptoKey,
-            };
-            return createSignerFromKeyPair(signerInput);
-          }),
+          sdkSigners.map(keypairToKitSigner),
         );
 
-        const positionMint: string =
-          extInfo?.nftMint?.toBase58?.() ?? "unknown";
-
         setStatus("signing");
-
-        // ── 7. Build & execute via TransactionBuilder (Solana Kit) ──────────
-        const signature: string = await new TransactionBuilder({
-          rpc: params.rpc,
-          computeUnits: { strategy: "fixed", units: 400_000 },
-          priorityFee: { strategy: "fixed", microLamports: 200_000 },
+        const { rpc, rpcSubscriptions } = client ?? params;
+        // 9. Execute via Pipeit Builder
+        const txBuilder = new TransactionBuilder({
+          rpc: rpc as Rpc<SolanaRpcApi>,
+          computeUnits: { strategy: "fixed", units: 600_000 }, // CLMM is heavy, 600k is safer
+          priorityFee: { strategy: "fixed", microLamports: 100_000 },
           autoRetry: false,
         })
           .setFeePayerSigner(params.signer)
+          .addInstructions(kitInstructions);
 
-          .addInstructions(kitInstructions)
-          .execute({
-            rpcSubscriptions: params.rpcSubscriptions,
-            commitment: "confirmed",
-            skipPreflight: true,
-          });
+        // Add the NFT position mint signers
+
+        const signature = await txBuilder.execute({
+          rpcSubscriptions: rpcSubscriptions as RpcSubscriptions<
+            SignatureNotificationsApi &
+              SlotNotificationsApi &
+              SolanaRpcSubscriptionsApi
+          >,
+          commitment: "confirmed",
+          skipPreflight: true,
+        });
 
         setStatus("confirmed");
-        const res: CLMMResult = { signature, positionMint };
+        const res = { signature, positionMint };
         setResult(res);
         return res;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
+        setError(err instanceof Error ? err.message : String(err));
         setStatus("error");
         throw err;
       }
     },
-    [],
+    [client],
   );
 
-  const reset = useCallback(() => {
-    setStatus("idle");
-    setError(null);
-    setResult(null);
-  }, []);
-
-  return { openPosition, status, error, result, reset };
+  return {
+    openPosition,
+    status,
+    error,
+    result,
+    reset: () => setStatus("idle"),
+  };
 }

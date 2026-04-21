@@ -654,10 +654,10 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
-    setLoading(true);
-    setData(null);
-    setOther(null);
-    setVariants([]);
+    //setLoading(true);
+    //setData(null);
+    //setOther(null);
+    //setVariants([]);
     let cancelled = false;
 
     async function load() {
@@ -668,13 +668,15 @@ export default function TokenDetailPage({
         ]);
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
         const json: TokenAssetResponse = await res.json();
-        if (cancelled) return;
-        setData(json);
-        setOther(otherData);
-        setVariants(
-          flattenVariantGroups(json.variantGroups, json.name, json.symbol),
-        );
+        if (!cancelled) {
+          setData(json);
+          setOther(otherData);
+          setVariants(
+            flattenVariantGroups(json.variantGroups, json.name, json.symbol),
+          );
+        }
       } catch (e) {
+        if (!cancelled) setLoading(false);
         console.error("[TokenDetailPage] Failed to load:", e);
       } finally {
         if (!cancelled) setLoading(false);

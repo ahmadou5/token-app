@@ -2473,3 +2473,718 @@ html:not(.dark) .alm-slip-btn {
   background: rgba(0, 0, 0, 0.04);
   color: #555;
 }
+
+/* ============================================================
+   add-liquidity-modal.css
+   Append to your global stylesheet or import in the component.
+   Matches your existing dark/light (#1B1813 / #F7F6F2) palette
+   and Solana purple (#9945FF) accent.
+   ============================================================ */
+
+/* ── Table: action column additions ─────────────────────────────────────── */
+
+.mkt-header--with-action,
+.mkt-row--with-action {
+  /* extend the existing grid with a new Action column */
+  grid-template-columns:
+    minmax(180px, 2fr)   /* pair      */
+    minmax(100px, 1fr)   /* liquidity */
+    minmax(100px, 1fr)   /* volume    */
+    minmax(100px, 1fr)   /* trades    */
+    minmax(100px, 1fr)   /* wallets   */
+    96px;                /* action    */
+}
+
+.mkt-col--action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+.mkt-action-none {
+  color: var(--text-muted, #888);
+  font-size: 0.8rem;
+}
+
+/* Add Liquidity row button */
+.mkt-add-liq-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #9945FF;
+  background: transparent;
+  color: #9945FF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.mkt-add-liq-btn:hover {
+  background: #9945FF;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(153, 69, 255, 0.4);
+}
+
+.mkt-add-liq-btn:active {
+  opacity: 0.85;
+}
+
+/* Highlight CLMM row faintly */
+.mkt-row--clmm {
+  position: relative;
+}
+.mkt-row--clmm::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #9945FF;
+  border-radius: 2px 0 0 2px;
+  opacity: 0.6;
+}
+
+/* ── Modal overlay ──────────────────────────────────────────────────────── */
+
+.alm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: alm-fade-in 0.18s ease;
+}
+
+@keyframes alm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal panel ─────────────────────────────────────────────────────────── */
+
+.alm-modal {
+  background: var(--bg-card, #221E1A);
+  border: 1px solid rgba(153, 69, 255, 0.25);
+  border-radius: 16px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow:
+    0 0 0 1px rgba(153, 69, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: alm-slide-in 0.22s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes alm-slide-in {
+  from { transform: translateY(16px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.alm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.alm-header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alm-header__icons {
+  display: flex;
+  align-items: center;
+}
+
+.alm-header__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card, #221E1A);
+  object-fit: cover;
+}
+
+.alm-header__icon--offset {
+  margin-left: -10px;
+}
+
+.alm-header__pair {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #F7F6F2);
+  letter-spacing: 0.01em;
+}
+
+.alm-header__slash {
+  color: var(--text-muted, #888);
+  margin: 0 3px;
+}
+
+.alm-header__source {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: #9945FF;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.alm-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary, #aaa);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.alm-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary, #F7F6F2);
+}
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+
+.alm-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.alm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alm-section--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alm-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #aaa);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Price range */
+
+.alm-range-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alm-range-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alm-range-field__label {
+  font-size: 0.7rem;
+  color: var(--text-muted, #888);
+  font-weight: 500;
+}
+
+.alm-range-field__tick {
+  font-size: 0.65rem;
+  color: var(--text-muted, #777);
+  font-variant-numeric: tabular-nums;
+}
+
+.alm-range-sep {
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+  margin-top: 18px;
+}
+
+/* Inputs */
+
+.alm-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary, #F7F6F2);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.alm-input:focus {
+  border-color: rgba(153, 69, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(153, 69, 255, 0.12);
+}
+
+.alm-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alm-input--amount {
+  flex: 1;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.alm-input--slip {
+  width: 64px;
+  text-align: right;
+  padding: 6px 8px;
+}
+
+/* Amount field row */
+
+.alm-amount-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.alm-amount-field .alm-input {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.alm-amount-field .alm-input:focus {
+  box-shadow: none;
+  border: none;
+}
+
+.alm-amount-field__token {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #F7F6F2);
+  min-width: 64px;
+}
+
+.alm-amount-field__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Preset buttons */
+
+.alm-presets {
+  display: flex;
+  gap: 6px;
+}
+
+.alm-preset-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary, #aaa);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.alm-preset-btn:hover:not(:disabled) {
+  border-color: #9945FF;
+  color: #9945FF;
+  background: rgba(153, 69, 255, 0.08);
+}
+
+.alm-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Slippage */
+
+.alm-slip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alm-slip-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary, #aaa);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.alm-slip-btn--active {
+  border-color: #9945FF;
+  color: #9945FF;
+  background: rgba(153, 69, 255, 0.12);
+}
+
+.alm-slip-btn:hover:not(:disabled):not(.alm-slip-btn--active) {
+  border-color: rgba(153, 69, 255, 0.5);
+  color: var(--text-primary, #F7F6F2);
+}
+
+.alm-slip-custom {
+  position: relative;
+  margin-left: 4px;
+}
+
+.alm-slip-pct {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--text-muted, #888);
+  pointer-events: none;
+}
+
+/* Error */
+
+.alm-error {
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Status bar */
+
+.alm-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #aaa);
+}
+
+.alm-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9945FF;
+  animation: alm-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes alm-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* CTA button */
+
+.alm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.alm-btn--primary {
+  background: linear-gradient(135deg, #9945FF 0%, #7B2FE0 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(153, 69, 255, 0.35);
+}
+
+.alm-btn--primary:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(153, 69, 255, 0.5);
+  opacity: 0.95;
+}
+
+.alm-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.alm-btn--full {
+  width: 100%;
+}
+
+/* ── Success state ────────────────────────────────────────────────────────── */
+
+.alm-success {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.alm-success__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9945FF, #14F195);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  margin-bottom: 8px;
+  box-shadow: 0 0 24px rgba(153, 69, 255, 0.5);
+  animation: alm-pop 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes alm-pop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.alm-success__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary, #F7F6F2);
+}
+
+.alm-success__label {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #888);
+  font-weight: 600;
+}
+
+.alm-success__link {
+  color: #9945FF;
+  font-size: 0.82rem;
+  font-weight: 600;
+  word-break: break-all;
+  text-decoration: none;
+}
+
+.alm-success__link:hover {
+  text-decoration: underline;
+}
+
+.alm-success__addr {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #aaa);
+  word-break: break-all;
+  margin: 0;
+}
+
+.alm-success__close {
+  margin-top: 16px;
+  min-width: 120px;
+}
+
+/* ── Light mode overrides ────────────────────────────────────────────────── */
+
+html:not(.dark) .alm-modal {
+  background: #fff;
+  border-color: rgba(153, 69, 255, 0.2);
+}
+
+html:not(.dark) .alm-input {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #1B1813;
+}
+
+html:not(.dark) .alm-amount-field {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+html:not(.dark) .alm-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+html:not(.dark) .alm-close {
+  background: rgba(0, 0, 0, 0.05);
+  color: #555;
+}
+
+html:not(.dark) .alm-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #1B1813;
+}
+
+html:not(.dark) .alm-preset-btn,
+html:not(.dark) .alm-slip-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+  color: #555;
+}
+
+/* ── Stake estimate block ──────────────────────────────────────────────────── */
+
+.alm-stake-estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(153, 69, 255, 0.07);
+  border: 1px solid rgba(153, 69, 255, 0.2);
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #aaa);
+}
+
+.alm-stake-estimate__amount {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #F7F6F2);
+}
+
+.alm-stake-estimate__rate {
+  font-size: 0.7rem;
+  color: var(--text-muted, #777);
+}
+
+/* ── External link button in header ───────────────────────────────────────── */
+
+.alm-ext-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary, #aaa);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.alm-ext-link:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary, #F7F6F2);
+}
+
+/* ── Unsupported protocol state ────────────────────────────────────────────── */
+
+.alm-unsupported {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #aaa);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.alm-unsupported strong {
+  color: var(--text-primary, #F7F6F2);
+}
+
+.alm-btn--outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-secondary, #aaa);
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.alm-btn--outline:hover {
+  border-color: rgba(255,255,255,0.35);
+  color: var(--text-primary, #F7F6F2);
+}
+
+/* ── Protocol badge color on row (overrides purple for non-CLMM) ──────────── */
+.mkt-add-liq-btn[data-protocol="orca"] {
+  border-color: #00c2ff;
+  color: #00c2ff;
+}
+.mkt-add-liq-btn[data-protocol="orca"]:hover {
+  background: #00c2ff;
+  color: #000;
+}
+.mkt-add-liq-btn[data-protocol="meteora"] {
+  border-color: #f5a623;
+  color: #f5a623;
+}
+.mkt-add-liq-btn[data-protocol="meteora"]:hover {
+  background: #f5a623;
+  color: #000;
+}
+.mkt-add-liq-btn[data-protocol="pump"] {
+  border-color: #00c853;
+  color: #00c853;
+}
+.mkt-add-liq-btn[data-protocol="pump"]:hover {
+  background: #00c853;
+  color: #000;
+}
+
+html:not(.dark) .alm-stake-estimate {
+  background: rgba(153, 69, 255, 0.05);
+}
+html:not(.dark) .alm-ext-link {
+  background: rgba(0,0,0,0.04);
+  color: #555;
+}
+html:not(.dark) .alm-btn--outline {
+  border-color: rgba(0,0,0,0.15);
+  color: #555;
+}

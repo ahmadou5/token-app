@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SolanaProviders } from "./SolanaProvider";
 import { SwapSettingsProvider } from "@/context/SwapSettingsContext";
+import "@/lib/suppressDevToolsNoise";
 
 const geistSans = DM_Mono({
   weight: "400",

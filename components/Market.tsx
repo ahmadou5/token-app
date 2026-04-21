@@ -16,20 +16,7 @@ import { useState } from "react";
 import type { MarketEntry } from "@/types/token.types";
 import { fmtCompact } from "@/components/TokenCard";
 import { AddLiquidityModal } from "@/components/Liquidity/AddLiquidityModal";
-
-// ── Raydium CLMM source identifiers (extend as needed) ───────────────────────
-const CLMM_SOURCES = new Set([
-  "raydium-clamm",
-  "raydium_clmm",
-  "raydiumclmm",
-  "Raydium CLAMM",
-  "CLAMM",
-  "clamm",
-]);
-
-function isCLMMMarket(market: MarketEntry): boolean {
-  return !!market.source && CLMM_SOURCES.has(market.source);
-}
+import { resolveProtocol } from "@/lib/marketProtocol";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Keep originals exactly as-is
@@ -199,7 +186,8 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           const qSym = mkt.quote?.symbol;
           const bIcon = mkt.base?.icon ?? null;
           const qIcon = mkt.quote?.icon ?? null;
-          const isCLMM = isCLMMMarket(mkt);
+          const proto = resolveProtocol(mkt.source);
+          const isCLMM = proto.canAddLiquidity;
 
           return (
             <div

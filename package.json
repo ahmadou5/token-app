@@ -2,6 +2,11 @@
   "name": "token",
   "version": "0.1.0",
   "private": true,
+  "pnpm": {
+    "overrides": {
+      "@coral-xyz/anchor": "0.29.0"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,22 +14,30 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "0.29.0",
+    "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
+    "@meteora-ag/dlmm": "^1.9.6",
+    "@orca-so/common-sdk": "^0.7.0",
+    "@orca-so/whirlpools-sdk": "^0.20.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pipeit/actions": "^0.1.2",
     "@pipeit/core": "^0.2.7",
     "@raydium-io/raydium-sdk-v2": "0.2.41-alpha",
+    "@solana-developers/helpers": "^2.8.1",
     "@solana-program/system": "^0.12.0",
     "@solana-program/token": "^0.13.0",
     "@solana/connector": "^0.2.4",
     "@solana/connector-debugger": "^0.1.1",
     "@solana/instruction-plans": "^6.7.0",
     "@solana/instructions": "^6.7.0",
-    "@solana/kit": "^6.7.0",
+    "@solana/kit": "^6.8.0",
     "@solana/rpc": "^6.7.0",
+    "@solana/spl-stake-pool": "^1.1.8",
     "@solana/web3.js": "^1.98.4",
     "@wallet-standard/app": "^1.1.0",
     "@xyflow/react": "^12.10.2",
     "axios": "1.14.0",
+    "bn.js": "^5.2.3",
     "bs58": "^6.0.0",
     "lucide-react": "^1.7.0",
     "metis": "link:@pipeit/actions/metis",
@@ -38,6 +51,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bn.js": "^5.2.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
