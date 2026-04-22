@@ -3188,3 +3188,604 @@ html:not(.dark) .alm-btn--outline {
   border-color: rgba(0,0,0,0.15);
   color: #555;
 }
+
+/* ══════════════════════════════════════════════════════
+   Add Liquidity Card — inline (replaces modal overlay)
+   Append to globals.css
+   ══════════════════════════════════════════════════════ */
+
+/* ── Row expansion state ─────────────────────────────── */
+.mkt-row--expanded {
+  background: var(--tc-accent-bg);
+  border-bottom: none !important;
+}
+
+/* ── Inline card wrapper ─────────────────────────────── */
+.mkt-liq-card-wrap {
+  padding: 0 12px 12px;
+  background: var(--tc-surface);
+  border-bottom: 1px solid var(--tc-divider);
+  animation: alcSlideDown 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes alcSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card shell — mirrors .sw-card ──────────────────── */
+.alc-card {
+  background: var(--tc-bg);
+  border: 1px solid var(--tc-border);
+  border-radius: var(--tc-radius);
+  overflow: hidden;
+  box-shadow: var(--tc-shadow);
+  font-family: var(--tc-font-sans);
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+
+/* ── Header — mirrors .sw-tabs ──────────────────────── */
+.alc-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 10px;
+  border-bottom: 1px solid var(--tc-border);
+  background: var(--tc-surface);
+  gap: 8px;
+}
+
+.alc-card__pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.alc-card__icons {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.alc-card__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--tc-bg);
+  object-fit: cover;
+}
+
+.alc-card__icon--offset {
+  margin-left: -8px;
+}
+
+.alc-card__pair-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tc-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.alc-card__slash {
+  color: var(--tc-text-muted);
+  margin: 0 2px;
+}
+
+.alc-card__source {
+  margin: 1px 0 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tc-accent);
+}
+
+/* Close / ext-link icon buttons */
+.alc-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--tc-border);
+  background: var(--tc-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--tc-text-muted);
+  text-decoration: none;
+  transition: background var(--tc-ease), color var(--tc-ease), border-color var(--tc-ease);
+  flex-shrink: 0;
+}
+
+.alc-icon-btn:hover {
+  background: var(--tc-bg-hover);
+  border-color: var(--tc-border-hover);
+  color: var(--tc-text-primary);
+}
+
+/* ── Card body ────────────────────────────────────────── */
+.alc-card__body {
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Sections ─────────────────────────────────────────── */
+.alc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alc-section--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alc-label {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tc-text-muted);
+}
+
+/* ── Price range ─────────────────────────────────────── */
+.alc-range-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.alc-range-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alc-range-field__label {
+  font-size: 10px;
+  color: var(--tc-text-muted);
+  font-weight: 500;
+}
+
+.alc-range-field__tick {
+  font-family: var(--tc-font-mono);
+  font-size: 9px;
+  color: var(--tc-text-muted);
+}
+
+/* ── Inputs ───────────────────────────────────────────── */
+.alc-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--tc-surface);
+  border: 1px solid var(--tc-border);
+  border-radius: 8px;
+  color: var(--tc-text-primary);
+  font-family: var(--tc-font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--tc-ease), box-shadow var(--tc-ease);
+  box-sizing: border-box;
+}
+
+.alc-input:focus {
+  border-color: var(--tc-accent);
+  box-shadow: 0 0 0 3px var(--tc-accent-bg);
+}
+
+.alc-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alc-input--amount {
+  flex: 1;
+  text-align: right;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  box-shadow: none !important;
+  padding: 0;
+}
+
+.alc-input--slip {
+  width: 56px;
+  text-align: right;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
+/* ── Amount field ─────────────────────────────────────── */
+.alc-amount-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--tc-surface);
+  border: 1px solid var(--tc-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  transition: border-color var(--tc-ease);
+}
+
+.alc-amount-field:focus-within {
+  border-color: var(--tc-accent);
+  box-shadow: 0 0 0 3px var(--tc-accent-bg);
+}
+
+.alc-amount-field__token {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tc-text-primary);
+  min-width: 56px;
+}
+
+.alc-amount-field__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ── Preset buttons ───────────────────────────────────── */
+.alc-presets {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.alc-preset-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--tc-border);
+  background: var(--tc-surface);
+  color: var(--tc-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--tc-ease), color var(--tc-ease), background var(--tc-ease);
+}
+
+.alc-preset-btn:hover:not(:disabled) {
+  border-color: var(--tc-accent);
+  color: var(--tc-accent);
+  background: var(--tc-accent-bg);
+}
+
+.alc-preset-btn--active {
+  border-color: var(--tc-accent);
+  color: var(--tc-accent);
+  background: var(--tc-accent-bg);
+}
+
+.alc-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Slippage ─────────────────────────────────────────── */
+.alc-slip-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.alc-slip-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--tc-border);
+  background: var(--tc-surface);
+  color: var(--tc-text-secondary);
+  font-family: var(--tc-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--tc-ease), color var(--tc-ease), background var(--tc-ease);
+}
+
+.alc-slip-btn--active {
+  border-color: var(--tc-accent);
+  color: var(--tc-accent);
+  background: var(--tc-accent-bg);
+}
+
+.alc-slip-btn:hover:not(:disabled):not(.alc-slip-btn--active) {
+  border-color: var(--tc-border-hover);
+  color: var(--tc-text-primary);
+}
+
+.alc-slip-custom {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.alc-slip-pct {
+  position: absolute;
+  right: 8px;
+  font-size: 10px;
+  color: var(--tc-text-muted);
+  pointer-events: none;
+}
+
+/* ── Errors / status ─────────────────────────────────── */
+.alc-error {
+  padding: 8px 12px;
+  background: var(--tc-accent-down-bg);
+  border: 1px solid var(--tc-accent-down);
+  border-radius: 8px;
+  color: var(--tc-accent-down);
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.alc-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--tc-text-secondary);
+}
+
+.alc-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tc-accent);
+  animation: alcPulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes alcPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(0.65); }
+}
+
+/* ── CTA button ───────────────────────────────────────── */
+.alc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 21px;
+  border: none;
+  font-family: var(--tc-font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--tc-ease), box-shadow var(--tc-ease);
+  letter-spacing: -0.01em;
+}
+
+.alc-btn--primary {
+  background: linear-gradient(135deg, #9945FF 0%, #7B2FE0 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(153, 69, 255, 0.3);
+}
+
+.alc-btn--primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(153, 69, 255, 0.45);
+  opacity: 0.93;
+}
+
+.alc-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.alc-btn--full {
+  width: 100%;
+}
+
+.alc-btn--outline {
+  background: transparent;
+  border: 1px solid var(--tc-border);
+  color: var(--tc-text-secondary);
+  margin-top: 8px;
+}
+
+.alc-btn--outline:hover {
+  border-color: var(--tc-border-hover);
+  color: var(--tc-text-primary);
+}
+
+/* ── "Add" row button — active state ─────────────────── */
+.mkt-add-liq-btn--active {
+  background: var(--tc-accent);
+  color: #fff;
+  border-color: var(--tc-accent);
+  box-shadow: 0 0 10px rgba(153, 69, 255, 0.4);
+}
+
+.mkt-add-liq-btn--active:hover {
+  background: var(--tc-accent);
+  color: #fff;
+  opacity: 0.88;
+}
+
+/* ── Powered by footer ────────────────────────────────── */
+.alc-powered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-top: 2px;
+  font-size: 10px;
+  color: var(--tc-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.alc-powered__badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--tc-accent-bg);
+  color: var(--tc-accent);
+  font-weight: 500;
+}
+
+/* ── Success screen ───────────────────────────────────── */
+.alc-success {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.alc-success__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9945FF, #14F195);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  box-shadow: 0 0 20px rgba(153, 69, 255, 0.4);
+  animation: alcPop 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes alcPop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.alc-success__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tc-text-primary);
+}
+
+.alc-success__label {
+  margin: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tc-text-muted);
+  font-weight: 600;
+}
+
+.alc-success__link {
+  color: var(--tc-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.alc-success__link:hover { text-decoration: underline; }
+
+.alc-success__addr {
+  font-family: var(--tc-font-mono);
+  font-size: 10px;
+  color: var(--tc-text-secondary);
+  word-break: break-all;
+  margin: 0;
+}
+
+.alc-success__close {
+  margin-top: 12px;
+  min-width: 100px;
+}
+
+/* ── Stake estimate ───────────────────────────────────── */
+.alc-stake-estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  background: var(--tc-accent-bg);
+  border: 1px solid var(--tc-border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--tc-text-secondary);
+}
+
+.alc-stake-estimate__amount {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tc-text-primary);
+  font-family: var(--tc-font-mono);
+}
+
+.alc-stake-estimate__rate {
+  font-size: 10px;
+  color: var(--tc-text-muted);
+}
+
+/* ── Unsupported ─────────────────────────────────────── */
+.alc-unsupported {
+  padding: 16px;
+  text-align: center;
+  color: var(--tc-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.alc-unsupported strong { color: var(--tc-text-primary); }
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════ */
+
+/* Collapse action column label on tablet */
+@media (max-width: 900px) {
+  .mkt-liq-card-wrap {
+    padding: 0 8px 10px;
+  }
+
+  /* Card body gets more compact */
+  .alc-card__body { padding: 12px 12px 10px; gap: 12px; }
+
+  /* Range fields stack vertically */
+  .alc-range-row { flex-direction: column; gap: 8px; }
+  .alc-range-field { width: 100%; }
+
+  /* Section row wraps */
+  .alc-section--row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mkt-liq-card-wrap { padding: 0 4px 8px; }
+
+  .alc-card__body { padding: 10px 10px 10px; }
+  .alc-input--amount { font-size: 14px; }
+
+  /* Slip buttons compact */
+  .alc-slip-btn { padding: 3px 7px; font-size: 10px; }
+  .alc-preset-btn { padding: 3px 7px; font-size: 10px; }
+
+  /* Action col: show icon only */
+  .mkt-add-liq-btn { padding: 4px 7px; font-size: 0; gap: 0; }
+  .mkt-add-liq-btn svg { margin: 0; }
+}

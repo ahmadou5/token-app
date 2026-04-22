@@ -1,26 +1,20 @@
 "use client";
 
 /**
- * MarketsSection — updated to include per-row "Add Liquidity" button
- * for Raydium CLMM pools, and the AddLiquidityModal.
+ * MarketsSection — inline Add Liquidity card (replaces modal)
  *
- * Only change vs original:
- *  1. Import AddLiquidityModal
- *  2. State: activeMarket (the row that opened the modal)
- *  3. Column header: +  "Action" col
- *  4. Row: render <AddLiquidityButton> when source is a CLMM source
- *  5. Render <AddLiquidityModal> at bottom of section when activeMarket set
+ * Clicking "Add" on a row expands an inline card beneath the table.
+ * Clicking "Add" again on the same row collapses it (toggle).
+ * Clicking a different row switches to that pool's card.
  */
 
 import { useState } from "react";
 import type { MarketEntry } from "@/types/token.types";
 import { fmtCompact } from "@/components/TokenCard";
-import { AddLiquidityModal } from "@/components/Liquidity/AddLiquidityModal";
+import { AddLiquidityCard } from "@/components/Liquidity/AddLiquidityCard";
 import { resolveProtocol } from "@/lib/marketProtocol";
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Keep originals exactly as-is
-// ──────────────────────────────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────────
 
 function truncateMint(mint: unknown): string {
   const m = mint && typeof mint === "string" ? mint : "";
@@ -45,7 +39,6 @@ function PairIcons({
 }) {
   const bInit = safeInitials(baseSymbol);
   const qInit = safeInitials(quoteSymbol);
-
   return (
     <div className="mkt-pair-icons">
       <div className="mkt-icon mkt-icon--base">
@@ -129,7 +122,7 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
   const [sortKey, setSortKey] = useState<SortKey>("liquidity");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  // ── NEW: which market row opened the modal ───────────────────────────────
+  // activeMarket: the row currently showing the liquidity card (null = hidden)
   const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
 
   const safeMarkets = Array.isArray(markets) ? markets.filter(Boolean) : [];
@@ -154,11 +147,17 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
 
   if (safeMarkets.length === 0) return null;
 
+  const handleAddClick = (mkt: MarketEntry) => {
+    // Toggle: clicking the same row closes the card
+    setActiveMarket((prev) => (prev?.address === mkt.address ? null : mkt));
+  };
+
   return (
     <section className="td-section">
       <h2 className="td-section__title">Markets</h2>
+
       <div className="mkt-table-wrap">
-        {/* Header — added Action col */}
+        {/* Header */}
         <div className="mkt-header mkt-header--with-action">
           <span className="mkt-col--pair">Pair</span>
           <button
@@ -188,127 +187,152 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           const qIcon = mkt.quote?.icon ?? null;
           const proto = resolveProtocol(mkt.source);
           const isCLMM = proto.canAddLiquidity;
+          const isActive = activeMarket?.address === mkt.address;
 
           return (
-            <div
-              key={`${mkt.address}-${i}`}
-              className={`mkt-row mkt-row--with-action${isCLMM ? " mkt-row--clmm" : ""}`}
-            >
-              {/* Pair */}
-              <div className="mkt-col--pair mkt-pair">
-                <PairIcons
-                  baseIcon={bIcon}
-                  quoteIcon={qIcon}
-                  baseSymbol={bSym}
-                  quoteSymbol={qSym}
-                />
-                <div className="mkt-pair__info">
-                  <div className="mkt-pair__name">
-                    <span className="mkt-pair__base">{bSym ?? "—"}</span>
-                    <span className="mkt-pair__slash"> / </span>
-                    <span className="mkt-pair__quote">{qSym ?? "—"}</span>
-                    {mkt.source && (
-                      <span className="mkt-pair__source">{mkt.source}</span>
+            <div key={`${mkt.address}-${i}`}>
+              {/* Row */}
+              <div
+                className={`mkt-row mkt-row--with-action${isCLMM ? " mkt-row--clmm" : ""}${isActive ? " mkt-row--expanded" : ""}`}
+              >
+                {/* Pair */}
+                <div className="mkt-col--pair mkt-pair">
+                  <PairIcons
+                    baseIcon={bIcon}
+                    quoteIcon={qIcon}
+                    baseSymbol={bSym}
+                    quoteSymbol={qSym}
+                  />
+                  <div className="mkt-pair__info">
+                    <div className="mkt-pair__name">
+                      <span className="mkt-pair__base">{bSym ?? "—"}</span>
+                      <span className="mkt-pair__slash"> / </span>
+                      <span className="mkt-pair__quote">{qSym ?? "—"}</span>
+                      {mkt.source && (
+                        <span className="mkt-pair__source">{mkt.source}</span>
+                      )}
+                    </div>
+                    {mkt.address && (
+                      <div className="mkt-pair__addr">
+                        {truncateMint(mkt.address)}
+                        <svg
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          width="10"
+                          height="10"
+                          className="mkt-pair__ext"
+                        >
+                          <path
+                            d="M2 10L10 2M10 2H5M10 2v5"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
                     )}
                   </div>
-                  {mkt.address && (
-                    <div className="mkt-pair__addr">
-                      {truncateMint(mkt.address)}
-                      <svg
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        width="10"
-                        height="10"
-                        className="mkt-pair__ext"
-                      >
-                        <path
-                          d="M2 10L10 2M10 2H5M10 2v5"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
+                </div>
+
+                <div className="mkt-col--liq mkt-num">
+                  {fmtCompact(mkt.liquidity)}
+                </div>
+                <div className="mkt-col--vol mkt-num">
+                  {fmtCompact(mkt.volume24h)}
+                </div>
+
+                <div className="mkt-col--trades mkt-num-stack">
+                  <span className="mkt-num">
+                    {mkt.trade24h != null ? mkt.trade24h.toLocaleString() : "—"}
+                  </span>
+                  {mkt.trade24hChangePercent != null && (
+                    <span
+                      className={`mkt-pct ${mkt.trade24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    >
+                      {mkt.trade24hChangePercent >= 0 ? "+" : ""}
+                      {mkt.trade24hChangePercent.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+
+                <div className="mkt-col--wallets mkt-num-stack">
+                  <span className="mkt-num">
+                    {mkt.uniqueWallet24h != null
+                      ? mkt.uniqueWallet24h.toLocaleString()
+                      : "—"}
+                  </span>
+                  {mkt.uniqueWallet24hChangePercent != null && (
+                    <span
+                      className={`mkt-pct ${mkt.uniqueWallet24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
+                    >
+                      {mkt.uniqueWallet24hChangePercent >= 0 ? "+" : ""}
+                      {mkt.uniqueWallet24hChangePercent.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+
+                {/* Action */}
+                <div className="mkt-col--action">
+                  {isCLMM ? (
+                    <button
+                      className={`mkt-add-liq-btn ${isActive ? "mkt-add-liq-btn--active" : ""}`}
+                      onClick={() => handleAddClick(mkt)}
+                      title={isActive ? "Close" : "Add liquidity to this pool"}
+                    >
+                      {isActive ? (
+                        <svg
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          width="10"
+                          height="10"
+                          aria-hidden
+                        >
+                          <path
+                            d="M2 2l8 8M10 2L2 10"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          width="10"
+                          height="10"
+                          aria-hidden
+                        >
+                          <path
+                            d="M6 1v10M1 6h10"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      )}
+                      {isActive ? "Close" : "Add"}
+                    </button>
+                  ) : (
+                    <span className="mkt-action-none">—</span>
                   )}
                 </div>
               </div>
 
-              {/* Liquidity */}
-              <div className="mkt-col--liq mkt-num">
-                {fmtCompact(mkt.liquidity)}
-              </div>
-
-              {/* Volume */}
-              <div className="mkt-col--vol mkt-num">
-                {fmtCompact(mkt.volume24h)}
-              </div>
-
-              {/* Trades */}
-              <div className="mkt-col--trades mkt-num-stack">
-                <span className="mkt-num">
-                  {mkt.trade24h != null ? mkt.trade24h.toLocaleString() : "—"}
-                </span>
-                {mkt.trade24hChangePercent != null && (
-                  <span
-                    className={`mkt-pct ${mkt.trade24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
-                  >
-                    {mkt.trade24hChangePercent >= 0 ? "+" : ""}
-                    {mkt.trade24hChangePercent.toFixed(2)}%
-                  </span>
-                )}
-              </div>
-
-              {/* Wallets */}
-              <div className="mkt-col--wallets mkt-num-stack">
-                <span className="mkt-num">
-                  {mkt.uniqueWallet24h != null
-                    ? mkt.uniqueWallet24h.toLocaleString()
-                    : "—"}
-                </span>
-                {mkt.uniqueWallet24hChangePercent != null && (
-                  <span
-                    className={`mkt-pct ${mkt.uniqueWallet24hChangePercent >= 0 ? "mkt-pct--up" : "mkt-pct--dn"}`}
-                  >
-                    {mkt.uniqueWallet24hChangePercent >= 0 ? "+" : ""}
-                    {mkt.uniqueWallet24hChangePercent.toFixed(2)}%
-                  </span>
-                )}
-              </div>
-
-              {/* ── NEW: Action column ── */}
-              <div className="mkt-col--action">
-                {isCLMM ? (
-                  <button
-                    className="mkt-add-liq-btn"
-                    onClick={() => setActiveMarket(mkt)}
-                    title="Add liquidity to this pool"
-                  >
-                    <svg
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      width="10"
-                      height="10"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M6 1v10M1 6h10"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Add
-                  </button>
-                ) : (
-                  <span className="mkt-action-none">—</span>
-                )}
-              </div>
+              {/* ── Inline liquidity card — only shown for this row ── */}
+              {isActive && (
+                <div className="mkt-liq-card-wrap">
+                  <AddLiquidityCard
+                    market={mkt}
+                    onClose={() => setActiveMarket(null)}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
 
-        {/* Footer (unchanged) */}
+        {/* Footer */}
         <div className="mkt-footer">
           <span className="mkt-footer__info">
             Showing {Math.min((page - 1) * perPage + 1, sorted.length)}–
@@ -366,14 +390,6 @@ export function MarketsSection({ markets, total }: MarketsSectionProps) {
           </div>
         </div>
       </div>
-
-      {/* ── Add Liquidity Modal (portal-less, above table in DOM) ── */}
-      {activeMarket && (
-        <AddLiquidityModal
-          market={activeMarket}
-          onClose={() => setActiveMarket(null)}
-        />
-      )}
     </section>
   );
 }
