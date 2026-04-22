@@ -10,7 +10,6 @@ import {
   fmtCompact,
 } from "@/components/TokenCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { MarketsSection } from "@/components/Market";
 import { SecuritySection } from "@/components/Secuirity";
 import {
   VariantsSection,
@@ -688,10 +687,10 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
-    setLoading(true);
-    setData(null);
-    setOther(null);
-    setVariants([]);
+    //setLoading(true);
+    //setData(null);
+    //setOther(null);
+    //setVariants([]);
 
     let cancelled = false;
 
@@ -986,10 +985,6 @@ export default function TokenDetailPage({
               ))}
             </div>
           </section>
-
-          {data.markets.length > 0 && (
-            <MarketsSection markets={data.markets} total={data.marketsTotal} />
-          )}
 
           {risk && (
             <SecuritySection
