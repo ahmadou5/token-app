@@ -3789,3 +3789,51 @@ html:not(.dark) .alm-btn--outline {
   .mkt-add-liq-btn { padding: 4px 7px; font-size: 0; gap: 0; }
   .mkt-add-liq-btn svg { margin: 0; }
 }
+
+/* ══════════════════════════════════════════════════════
+   Sidebar panel — swap ↔ add-liquidity transition
+   Append to globals.css
+   ══════════════════════════════════════════════════════ */
+
+/* Wrapper that animates when swapping between swap and liquidity */
+.td-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: tdPanelIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tdPanelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* "← Back to Swap" button shown above AddLiquidityCard in sidebar */
+.td-sidebar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--tc-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tc-text-muted);
+  padding: 0 2px 10px;
+  transition: color var(--tc-ease);
+}
+
+.td-sidebar-back:hover {
+  color: var(--tc-text-primary);
+}
+
+/* Highlighted market row when its liquidity card is open in sidebar */
+.mkt-row--active-liq {
+  background: var(--tc-accent-bg) !important;
+}
+
+.mkt-row--active-liq .mkt-pair__base,
+.mkt-row--active-liq .mkt-pair__quote {
+  color: var(--tc-accent);
+}

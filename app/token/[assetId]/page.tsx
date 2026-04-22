@@ -20,10 +20,12 @@ import {
 import { ExpandableDescription } from "@/components/ExpandableDescription";
 import { VariantPicker } from "@/components/VariantPicker";
 import type { TokenAssetResponse } from "@/types/token.types";
+import type { MarketEntry } from "@/types/token.types";
 import { tokenRequest } from "@/lib/token";
 import type { AssetsResolveResponse } from "@/types";
 import { useTokens } from "@/hooks/useToken";
 import { SpotSwap } from "@/components/Swap/SpotSwap";
+import { AddLiquidityCard } from "@/components/Liquidity/AddLiquidityCard";
 import { useConnector, useWallet } from "@solana/connector";
 import { ConnectedPill } from "@/components/Swap";
 
@@ -113,12 +115,6 @@ function OHLCVChart({
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
-    const pathLen = pts.reduce((acc, pt, i) => {
-      if (i === 0) return 0;
-      const prev = pts[i - 1];
-      return acc + Math.hypot(pt[0] - prev[0], pt[1] - prev[1]);
-    }, 0);
-
     const steps = 4;
     const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
       y: PAD.top + (1 - i / steps) * iH,
@@ -140,17 +136,7 @@ function OHLCVChart({
     const positive = closes[closes.length - 1] >= closes[0];
     const pulsePt = pts[pts.length - 1];
 
-    return {
-      path,
-      areaPath,
-      pathLen,
-      yLabels,
-      xLabels,
-      positive,
-      pulsePt,
-      pts,
-      iW,
-    };
+    return { path, areaPath, yLabels, xLabels, positive, pulsePt, pts, iW };
   }, [candles]);
 
   function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
@@ -321,7 +307,6 @@ function OHLCVChart({
             />
           </clipPath>
         </defs>
-
         {yLabels.map(({ y }) => (
           <line
             key={y}
@@ -333,7 +318,6 @@ function OHLCVChart({
             strokeWidth="1"
           />
         ))}
-
         <g clipPath="url(#chartClip)">
           <path d={areaPath} fill="url(#chartGrad)" />
         </g>
@@ -347,7 +331,6 @@ function OHLCVChart({
             strokeLinejoin="round"
           />
         </g>
-
         {yLabels.map(({ y, label }) => (
           <text
             key={y}
@@ -374,7 +357,6 @@ function OHLCVChart({
             {label}
           </text>
         ))}
-
         {animated && !tooltip.visible && (
           <g>
             <circle
@@ -394,7 +376,6 @@ function OHLCVChart({
             />
           </g>
         )}
-
         {tooltip.visible && (
           <g>
             <line
@@ -626,6 +607,62 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ─── Sidebar panel: swap ↔ add-liquidity ──────────────────────────────────────
+
+/**
+ * SidebarPanel
+ * - When no market is active → shows SpotSwap (default)
+ * - When a market is selected → shows AddLiquidityCard with a "← Back to Swap" header
+ * Animate between the two with a fade/slide.
+ */
+function SidebarPanel({
+  activeMarket,
+  onCloseMarket,
+  outputMint,
+  outputSymbol,
+  outputName,
+  outputLogo,
+}: {
+  activeMarket: MarketEntry | null;
+  onCloseMarket: () => void;
+  outputMint: string;
+  outputSymbol?: string;
+  outputName: string;
+  outputLogo?: string;
+}) {
+  if (activeMarket) {
+    return (
+      <div className="td-sidebar-panel" key={activeMarket.address}>
+        {/* Back bar */}
+        <button className="td-sidebar-back" onClick={onCloseMarket}>
+          <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
+            <path
+              d="M10 3L5 8l5 5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Back to Swap
+        </button>
+        <AddLiquidityCard market={activeMarket} onClose={onCloseMarket} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="td-sidebar-panel" key="swap">
+      <SpotSwap
+        outputMint={outputMint}
+        outputSymbol={outputSymbol}
+        outputName={outputName}
+        outputLogo={outputLogo}
+      />
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function TokenDetailPage({
@@ -643,7 +680,14 @@ export default function TokenDetailPage({
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setLoading] = useState(true);
-  const [showTradeSheet, setShowTradeSheet] = useState(false);
+
+  // ── Sheet state (mobile) ──────────────────────────────────────────────────
+  // "swap" | "liquidity" | null (closed)
+  const [sheetMode, setSheetMode] = useState<"swap" | "liquidity" | null>(null);
+
+  // ── Active liquidity market (shared between sidebar + sheet) ─────────────
+  const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
+
   const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
 
   const {
@@ -654,12 +698,7 @@ export default function TokenDetailPage({
   } = useOHLCV(assetId);
 
   useEffect(() => {
-    //setLoading(true);
-    //setData(null);
-    //setOther(null);
-    //setVariants([]);
     let cancelled = false;
-
     async function load() {
       try {
         const [res, otherData] = await Promise.all([
@@ -682,7 +721,6 @@ export default function TokenDetailPage({
         if (!cancelled) setLoading(false);
       }
     }
-
     load();
     return () => {
       cancelled = true;
@@ -714,6 +752,43 @@ export default function TokenDetailPage({
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
+
+  // Called from MarketsSection when user clicks "Add" on a row
+  function handleAddLiquidity(market: MarketEntry) {
+    // Toggle: same market → close
+    if (activeMarket?.address === market.address) {
+      setActiveMarket(null);
+      // On mobile close any open sheet if it was showing liquidity
+      setSheetMode((prev) => (prev === "liquidity" ? null : prev));
+      return;
+    }
+    setActiveMarket(market);
+    // On mobile, open the sheet in liquidity mode
+    setSheetMode("liquidity");
+  }
+
+  function handleCloseMarket() {
+    setActiveMarket(null);
+    setSheetMode((prev) => (prev === "liquidity" ? null : prev));
+  }
+
+  // FAB label & click
+  const fabLabel = activeMarket ? `Add Liquidity` : "Trade";
+
+  function handleFabClick() {
+    if (activeMarket) {
+      setSheetMode("liquidity");
+    } else {
+      setSheetMode("swap");
+    }
+  }
+
+  const sheetTitle =
+    sheetMode === "liquidity" && activeMarket
+      ? `Add Liquidity · ${activeMarket.base?.symbol ?? ""}/${activeMarket.quote?.symbol ?? ""}`
+      : data.symbol
+        ? `Trade $${data.symbol}`
+        : `Trade ${data.name}`;
 
   return (
     <div className="td-page">
@@ -942,8 +1017,14 @@ export default function TokenDetailPage({
             </div>
           </section>
 
+          {/* Markets — pass callback up */}
           {data.markets.length > 0 && (
-            <MarketsSection markets={data.markets} total={data.marketsTotal} />
+            <MarketsSection
+              markets={data.markets}
+              total={data.marketsTotal}
+              activeMarketAddress={activeMarket?.address ?? null}
+              onAddLiquidity={handleAddLiquidity}
+            />
           )}
 
           {risk && (
@@ -954,7 +1035,6 @@ export default function TokenDetailPage({
               holders={null}
             />
           )}
-
           {variants.length > 0 && (
             <VariantsSection assetName={data.name} variants={variants} />
           )}
@@ -962,16 +1042,13 @@ export default function TokenDetailPage({
 
         {/* ── Sidebar ── */}
         <aside className="td-sidebar">
-          {/*
-            ConnectedPill — shown here on desktop only.
-            On mobile (≤900px) .td-sidebar-pill is hidden via CSS because
-            the pill already appears inside sw-tabs within SpotSwap.
-          */}
           {isConnected && (
             <div className="td-sidebar-pill">
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             </div>
           )}
+
+          {/* Desktop: sidebar panel swaps between Swap and AddLiquidity */}
           <div className="mt-[26px] td-swap-desktop-only">
             <SpotSwap
               outputMint={currentMint ?? ""}
@@ -980,30 +1057,41 @@ export default function TokenDetailPage({
               outputLogo={data.imageUrl ?? undefined}
             />
           </div>
-          {!showTradeSheet && (
-            <button
-              className="td-trade-fab"
-              onClick={() => setShowTradeSheet(true)}
-            >
-              Trade
+
+          {/* Mobile FAB — label changes based on context */}
+          {sheetMode === null && (
+            <button className="td-trade-fab" onClick={handleFabClick}>
+              {activeMarket ? (
+                <>
+                  <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+                    <path
+                      d="M7 1v12M1 7h12"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Add Liquidity
+                </>
+              ) : (
+                "Trade"
+              )}
             </button>
           )}
 
-          {/* Mobile Swap Bottom Sheet */}
-          {showTradeSheet && (
+          {/* Mobile Bottom Sheet */}
+          {sheetMode !== null && (
             <>
               <div
                 className="td-swap-sheet-backdrop"
-                onClick={() => setShowTradeSheet(false)}
+                onClick={() => setSheetMode(null)}
               />
               <div className="td-swap-sheet">
                 <div className="td-swap-sheet__header">
-                  <span className="td-swap-sheet__title">
-                    Trade {data.symbol ? `$${data.symbol}` : data.name}
-                  </span>
+                  <span className="td-swap-sheet__title">{sheetTitle}</span>
                   <button
                     className="td-swap-sheet__close"
-                    onClick={() => setShowTradeSheet(false)}
+                    onClick={() => setSheetMode(null)}
                     aria-label="Close"
                   >
                     <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
@@ -1017,16 +1105,24 @@ export default function TokenDetailPage({
                   </button>
                 </div>
                 <div className="td-swap-sheet__body">
-                  <SpotSwap
-                    outputMint={currentMint ?? ""}
-                    outputSymbol={data.symbol}
-                    outputName={data.name}
-                    outputLogo={data.imageUrl ?? undefined}
-                  />
+                  {sheetMode === "liquidity" && activeMarket ? (
+                    <AddLiquidityCard
+                      market={activeMarket}
+                      onClose={() => setSheetMode(null)}
+                    />
+                  ) : (
+                    <SpotSwap
+                      outputMint={currentMint ?? ""}
+                      outputSymbol={data.symbol}
+                      outputName={data.name}
+                      outputLogo={data.imageUrl ?? undefined}
+                    />
+                  )}
                 </div>
               </div>
             </>
           )}
+
           {description && (
             <ExpandableDescription
               text={description}
@@ -1079,6 +1175,12 @@ export default function TokenDetailPage({
                 )}
               </div>
             </div>
+          )}
+          {sheetMode === "liquidity" && activeMarket && (
+            <AddLiquidityCard
+              market={activeMarket}
+              onClose={() => setSheetMode(null)}
+            />
           )}
         </aside>
       </div>
