@@ -1176,12 +1176,12 @@ export default function TokenDetailPage({
               </div>
             </div>
           )}
-          {sheetMode === "liquidity" && activeMarket && (
+          {/**sheetMode === "liquidity" && activeMarket && (
             <AddLiquidityCard
               market={activeMarket}
               onClose={() => setSheetMode(null)}
             />
-          )}
+          )**/}
         </aside>
       </div>
     </div>
