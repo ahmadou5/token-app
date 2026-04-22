@@ -42,6 +42,8 @@ function fmtVolTooltip(n: number | null | undefined): string {
   return `$${n.toFixed(2)}`;
 }
 
+// ─── OHLCV Chart ──────────────────────────────────────────────────────────────
+
 interface TooltipState {
   x: number;
   y: number;
@@ -58,9 +60,10 @@ function OHLCVChart({
   candles: { time: number; close: number; volume: number }[];
   isLoading: boolean;
 }) {
-  const W = 800,
-    H = 220;
+  const W = 800;
+  const H = 220;
   const PAD = { top: 16, right: 16, bottom: 32, left: 56 };
+
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({
     x: 0,
@@ -74,9 +77,9 @@ function OHLCVChart({
 
   useEffect(() => {
     if (!isLoading && candles.length > 1) {
-      const raf = requestAnimationFrame(() =>
-        requestAnimationFrame(() => setAnimated(true)),
-      );
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimated(true));
+      });
       return () => cancelAnimationFrame(raf);
     }
   }, [isLoading, candles.length]);
@@ -86,12 +89,14 @@ function OHLCVChart({
       (c) => c && typeof c.close === "number" && isFinite(c.close),
     );
     if (clean.length < 2) return null;
+
     const closes = clean.map((c) => c.close);
-    const minVal = Math.min(...closes),
-      maxVal = Math.max(...closes);
+    const minVal = Math.min(...closes);
+    const maxVal = Math.max(...closes);
     const range = maxVal - minVal || 1;
-    const iW = W - PAD.left - PAD.right,
-      iH = H - PAD.top - PAD.bottom;
+    const iW = W - PAD.left - PAD.right;
+    const iH = H - PAD.top - PAD.bottom;
+
     const pts = clean.map(
       (c, i) =>
         [
@@ -100,18 +105,22 @@ function OHLCVChart({
           c,
         ] as [number, number, typeof c],
     );
+
     const path = pts
       .map(
         ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`,
       )
       .join(" ");
+
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
+
     const steps = 4;
     const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
       y: PAD.top + (1 - i / steps) * iH,
       label: fmtPrice(minVal + (maxVal - minVal) * (i / steps)),
     }));
+
     const xCount = Math.min(6, clean.length);
     const xLabels = Array.from({ length: xCount }, (_, i) => {
       const idx = Math.round((i / (xCount - 1)) * (clean.length - 1));
@@ -123,44 +132,42 @@ function OHLCVChart({
         }),
       };
     });
-    return {
-      path,
-      areaPath,
-      yLabels,
-      xLabels,
-      positive: closes[closes.length - 1] >= closes[0],
-      pulsePt: pts[pts.length - 1],
-      pts,
-    };
+
+    const positive = closes[closes.length - 1] >= closes[0];
+    const pulsePt = pts[pts.length - 1];
+
+    return { path, areaPath, yLabels, xLabels, positive, pulsePt, pts, iW };
   }, [candles]);
 
   function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
     if (!derived || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const clampedX = Math.max(
-      PAD.left,
-      Math.min(W - PAD.right, (e.clientX - rect.left) * (W / rect.width)),
-    );
-    const ratio = (clampedX - PAD.left) / (W - PAD.left - PAD.right);
+    const scaleX = W / rect.width;
+    const rawX = (e.clientX - rect.left) * scaleX;
+    const clampedX = Math.max(PAD.left, Math.min(W - PAD.right, rawX));
+    const iW = W - PAD.left - PAD.right;
+    const ratio = (clampedX - PAD.left) / iW;
     const clean = (candles ?? []).filter(
       (c) => c && typeof c.close === "number" && isFinite(c.close),
     );
-    const idx = Math.max(
-      0,
-      Math.min(Math.round(ratio * (clean.length - 1)), clean.length - 1),
-    );
+    const idx = Math.round(ratio * (clean.length - 1));
+    const candle = clean[Math.max(0, Math.min(idx, clean.length - 1))];
     const pt = derived.pts[Math.max(0, Math.min(idx, derived.pts.length - 1))];
     setTooltip({
       x: pt[0],
       y: pt[1],
-      price: clean[idx].close,
-      volume: clean[idx].volume,
-      time: clean[idx].time,
+      price: candle.close,
+      volume: candle.volume,
+      time: candle.time,
       visible: true,
     });
   }
 
-  if (isLoading)
+  function handlePointerLeave() {
+    setTooltip((t) => ({ ...t, visible: false }));
+  }
+
+  if (isLoading) {
     return (
       <div className="td-chart td-chart--loading">
         <svg
@@ -187,22 +194,24 @@ function OHLCVChart({
             );
           })}
           <polyline
-            points={Array.from(
-              { length: 20 },
-              (_, i) =>
-                `${PAD.left + (i / 19) * (W - PAD.left - PAD.right)},${H / 2 + Math.sin(i * 0.8) * 24}`,
-            ).join(" ")}
+            points={Array.from({ length: 20 }, (_, i) => {
+              const x = PAD.left + (i / 19) * (W - PAD.left - PAD.right);
+              const y = H / 2 + Math.sin(i * 0.8) * 24;
+              return `${x},${y}`;
+            }).join(" ")}
             fill="none"
             stroke="var(--tc-chart-skel)"
             strokeWidth="2"
             strokeLinecap="round"
+            strokeLinejoin="round"
             className="td-chart__skel-line"
           />
         </svg>
       </div>
     );
+  }
 
-  if (!derived)
+  if (!derived) {
     return (
       <div className="td-chart td-chart--empty">
         <svg
@@ -256,9 +265,11 @@ function OHLCVChart({
         <span className="td-chart__empty-pulse" aria-hidden />
       </div>
     );
+  }
 
   const { path, areaPath, yLabels, xLabels, positive, pulsePt } = derived;
   const lineColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
+  const pulseColor = positive ? "var(--tc-accent-up)" : "var(--tc-accent-down)";
   const ttW = 140;
   const ttX = Math.min(
     Math.max(tooltip.x - ttW / 2, PAD.left),
@@ -274,7 +285,7 @@ function OHLCVChart({
         preserveAspectRatio="none"
         className="td-chart__svg"
         onPointerMove={handlePointerMove}
-        onPointerLeave={() => setTooltip((t) => ({ ...t, visible: false }))}
+        onPointerLeave={handlePointerLeave}
         style={{ cursor: "crosshair" }}
       >
         <defs>
@@ -352,7 +363,7 @@ function OHLCVChart({
               cx={pulsePt[0]}
               cy={pulsePt[1]}
               r="8"
-              fill={lineColor}
+              fill={pulseColor}
               opacity="0"
               className="td-chart__pulse-ring"
             />
@@ -360,7 +371,7 @@ function OHLCVChart({
               cx={pulsePt[0]}
               cy={pulsePt[1]}
               r="4"
-              fill={lineColor}
+              fill={pulseColor}
               className="td-chart__pulse-dot"
             />
           </g>
@@ -384,75 +395,79 @@ function OHLCVChart({
               stroke="var(--tc-bg)"
               strokeWidth="2"
             />
-            <rect
-              x={ttX}
-              y={ttY}
-              width={ttW}
-              height={60}
-              rx="6"
-              fill="var(--tc-tooltip-bg)"
-              stroke="var(--tc-tooltip-border)"
-              strokeWidth="1"
-            />
-            <text
-              x={ttX + 10}
-              y={ttY + 16}
-              fontSize="9"
-              fill="var(--tc-text-muted)"
-              fontFamily="var(--tc-font-sans)"
-            >
-              {new Date(tooltip.time).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </text>
-            <text
-              x={ttX + 10}
-              y={ttY + 32}
-              fontSize="9"
-              fill="var(--tc-text-muted)"
-              fontFamily="var(--tc-font-sans)"
-            >
-              Price
-            </text>
-            <text
-              x={ttX + ttW - 10}
-              y={ttY + 32}
-              fontSize="11"
-              fontWeight="600"
-              fill="var(--tc-text-primary)"
-              fontFamily="var(--tc-font-mono)"
-              textAnchor="end"
-            >
-              {fmtPrice(tooltip.price)}
-            </text>
-            <text
-              x={ttX + 10}
-              y={ttY + 50}
-              fontSize="9"
-              fill="var(--tc-text-muted)"
-              fontFamily="var(--tc-font-sans)"
-            >
-              Volume
-            </text>
-            <text
-              x={ttX + ttW - 10}
-              y={ttY + 50}
-              fontSize="11"
-              fontWeight="600"
-              fill={lineColor}
-              fontFamily="var(--tc-font-mono)"
-              textAnchor="end"
-            >
-              {fmtVolTooltip(tooltip.volume)}
-            </text>
+            <g>
+              <rect
+                x={ttX}
+                y={ttY}
+                width={ttW}
+                height={60}
+                rx="6"
+                fill="var(--tc-tooltip-bg)"
+                stroke="var(--tc-tooltip-border)"
+                strokeWidth="1"
+              />
+              <text
+                x={ttX + 10}
+                y={ttY + 16}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                {new Date(tooltip.time).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </text>
+              <text
+                x={ttX + 10}
+                y={ttY + 32}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                Price
+              </text>
+              <text
+                x={ttX + ttW - 10}
+                y={ttY + 32}
+                fontSize="11"
+                fontWeight="600"
+                fill="var(--tc-text-primary)"
+                fontFamily="var(--tc-font-mono)"
+                textAnchor="end"
+              >
+                {fmtPrice(tooltip.price)}
+              </text>
+              <text
+                x={ttX + 10}
+                y={ttY + 50}
+                fontSize="9"
+                fill="var(--tc-text-muted)"
+                fontFamily="var(--tc-font-sans)"
+              >
+                Volume
+              </text>
+              <text
+                x={ttX + ttW - 10}
+                y={ttY + 50}
+                fontSize="11"
+                fontWeight="600"
+                fill={lineColor}
+                fontFamily="var(--tc-font-mono)"
+                textAnchor="end"
+              >
+                {fmtVolTooltip(tooltip.volume)}
+              </text>
+            </g>
           </g>
         )}
       </svg>
     </div>
   );
 }
+
+// ─── Chart controls ───────────────────────────────────────────────────────────
 
 const TIMEFRAMES: OHLCVTimeframe[] = ["24H", "7D", "30D", "90D", "1Y"];
 
@@ -485,6 +500,8 @@ function ChartControls({
     </div>
   );
 }
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function PageSkeleton({ onBack }: { onBack: () => void }) {
   return (
@@ -590,8 +607,14 @@ function PageSkeleton({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ─── Sidebar panel: swaps between SpotSwap and AddLiquidityCard ───────────────
+// ─── Sidebar panel: swap ↔ add-liquidity ──────────────────────────────────────
 
+/**
+ * SidebarPanel
+ * - When no market is active → shows SpotSwap (default)
+ * - When a market is selected → shows AddLiquidityCard with a "← Back to Swap" header
+ * Animate between the two with a fade/slide.
+ */
 function SidebarPanel({
   activeMarket,
   onCloseMarket,
@@ -610,6 +633,7 @@ function SidebarPanel({
   if (activeMarket) {
     return (
       <div className="td-sidebar-panel" key={activeMarket.address}>
+        {/* Back bar */}
         <button className="td-sidebar-back" onClick={onCloseMarket}>
           <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
             <path
@@ -626,6 +650,7 @@ function SidebarPanel({
       </div>
     );
   }
+
   return (
     <div className="td-sidebar-panel" key="swap">
       <SpotSwap
@@ -655,10 +680,16 @@ export default function TokenDetailPage({
   const [other, setOther] = useState<AssetsResolveResponse | null>(null);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [isLoadingPage, setLoading] = useState(true);
+
+  // ── Sheet state (mobile) ──────────────────────────────────────────────────
+  // "swap" | "liquidity" | null (closed)
   const [sheetMode, setSheetMode] = useState<"swap" | "liquidity" | null>(null);
+
+  // ── Active liquidity market (shared between sidebar + sheet) ─────────────
   const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
 
   const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
+
   const {
     candles,
     isLoading: chartLoading,
@@ -696,11 +727,13 @@ export default function TokenDetailPage({
     };
   }, [assetId]);
 
-  if (isLoadingPage || !data)
+  if (isLoadingPage || !data) {
     return <PageSkeleton onBack={() => router.back()} />;
+  }
 
   const profile = other?.includes?.profile?.data ?? null;
   const risk = other?.includes?.risk?.data ?? null;
+
   const price = profile?.price ?? data.stats.price ?? null;
   const change24h =
     profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
@@ -720,19 +753,34 @@ export default function TokenDetailPage({
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
 
+  // Called from MarketsSection when user clicks "Add" on a row
   function handleAddLiquidity(market: MarketEntry) {
+    // Toggle: same market → close
     if (activeMarket?.address === market.address) {
       setActiveMarket(null);
-      setSheetMode((p) => (p === "liquidity" ? null : p));
+      // On mobile close any open sheet if it was showing liquidity
+      setSheetMode((prev) => (prev === "liquidity" ? null : prev));
       return;
     }
     setActiveMarket(market);
+    // On mobile, open the sheet in liquidity mode
     setSheetMode("liquidity");
   }
 
   function handleCloseMarket() {
     setActiveMarket(null);
-    setSheetMode((p) => (p === "liquidity" ? null : p));
+    setSheetMode((prev) => (prev === "liquidity" ? null : prev));
+  }
+
+  // FAB label & click
+  const fabLabel = activeMarket ? `Add Liquidity` : "Trade";
+
+  function handleFabClick() {
+    if (activeMarket) {
+      setSheetMode("liquidity");
+    } else {
+      setSheetMode("swap");
+    }
   }
 
   const sheetTitle =
@@ -744,6 +792,7 @@ export default function TokenDetailPage({
 
   return (
     <div className="td-page">
+      {/* Topbar */}
       <div className="td-topbar">
         <div className="td-topbar__left">
           <button className="td-back" onClick={() => router.back()}>
@@ -775,7 +824,9 @@ export default function TokenDetailPage({
       </div>
 
       <div className="td-layout">
+        {/* ── Main column ── */}
         <div className="td-main">
+          {/* Header */}
           <div className="td-header">
             <TokenAvatar src={imageUrl} name={data.name} size={52} />
             <div className="td-header__info">
@@ -910,6 +961,7 @@ export default function TokenDetailPage({
             </div>
           </div>
 
+          {/* Chart */}
           <div className="td-chart-section">
             <div className="td-chart-label">
               <span className="td-chart-label__sym">{data.symbol}</span>
@@ -926,6 +978,7 @@ export default function TokenDetailPage({
             />
           </div>
 
+          {/* Stats */}
           <section className="td-section">
             <h2 className="td-section__title">Stats</h2>
             <div className="td-stats-grid">
@@ -964,6 +1017,7 @@ export default function TokenDetailPage({
             </div>
           </section>
 
+          {/* Markets — pass callback up */}
           {data.markets.length > 0 && (
             <MarketsSection
               markets={data.markets}
@@ -994,11 +1048,9 @@ export default function TokenDetailPage({
             </div>
           )}
 
-          {/* Desktop only: SidebarPanel switches between swap and add-liquidity */}
+          {/* Desktop: sidebar panel swaps between Swap and AddLiquidity */}
           <div className="mt-[26px] td-swap-desktop-only">
-            <SidebarPanel
-              activeMarket={activeMarket}
-              onCloseMarket={handleCloseMarket}
+            <SpotSwap
               outputMint={currentMint ?? ""}
               outputSymbol={data.symbol}
               outputName={data.name}
@@ -1006,14 +1058,9 @@ export default function TokenDetailPage({
             />
           </div>
 
-          {/* Mobile FAB — hidden when sheet is open */}
+          {/* Mobile FAB — label changes based on context */}
           {sheetMode === null && (
-            <button
-              className="td-trade-fab"
-              onClick={() =>
-                activeMarket ? setSheetMode("liquidity") : setSheetMode("swap")
-              }
-            >
+            <button className="td-trade-fab" onClick={handleFabClick}>
               {activeMarket ? (
                 <>
                   <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
@@ -1128,6 +1175,12 @@ export default function TokenDetailPage({
                 )}
               </div>
             </div>
+          )}
+          {sheetMode === "liquidity" && activeMarket && (
+            <AddLiquidityCard
+              market={activeMarket}
+              onClose={() => setSheetMode(null)}
+            />
           )}
         </aside>
       </div>
