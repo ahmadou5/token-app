@@ -1,11 +1,11 @@
 "use client";
 
-import { useWalletConnectModal, WalletSuccessModal } from "@/components/connector/WalletSuccessModal"; 
+import { useWalletConnectToast, WalletSuccessToast } from "@/components/connector/WalletSuccessModal"; 
 import { TxModalProvider } from "@/context/TxModalContext";
 
 function WalletWatcher() {
   // This hook runs the logic to detect connection and show the modal
-  useWalletConnectModal();
+  useWalletConnectToast();
   return null;
 }
 
@@ -14,7 +14,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     <>
     <TxModalProvider>
   <WalletWatcher />
-      <WalletSuccessModal />
+      <WalletSuccessToast />
       {children}
     </TxModalProvider>
     
