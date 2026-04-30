@@ -9,6 +9,7 @@ import "@/lib/suppressDevToolsNoise";
 import { ClientProviders } from "./ClientProvider";
 import { TxModalProvider } from "@/context/TxModalContext";
 import { TxModalRoot } from "@/components/TxModall/TxModalRoot";
+import { PortfolioDrawerProvider } from "@/context/PortfolioDrawerContext";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -39,7 +40,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SolanaProviders>
-          <SwapSettingsProvider>
+          <PortfolioDrawerProvider>
+<SwapSettingsProvider>
             <ThemeProvider>
               <TxModalProvider>
           <TxModalRoot />   {/* ← renders TxToast + WalletSuccessModal */}
@@ -47,6 +49,8 @@ export default function RootLayout({
         </TxModalProvider>
                 </ThemeProvider>
           </SwapSettingsProvider>
+          </PortfolioDrawerProvider>
+          
         </SolanaProviders>
       </body>
     </html>
