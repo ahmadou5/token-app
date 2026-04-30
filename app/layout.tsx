@@ -7,6 +7,8 @@ import { SolanaProviders } from "./SolanaProvider";
 import { SwapSettingsProvider } from "@/context/SwapSettingsContext";
 import "@/lib/suppressDevToolsNoise";
 import { ClientProviders } from "./ClientProvider";
+import { TxModalProvider } from "@/context/TxModalContext";
+import { TxModalRoot } from "@/components/TxModall/TxModalRoot";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -39,9 +41,10 @@ export default function RootLayout({
         <SolanaProviders>
           <SwapSettingsProvider>
             <ThemeProvider>
-              <ClientProviders>
-                {children}
-                </ClientProviders>
+              <TxModalProvider>
+          <TxModalRoot />   {/* ← renders TxToast + WalletSuccessModal */}
+          {children}
+        </TxModalProvider>
                 </ThemeProvider>
           </SwapSettingsProvider>
         </SolanaProviders>
