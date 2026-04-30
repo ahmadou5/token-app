@@ -1,17 +1,10 @@
 "use client";
 
-// Mount this once inside TxModalProvider in layout.tsx:
-// <TxModalProvider>
-//   <TxModalRoot />   ← add this
-//   {children}
-// </TxModalProvider>
-
-import { TxToast } from "./TxModalToast";
-import { WalletSuccessModal, useWalletConnectModal } from "@/components/connector/WalletSuccessModal";
+import { TxToast } from "@/components/TxModall/TxModalToast";
+import { WalletSuccessToast, useWalletConnectToast } from "@/components/connector/WalletSuccessModal";
 
 function WalletConnectWatcher() {
-  // Triggers wallet success modal on connect — must be inside TxModalProvider
-  useWalletConnectModal();
+  useWalletConnectToast();
   return null;
 }
 
@@ -20,7 +13,7 @@ export function TxModalRoot() {
     <>
       <WalletConnectWatcher />
       <TxToast />
-      <WalletSuccessModal />
+      <WalletSuccessToast />
     </>
   );
 }
