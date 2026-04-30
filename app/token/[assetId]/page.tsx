@@ -689,7 +689,14 @@ export default function TokenDetailPage({
   const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
 
   const fallbackToken = tokens.find((t) => t.assetId === assetId) ?? null;
+  const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile(); // Initial check
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   const {
     candles,
     isLoading: chartLoading,
@@ -1041,25 +1048,34 @@ export default function TokenDetailPage({
         </div>
 
         {/* ── Sidebar ── */}
-        <aside className="td-sidebar">
-          {isConnected && (
-            <div className="td-sidebar-pill">
-              <ConnectedPill onDisconnect={() => connector.disconnect()} />
-            </div>
-          )}
+        <aside className="td-sidebar ">
+          <div className=" h-[36px] mb-[26px] bg-amber-0">
+            {isConnected && (
+              <div className="td-sidebar-pill">
+                <ConnectedPill onDisconnect={() => connector.disconnect()} />
+              </div>
+            )}
+          </div>
 
           {/* Desktop: sidebar panel swaps between Swap and AddLiquidity */}
-          <div className="mt-[26px] td-swap-desktop-only">
-            <SpotSwap
-              outputMint={currentMint ?? ""}
-              outputSymbol={data.symbol}
-              outputName={data.name}
-              outputLogo={data.imageUrl ?? undefined}
-            />
+          <div className=" td-swap-desktop-only">
+            {activeMarket ? (
+              <AddLiquidityCard
+                market={activeMarket}
+                onClose={handleCloseMarket}
+              />
+            ) : (
+              <SpotSwap
+                outputMint={currentMint ?? ""}
+                outputSymbol={data.symbol}
+                outputName={data.name}
+                outputLogo={data.imageUrl ?? undefined}
+              />
+            )}
           </div>
 
           {/* Mobile FAB — label changes based on context */}
-          {sheetMode === null && (
+          {isMobile && sheetMode === null && (
             <button className="td-trade-fab" onClick={handleFabClick}>
               {activeMarket ? (
                 <>
@@ -1080,7 +1096,7 @@ export default function TokenDetailPage({
           )}
 
           {/* Mobile Bottom Sheet */}
-          {sheetMode !== null && (
+          {isMobile && sheetMode !== null && (
             <>
               <div
                 className="td-swap-sheet-backdrop"
@@ -1088,7 +1104,9 @@ export default function TokenDetailPage({
               />
               <div className="td-swap-sheet">
                 <div className="td-swap-sheet__header">
-                  <span className="td-swap-sheet__title">{sheetTitle}</span>
+                  <span className="td-swap-sheet__title">
+                    {sheetTitle + "hre"}
+                  </span>
                   <button
                     className="td-swap-sheet__close"
                     onClick={() => setSheetMode(null)}
@@ -1104,7 +1122,7 @@ export default function TokenDetailPage({
                     </svg>
                   </button>
                 </div>
-                <div className="td-swap-sheet__body">
+                <div className="td-swap-sheet__body ">
                   {sheetMode === "liquidity" && activeMarket ? (
                     <AddLiquidityCard
                       market={activeMarket}
