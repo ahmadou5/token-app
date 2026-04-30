@@ -1,111 +1,128 @@
 "use client";
 
-// ConnectedPill — adds "View Portfolio" to the dropdown
-// This replaces your existing ConnectedPill component.
-// The only change is the addition of the portfolio button in sw-connected-menu.
-
-import { useRef, useState } from "react";
-import { useWallet } from "@solana/connector";
+import { useEffect, useRef, useState } from "react";
 import { useConnector } from "@solana/connector/react";
+import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { usePortfolioDrawer } from "@/context/PortfolioDrawerContext";
+import { TagChevronIcon } from "@phosphor-icons/react";
 
 interface ConnectedPillProps {
-  onDisconnect?: () => void;
+  onDisconnect: () => void;
 }
 
 export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
-  const { account, isConnected } = useWallet();
-  const connector = useConnector();
+  const { selectedAccount, selectedWallet, wallets } = useConnector();
+  const [open, setOpen] = useState(false);
   const { open: openPortfolio } = usePortfolioDrawer();
-  const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  if (!isConnected || !account) return null;
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
-  const truncated = `${account.slice(0, 4)}…${account.slice(-4)}`;
+  if (!selectedAccount || !selectedWallet) return null;
 
-  const handleDisconnect = () => {
-    setMenuOpen(false);
-    onDisconnect?.();
-    connector.disconnect();
-  };
+  const shortAddr = `${selectedAccount.slice(0, 4)}…${selectedAccount.slice(-4)}`;
+  const walletWithIcon = wallets.find(
+    (w) => w.wallet.name === selectedWallet.name,
+  );
+  const icon = walletWithIcon?.wallet.icon || selectedWallet.icon;
 
   return (
     <div className="sw-connected-pill" ref={ref}>
       <button
         className="sw-connected-trigger"
-        onClick={() => setMenuOpen((v) => !v)}
-        aria-label="Wallet menu"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
       >
-        {/* Wallet icon */}
-        <span className="sw-connected-trigger__icon--fallback">
-          <svg viewBox="0 0 18 18" fill="none" width="13" height="13">
-            <rect x="1" y="5" width="16" height="11" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M1 9h16" stroke="currentColor" strokeWidth="1.3" />
-            <circle cx="13.5" cy="13" r="1" fill="currentColor" />
-          </svg>
-        </span>
-        <span className="sw-connected-trigger__addr">{truncated}</span>
+        {icon ? (
+          <img
+            src={icon}
+            alt={selectedWallet.name}
+            width={18}
+            height={18}
+            className="sw-connected-trigger__icon"
+          />
+        ) : (
+          <span className="sw-connected-trigger__icon sw-connected-trigger__icon--fallback">
+            <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
+              <rect
+                x="1"
+                y="4"
+                width="14"
+                height="9"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
+              <path d="M12 9a1 1 0 110-2 1 1 0 010 2z" fill="currentColor" />
+            </svg>
+          </span>
+        )}
+        <span className="sw-connected-trigger__addr">{shortAddr}</span>
         <svg
-          viewBox="0 0 10 10"
+          viewBox="0 0 10 6"
           fill="none"
           width="8"
           height="8"
-          style={{
-            transform: menuOpen ? "rotate(180deg)" : "none",
-            transition: "transform 160ms",
-            color: "var(--tc-text-muted)",
-          }}
+          className={`sw-chev ${open ? "sw-chev--open" : ""}`}
         >
-          <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M1 1l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
         </svg>
       </button>
 
-      {menuOpen && (
-        <>
-          {/* Click-away */}
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 49 }}
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="sw-connected-menu" style={{ zIndex: 50 }}>
-            {/* Wallet info */}
-            <div className="sw-connected-menu__info">
-              <span className="sw-connected-menu__wallet">Connected</span>
-              <span className="sw-connected-menu__addr">{truncated}</span>
-            </div>
-
-            {/* ── Portfolio button ── */}
-            <button
+      {open && (
+        <div className="sw-connected-menu" role="menu">
+          <div className="sw-connected-menu__info">
+            <span className="sw-connected-menu__wallet">
+              {selectedWallet.name}
+            </span>
+            <span className="sw-connected-menu__addr">{shortAddr}</span>
+          </div>
+          <div className="sw-connected-menu__divider" />
+          <button
               className="sw-connected-menu__portfolio"
               onClick={() => {
-                setMenuOpen(false);
+                setOpen(false);
                 openPortfolio();
               }}
             >
-              <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                <rect x="1" y="4" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M1 8.5h14" stroke="currentColor" strokeWidth="1.2" />
-              </svg>
+              <TagChevronIcon />
               View Portfolio
             </button>
-
+ 
             <div className="sw-connected-menu__divider" />
-
-            {/* Disconnect */}
-            <button
-              className="sw-connected-menu__disconnect"
-              onClick={handleDisconnect}
-            >
-              <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                <path d="M10 8H2M2 8l3-3M2 8l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M8 5V3a1 1 0 011-1h3a1 1 0 011 1v10a1 1 0 01-1 1H9a1 1 0 01-1-1v-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              Disconnect
-            </button>
-          </div>
-        </>
+          <button
+            className="sw-connected-menu__disconnect"
+            role="menuitem"
+            onClick={() => {
+              onDisconnect();
+              setOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+              <path
+                d="M5 7h7M9 4l3 3-3 3M7 2H3a1 1 0 00-1 1v8a1 1 0 001 1h4"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Disconnect
+          </button>
+        </div>
       )}
     </div>
   );

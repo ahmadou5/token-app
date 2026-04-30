@@ -13,7 +13,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <>
     <TxModalProvider>
-  <WalletWatcher />
+     <WalletWatcher />
       <WalletSuccessToast />
       {children}
     </TxModalProvider>
