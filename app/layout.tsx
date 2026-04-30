@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { SolanaProviders } from "./SolanaProvider";
 import { SwapSettingsProvider } from "@/context/SwapSettingsContext";
 import "@/lib/suppressDevToolsNoise";
+import { ClientProviders } from "./ClientProvider";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -37,7 +38,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <SolanaProviders>
           <SwapSettingsProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ThemeProvider>
+              <ClientProviders>
+                {children}
+                </ClientProviders>
+                </ThemeProvider>
           </SwapSettingsProvider>
         </SolanaProviders>
       </body>

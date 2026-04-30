@@ -6,6 +6,7 @@ import {
   useSolanaClient,
   useWallet,
 } from "@solana/connector";
+import { useTxModal } from "@/context/TxModalContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,10 @@ export type PerpExecuteStatus =
   | "error";
 
 export interface UsePerpExecuteReturn {
-  open: (txBase64: string) => Promise<string | null>;
+  open: (txBase64: string,
+    actionLabel?: string,
+    tokenSymbol?: string,
+    tokenAmount?: string,) => Promise<string | null>;
   status: PerpExecuteStatus;
   txSignature: string | null;
   error: string | null;
@@ -118,7 +122,7 @@ export function usePerpExecute(): UsePerpExecuteReturn {
   const { account } = useWallet();
   const { signer, ready: signerReady } = useKitTransactionSigner();
   const { client } = useSolanaClient();
-
+  const { showTxModal } = useTxModal();
   const [status, setStatus] = useState<PerpExecuteStatus>("idle");
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +134,9 @@ export function usePerpExecute(): UsePerpExecuteReturn {
   }, []);
 
   const open = useCallback(
-    async (txBase64: string): Promise<string | null> => {
+    async (txBase64: string, actionLabel = "Open Position",
+      tokenSymbol?: string,
+      tokenAmount?: string,): Promise<string | null> => {
       if (!account || !signerReady || !signer || !client) {
         setError("Wallet not connected");
         return null;
@@ -152,6 +158,19 @@ export function usePerpExecute(): UsePerpExecuteReturn {
 
         setTxSignature(sig);
         setStatus("confirmed");
+        // Show success toast
+        showTxModal({
+          status: "success",
+          action: actionLabel,
+          txSignature: sig,
+          tokenSymbol,
+          tokenAmount,
+          secondaryCta: {
+            label: "View Portfolio",
+            onClick: () =>
+              window.dispatchEvent(new CustomEvent("open-portfolio-drawer")),
+          },
+        });
         return sig;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Transaction failed";

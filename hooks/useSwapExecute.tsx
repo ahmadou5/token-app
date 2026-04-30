@@ -10,6 +10,7 @@ import {
 import type { SwapQuote } from "./useSwapQuote";
 import { useSwapSettings } from "@/context/SwapSettingsContext";
 import { TransactionPlanResult } from "@solana/instruction-plans";
+import { useTxModal } from "@/context/TxModalContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ export function useSwapExecute(): UseSwapExecuteReturn {
   const { account } = useWallet();
   const { signer, ready: signerReady } = useKitTransactionSigner();
   const { client } = useSolanaClient();
-
+const { showTxModal } = useTxModal();
   const [status, setStatus] = useState<SwapExecuteStatus>("idle");
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -294,9 +295,25 @@ export function useSwapExecute(): UseSwapExecuteReturn {
 
         await new Promise((r) => setTimeout(r, 800));
         setStatus("success");
+        // After setStatus("success"):
+showTxModal({
+  status: "success",
+  action: `Swapped Success`,
+  txSignature: sig as string,
+  tokenSymbol: 'USDC',
+  secondaryCta: {
+    label: "View Portfolio",
+    onClick: () => window.dispatchEvent(new CustomEvent("open-portfolio-drawer")),
+  },
+});
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Swap failed";
         setError(msg);
+        showTxModal({
+  status: "error",
+  action: `Swap `,
+  errorMessage: msg,
+});
         setStatus("error");
       }
     },
