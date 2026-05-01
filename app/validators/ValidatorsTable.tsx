@@ -19,7 +19,7 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
   const filteredValidators = useMemo(() => {
     let list = initialValidators.filter((v) =>
       v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.voteAccount.toLowerCase().includes(search.toLowerCase())
+      v.votingPubkey.toLowerCase().includes(search.toLowerCase())
     );
 
     list.sort((a, b) => {
@@ -84,20 +84,25 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
           </thead>
           <tbody className="vl-tbody">
             {filteredValidators.map((v) => (
-              <tr key={v.voteAccount} className="vl-row border-bottom border-[var(--tc-divider)] hover:bg-[var(--tc-bg-hover)] transition-colors">
+              <tr key={v.votingPubkey} className="vl-row border-bottom border-[var(--tc-divider)] hover:bg-[var(--tc-bg-hover)] transition-colors">
                 <td className="p-4 text-[var(--tc-text-muted)] font-mono text-[12px]">{v.rank}</td>
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    {v.imageUrl ? (
-                      <img src={v.imageUrl} alt={v.name} className="w-8 h-8 rounded-full border border-[var(--tc-border)]" />
+                    {v.avatar ? (
+                      <img src={v.avatar} alt={v.name} className="w-8 h-8 rounded-full border border-[var(--tc-border)]" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] flex items-center justify-center text-[10px] font-bold">
                         {v.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[14px] font-semibold text-[var(--tc-text-primary)] truncate">{v.name}</span>
-                      <span className="text-[11px] text-[var(--tc-text-muted)] font-mono truncate">{v.voteAccount.slice(0, 4)}…{v.voteAccount.slice(-4)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[14px] font-semibold text-[var(--tc-text-primary)] truncate">{v.name}</span>
+                        {v.isJito && (
+                          <span className="px-1 py-0.5 rounded bg-[#313131] text-[#00FFBD] text-[8px] font-bold uppercase tracking-wider">Jito</span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-[var(--tc-text-muted)] font-mono truncate">{v.votingPubkey.slice(0, 4)}…{v.votingPubkey.slice(-4)}</span>
                     </div>
                   </div>
                 </td>
@@ -106,7 +111,7 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
                 <td className="p-4 hidden md:table-cell text-[14px] font-medium text-[var(--tc-text-primary)]">{v.activatedStake.toLocaleString(undefined, { maximumFractionDigits: 0 })} SOL</td>
                 <td className="p-4 hidden md:table-cell text-[14px] text-[var(--tc-text-muted)]">{(v.skipRate * 100).toFixed(1)}%</td>
                 <td className="p-4 text-right">
-                  <Link href={`/validators/${v.voteAccount}`} className="vl-stake-btn inline-flex items-center justify-center p-2 px-4 rounded-lg bg-[var(--tc-accent)] text-white text-[12px] font-bold no-underline hover:opacity-90 transition-opacity">
+                  <Link href={`/validators/${v.votingPubkey}`} className="vl-stake-btn inline-flex items-center justify-center p-2 px-4 rounded-lg bg-[var(--tc-accent)] text-white text-[12px] font-bold no-underline hover:opacity-90 transition-opacity">
                     Stake
                   </Link>
                 </td>

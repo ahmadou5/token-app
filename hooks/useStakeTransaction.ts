@@ -198,7 +198,7 @@ export function useStakeTransaction() {
 
           return {
             address: item.pubkey,
-            validator: voteAccount ? voteAccount.slice(0, 8) + "…" : "Inactive",
+            validator: voteAccount || "Inactive",
             amount: Number(item.account.lamports) / 1e9,
             status: state === 2 ? "active" : "inactive",
           };

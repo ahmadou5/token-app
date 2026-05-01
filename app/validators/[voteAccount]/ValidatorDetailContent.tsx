@@ -27,7 +27,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
   }, [isConnected, account, fetchActiveStakes]);
 
   const existingStake = useMemo(() => 
-    stakes.find(s => s.validator === validator.name || s.validator === validator.voteAccount),
+    stakes.find(s => s.validator === validator.name || s.validator === validator.votingPubkey),
   [stakes, validator]);
 
   const handleMax = () => {
@@ -41,7 +41,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
     const val = parseFloat(amount);
     if (!val || val <= 0) return;
     await executeStakeAction("stake", {
-      voteAccount: validator.voteAccount,
+      voteAccount: validator.votingPubkey,
       amountSOL: val,
     });
   };
@@ -66,8 +66,8 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
       {/* Header Info */}
       <div className="vs-card bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-2xl p-6 flex flex-col md:flex-row gap-6">
         <div className="vs-logo-wrap flex-shrink-0">
-          {validator.imageUrl ? (
-            <img src={validator.imageUrl} alt={validator.name} className="w-20 h-20 rounded-2xl border border-[var(--tc-border)]" />
+          {validator.avatar ? (
+            <img src={validator.avatar} alt={validator.name} className="w-20 h-20 rounded-2xl border border-[var(--tc-border)]" />
           ) : (
             <div className="w-20 h-20 rounded-2xl bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] flex items-center justify-center text-2xl font-bold">
               {validator.name.slice(0, 2).toUpperCase()}
@@ -77,8 +77,8 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
         <div className="vs-info flex flex-col flex-1 gap-2">
           <h2 className="text-xl font-bold text-[var(--tc-text-primary)]">{validator.name}</h2>
           <div className="flex items-center gap-2 text-[var(--tc-text-muted)] font-mono text-[13px]">
-            <span>{validator.voteAccount}</span>
-            <button className="hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => navigator.clipboard.writeText(validator.voteAccount)}>
+            <span>{validator.votingPubkey}</span>
+            <button className="hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => navigator.clipboard.writeText(validator.votingPubkey)}>
               <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
                 <path d="M4 4h8v8H4z" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M2 2h8v2H4v8H2z" fill="currentColor" opacity="0.3" />
