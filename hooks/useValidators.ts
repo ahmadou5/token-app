@@ -1,11 +1,18 @@
 import { ValidatorInfo } from "@/types/validator";
+import { fetchStakeWizValidatorInfos, getStakeWizValidatorByAddress } from "@/lib/services/stakewizValidators.service";
 
 export type Validator = ValidatorInfo;
 
 export async function getValidators(): Promise<Validator[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-    const res = await fetch(`${baseUrl}/api/validators`, {
+    // If on server, call service directly to avoid fetch issues
+    if (typeof window === "undefined") {
+      const validators = await fetchStakeWizValidatorInfos();
+      validators.sort((a, b) => b.stake - a.stake);
+      return validators;
+    }
+
+    const res = await fetch("/api/validators", {
       next: { revalidate: 300 },
     });
 
@@ -25,8 +32,12 @@ export async function getValidator(
   voteAccount: string,
 ): Promise<Validator | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "";
-    const res = await fetch(`${baseUrl}/api/validators/${voteAccount}`, {
+    // If on server, call service directly
+    if (typeof window === "undefined") {
+      return await getStakeWizValidatorByAddress(voteAccount);
+    }
+
+    const res = await fetch(`/api/validators/${voteAccount}`, {
       next: { revalidate: 300 },
     });
 

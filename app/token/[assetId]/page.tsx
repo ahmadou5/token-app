@@ -774,7 +774,9 @@ export default function TokenDetailPage({
   ];
   const isStable = STABLE_SYMBOLS.includes(data.symbol?.toUpperCase() ?? "");
   const isNativeSOL =
-    data.symbol?.toUpperCase() === "SOL" && !data.primaryVariant?.mint;
+    data.symbol?.toUpperCase() === "SOL" &&
+    (!data.primaryVariant?.mint ||
+      data.primaryVariant.mint === "So11111111111111111111111111111111111111112");
 
   // Called from MarketsSection when user clicks "Add" on a row
   function handleAddLiquidity(market: MarketEntry) {
