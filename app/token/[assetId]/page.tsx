@@ -1092,13 +1092,13 @@ export default function TokenDetailPage({
             )}
           </div>
 
-          {isStable && (
-            <div className="mt-6">
-              <EarnVault mint={currentMint} symbol={data.symbol} />
+          {/* Yield Opportunities Section */}
+          {(isStable || isNativeSOL) && (
+            <div className="mt-6 flex flex-col gap-6">
+              {isNativeSOL && <NativeStakeCard />}
+              {isStable && <EarnVault mint={currentMint} symbol={data.symbol} />}
             </div>
           )}
-
-          {isNativeSOL && <NativeStakeCard />}
 
           {/* Mobile FAB — label changes based on context */}
           {isMobile && sheetMode === null && (

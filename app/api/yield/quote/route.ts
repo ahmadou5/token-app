@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchYieldAPY } from "@/lib/services/yield.service";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { provider, mint, symbol, amountUi, owner, action } = body;
 
-    // TODO: Integrate real vault APIs (Kamino, MarginFi, Drift)
-    // For now, return mock data
-
-    const mockApy: Record<string, number> = {
-      kamino: 7.42,
-      marginfi: 6.85,
-      drift: 8.12,
-    };
-
-    const apy = mockApy[provider] || 5.0;
+    const apy = await fetchYieldAPY(provider, symbol);
     const amount = parseFloat(amountUi) || 0;
     const dailyEarningsUsd = (amount * (apy / 100)) / 365;
 
@@ -27,7 +19,8 @@ export async function POST(req: NextRequest) {
         provider,
       },
       // Placeholder transaction (base64)
-      transaction: "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      transaction:
+        "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       err: null,
     });
   } catch (error: any) {

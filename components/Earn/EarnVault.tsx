@@ -183,63 +183,64 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
         />
       )}
 
-      <div className="sw-card sw-earn-card">
+      <div className="td-card">
         {/* Header */}
-        <div className="sw-tabs">
-          <div className="sw-tab sw-tab--active">
-            <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
-              <path
-                d="M7 2v10M2 7h10"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-              />
-              <circle
-                cx="7"
-                cy="7"
-                r="2.5"
-                stroke="currentColor"
-                strokeWidth="1.3"
-              />
-            </svg>
-            Earn
-            {providerMeta.badge && (
-              <span className="sw-earn-card__provider-badge">
-                {providerMeta.label}
-              </span>
-            )}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[var(--tc-accent-bg)] flex items-center justify-center text-[var(--tc-accent)]">
+              <svg viewBox="0 0 14 14" fill="none" width="16" height="16">
+                <path
+                  d="M7 2v10M2 7h10"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="2.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </div>
+            <h3 className="text-[15px] font-bold text-[var(--tc-text-primary)]">Earn Yield</h3>
           </div>
-          <div className="flex-1" />
-          <button className="sw-gear" onClick={() => setShowSettings(true)}>
-            <GearSixIcon size={19} />
+          <button className="p-2 rounded-lg hover:bg-[var(--tc-bg-hover)] text-[var(--tc-text-muted)] transition-colors" onClick={() => setShowSettings(true)}>
+            <GearSixIcon size={20} />
           </button>
         </div>
 
-        <div className="sw-earn-card__body">
+        <div className="flex flex-col gap-5">
           {/* APY Display */}
-          <div className="sw-earn-card__apy-box">
-            <span className="sw-earn-card__apy-label">Current APY</span>
-            <div className="sw-earn-card__apy-value">
-              {isQuoteLoading ? "—" : `${quote?.apy ?? "0.00"}%`}
+          <div className="bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] rounded-2xl p-5 flex flex-col items-center gap-1 shadow-sm">
+            <span className="text-[11px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">Estimated APY</span>
+            <div className="text-[36px] font-bold text-[var(--tc-accent-up)] font-mono leading-none py-1">
+              {isQuoteLoading ? (
+                <span className="animate-pulse opacity-50">...</span>
+              ) : (
+                `${quote?.apy ?? "0.00"}%`
+              )}
             </div>
-            <div className="sw-earn-card__provider-tag">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--tc-surface)] border border-[var(--tc-border)] text-[10px] font-medium text-[var(--tc-text-secondary)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--tc-accent)]" />
               via {providerMeta.label}
             </div>
           </div>
 
           {/* Stats */}
-          <div className="sw-earn-card__stats">
-            <div className="sw-earn-card__stat">
-              <span className="sw-earn-card__stat-label">Your deposit</span>
-              <span className="sw-earn-card__stat-value">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1 p-3 rounded-xl border border-[var(--tc-border)] bg-[var(--tc-surface)]">
+              <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-tight">Your Deposit</span>
+              <span className="text-[13px] font-semibold text-[var(--tc-text-primary)] truncate">
                 {currentPosition
                   ? `${currentPosition.amount.toLocaleString()} ${symbol}`
-                  : "—"}
+                  : "0.00"}
               </span>
             </div>
-            <div className="sw-earn-card__stat">
-              <span className="sw-earn-card__stat-label">Earned so far</span>
-              <span className="sw-earn-card__stat-value sw-earn-card__stat-value--yield">
+            <div className="flex flex-col gap-1 p-3 rounded-xl border border-[var(--tc-border)] bg-[var(--tc-surface)]">
+              <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-tight">Total Earned</span>
+              <span className="text-[13px] font-semibold text-[var(--tc-accent-up)]">
                 {currentPosition
                   ? `+$${currentPosition.yieldUsd.toFixed(2)}`
                   : "—"}
@@ -247,126 +248,106 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
             </div>
           </div>
 
-          {/* Action Tabs (Small) */}
-          <div className="sw-earn-card__actions-tabs">
-            <button
-              className={`sw-earn-card__action-tab ${activeAction === "deposit" ? "sw-earn-card__action-tab--active" : ""}`}
-              onClick={() => {
-                setActiveAction("deposit");
-                resetExec();
-              }}
-            >
-              Deposit
-            </button>
-            {currentPosition && (
+          {/* Action Area */}
+          <div className="flex flex-col gap-3">
+            <div className="flex p-1 bg-[var(--tc-bg-muted)] rounded-xl gap-1">
               <button
-                className={`sw-earn-card__action-tab ${activeAction === "withdraw" ? "sw-earn-card__action-tab--active" : ""}`}
+                className={`flex-1 py-2 text-[12px] font-bold rounded-lg transition-all ${activeAction === "deposit" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
                 onClick={() => {
-                  setActiveAction("withdraw");
+                  setActiveAction("deposit");
                   resetExec();
                 }}
               >
-                Withdraw
+                Deposit
               </button>
+              {currentPosition && (
+                <button
+                  className={`flex-1 py-2 text-[12px] font-bold rounded-lg transition-all ${activeAction === "withdraw" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
+                  onClick={() => {
+                    setActiveAction("withdraw");
+                    resetExec();
+                  }}
+                >
+                  Withdraw
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[11px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">
+                  Amount
+                </span>
+                <button className="text-[11px] font-bold text-[var(--tc-accent)] hover:opacity-80 transition-opacity" onClick={handleMax}>
+                  MAX: {activeAction === "deposit" ? balanceUi : (currentPosition?.amount ?? 0)}
+                </button>
+              </div>
+              <div className="relative group">
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  className="w-full h-12 pl-4 pr-16 rounded-xl bg-[var(--tc-surface)] border border-[var(--tc-border)] text-[16px] font-mono text-[var(--tc-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--tc-accent)] focus:ring-opacity-20 transition-all group-hover:border-[var(--tc-border-hover)]"
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    resetExec();
+                  }}
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--tc-text-muted)]">
+                  {symbol}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quote & Submit */}
+          <div className="flex flex-col gap-4">
+            {quote && parseFloat(amount) > 0 && !isQuoteLoading && (
+              <div className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--tc-accent-bg)] border border-[var(--tc-accent)] border-opacity-10">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--tc-text-secondary)]">Daily Earnings</span>
+                  <span className="font-bold text-[var(--tc-accent-up)]">${quote.dailyEarningsUsd.toFixed(4)}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--tc-text-secondary)]">Protocol Fee</span>
+                  <span className="font-bold text-[var(--tc-text-primary)]">{quote.protocolFeePercent}%</span>
+                </div>
+              </div>
             )}
+
+            {isQuoteLoading && parseFloat(amount) > 0 && (
+              <div className="flex items-center justify-center gap-2 p-3 text-[11px] text-[var(--tc-text-muted)] animate-pulse">
+                <div className="w-3 h-3 rounded-full border-2 border-[var(--tc-accent)] border-t-transparent animate-spin" />
+                Fetching live quote...
+              </div>
+            )}
+
+            {(quoteError || execError) && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-[11px] text-red-600 dark:text-red-400 flex gap-2">
+                <svg viewBox="0 0 14 14" fill="none" width="14" height="14" className="shrink-0 mt-0.5">
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 4.5v3M7 9.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                {quoteError ?? execError}
+              </div>
+            )}
+
+            <button
+              className={`w-full h-12 rounded-2xl font-bold text-[14px] transition-all flex items-center justify-center gap-2 ${canSubmit ? "bg-[var(--tc-accent)] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5" : "bg-[var(--tc-bg-muted)] text-[var(--tc-text-muted)] cursor-not-allowed"}`}
+              disabled={!canSubmit}
+              onClick={handleAction}
+            >
+              {isExecuting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {isExecuting
+                ? "Processing Transaction..."
+                : `${activeAction === "deposit" ? "Deposit" : "Withdraw"} ${symbol}`}
+            </button>
           </div>
-
-          {/* Input Row */}
-          <div className="sw-perp-form__field">
-            <div className="sw-perp-form__field-hdr">
-              <span className="sw-perp-form__field-label">
-                {activeAction === "deposit"
-                  ? "Deposit Amount"
-                  : "Withdraw Amount"}
-              </span>
-              <button className="sw-bal-btn" onClick={handleMax}>
-                Max:{" "}
-                {activeAction === "deposit"
-                  ? balanceUi
-                  : (currentPosition?.amount ?? 0)}
-              </button>
-            </div>
-            <div className="sw-perp-form__input-row">
-              <input
-                type="number"
-                placeholder="0.00"
-                className="sw-perp-form__input"
-                value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  resetExec();
-                }}
-              />
-              <span className="sw-perp-form__input-token">{symbol}</span>
-            </div>
-          </div>
-
-          {/* Quote Panel */}
-          {quote && parseFloat(amount) > 0 && (
-            <div className="sw-perp-quote">
-              <div className="sw-perp-quote__row">
-                <span>Estimated Daily</span>
-                <span className="sw-perp-quote__val">
-                  ${quote.dailyEarningsUsd.toFixed(4)}
-                </span>
-              </div>
-              <div className="sw-perp-quote__row">
-                <span>Protocol Fee</span>
-                <span className="sw-perp-quote__val">
-                  {quote.protocolFeePercent}%
-                </span>
-              </div>
-              <div className="sw-perp-quote__row">
-                <span>Transaction Fee</span>
-                <span className="sw-perp-quote__val">~0.00001 SOL</span>
-              </div>
-            </div>
-          )}
-
-          {isQuoteLoading && (
-            <div className="sw-perp-quote-loading">
-              <span className="sw-spinner sw-spinner--dark" aria-hidden />
-              <span>Fetching quote…</span>
-            </div>
-          )}
-
-          {/* Error */}
-          {(quoteError || execError) && (
-            <div className="sw-error">
-              <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-                <path
-                  d="M7 4.5v3M7 9.5v.5"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              {quoteError ?? execError}
-            </div>
-          )}
-
-          {/* CTA */}
-          <button
-            className={`sw-swap-btn mt-4 ${isExecuting ? "sw-swap-btn--busy" : ""}`}
-            disabled={!canSubmit}
-            onClick={handleAction}
-          >
-            {isExecuting && <span className="sw-spinner" aria-hidden />}
-            {isExecuting
-              ? "Processing..."
-              : `${activeAction === "deposit" ? "Deposit" : "Withdraw"} ${symbol}`}
-          </button>
         </div>
 
-        <div className="sw-powered">
-          <span>Powered by {providerMeta.label}</span>
+        <div className="mt-4 pt-3 border-t border-[var(--tc-divider)] flex items-center justify-center gap-1.5 opacity-50">
+          <span className="text-[9px] font-bold text-[var(--tc-text-muted)] uppercase tracking-widest">Powered by</span>
+          <span className="text-[10px] font-bold text-[var(--tc-text-primary)]">{providerMeta.label}</span>
         </div>
       </div>
     </>
