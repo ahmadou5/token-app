@@ -173,13 +173,13 @@ export function NativeStakeCard() {
                   <Link
                     key={v.votingPubkey}
                     href={`/validators/${v.votingPubkey}`}
-                    className="flex items-center gap-3 p-3 hover:bg-[var(--tc-bg-hover)] transition-colors no-underline group"
+                    className="flex items-center gap-2 p-2 hover:bg-[var(--tc-bg-hover)] transition-colors no-underline group"
                   >
                     {v.avatar ? (
                       <img
                         src={v.avatar}
                         alt={v.name}
-                        className="w-8 h-8 rounded-full border border-[var(--tc-border)]"
+                        className="w-6 h-6 rounded-full border border-[var(--tc-border)]"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] flex items-center justify-center text-[10px] font-bold text-[var(--tc-text-primary)]">
@@ -187,10 +187,10 @@ export function NativeStakeCard() {
                       </div>
                     )}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-semibold text-[var(--tc-text-primary)] truncate">
+                      <span className="text-[10px] font-semibold text-[var(--tc-text-primary)] truncate">
                         {v.name}
                       </span>
-                      <span className="text-[10px] text-[var(--tc-accent-up)] font-medium">
+                      <span className="text-[7px] text-[var(--tc-accent-up)] font-medium">
                         {v.apy.toFixed(2)}% APY
                       </span>
                     </div>
