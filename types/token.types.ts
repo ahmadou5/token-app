@@ -167,6 +167,22 @@ export interface MarketEntry {
   uniqueWallet24hChangePercent: number;
 }
 
+// ─── OHLCV (from ?include=ohlcv) ─────────────────────────────────────────────
+
+export interface OHLCVEntry {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface OHLCVData {
+  ok: boolean;
+  data: OHLCVEntry[];
+}
+
 // ─── Merged / flat token response ────────────────────────────────────────────
 
 export interface TokenAssetResponse {

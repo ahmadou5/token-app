@@ -35,7 +35,10 @@ const TIMEFRAME_CONFIG: Record<
   "90D": { interval: "1D", limit: 90 },
   "1Y": { interval: "1W", limit: 52 },
 };
-export function useOHLCV(assetId: string | null): UseOHLCVReturn {
+export function useOHLCV(
+  assetId: string | null,
+  mint: string | null = null,
+): UseOHLCVReturn {
   const [candles, setCandles] = useState<OHLCVCandle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -46,34 +49,28 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     setIsLoading(true);
     setError(null);
     try {
-      const { interval, limit } = TIMEFRAME_CONFIG[timeframe];
-      const data = await tokenRequest.getOHLCV(assetId, interval, limit);
+      const { interval } = TIMEFRAME_CONFIG[timeframe];
 
-      let rawArray: RawOHLCVTuple[] = [];
-      if (Array.isArray(data)) {
-        rawArray = data as RawOHLCVTuple[];
-      } else if (data && typeof data === "object") {
-        rawArray = data.candles || data.data || [];
-      }
+      // Use the new getVariant API which returns the exact structure requested
+      let url = `/api/getVariant?assetId=${assetId}&ohlcvInterval=${interval}&include=ohlcv`;
+      if (mint) url += `&mint=${mint}`;
 
-      const parsed: OHLCVCandle[] = rawArray.map((c) => {
-        if (Array.isArray(c)) {
-          return {
-            time: c[0] * 1000,
-            open: c[1],
-            high: c[2],
-            low: c[3],
-            close: c[4],
-            volume: c[5],
-          };
-        }
-        // Object format — still needs seconds → ms conversion
-        const obj = c as unknown as OHLCVCandle;
-        return {
-          ...obj,
-          time: obj.time * 1000,
-        };
-      });
+      // For timeframe calculation, we might need 'from'/'to' but the configurator uses limit
+      // Let's stick to the configuration we have or map limit to from/to
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch OHLCV");
+      const json = await res.json();
+
+      const ohlcvData = json.includes?.ohlcv?.data || [];
+
+      const parsed: OHLCVCandle[] = ohlcvData.map((c: any) => ({
+        time: c.time * 1000,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      }));
 
       setCandles(parsed);
     } catch (err) {
@@ -83,7 +80,7 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [assetId, timeframe]);
+  }, [assetId, mint, timeframe]);
 
   useEffect(() => {
     fetchCandles();
@@ -93,9 +90,9 @@ export function useOHLCV(assetId: string | null): UseOHLCVReturn {
     candles,
     isLoading,
     error,
-    interval: TIMEFRAME_CONFIG[timeframe].interval, // derived, not state
+    interval: TIMEFRAME_CONFIG[timeframe].interval,
     timeframe,
-    setInterval: () => {}, // no-op, kept for interface compatibility
+    setInterval: () => {},
     setTimeframe: setTimeframeState,
   };
 }

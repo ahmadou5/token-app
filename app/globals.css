@@ -211,8 +211,8 @@ html.dark .theme-toggle__thumb {
   align-items: center;
   justify-content: center;
   font-family: var(--tc-font-mono);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 0.35em;
+  font-weight: 600;
   color: var(--tc-avatar-c);
   letter-spacing: 0.02em;
 }

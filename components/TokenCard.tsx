@@ -21,6 +21,24 @@ function safeInitials(str: string | null | undefined): string {
   return str.slice(0, 2).toUpperCase();
 }
 
+function getAvatarColor(name: string) {
+  const colors = [
+    "#F43F5E", // rose
+    "#8B5CF6", // violet
+    "#3B82F6", // blue
+    "#10B981", // emerald
+    "#F59E0B", // amber
+    "#EF4444", // red
+    "#EC4899", // pink
+    "#6366F1", // indigo
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
 export function fmtPrice(n: number | null | undefined): string {
@@ -91,7 +109,13 @@ export function TokenAvatar({
 }) {
   const safeName = name && typeof name === "string" ? name : "?";
   const initials = safeInitials(safeName);
-  const style = { width: size, height: size, minWidth: size };
+  const avatarColor = useMemo(() => getAvatarColor(safeName), [safeName]);
+  const style = {
+    width: size,
+    height: size,
+    minWidth: size,
+    "--avatar-color": avatarColor,
+  } as React.CSSProperties;
 
   if (src && typeof src === "string") {
     return (
@@ -106,6 +130,8 @@ export function TokenAvatar({
             const parent = img.parentElement;
             if (parent) {
               parent.classList.add("tc-avatar--fallback");
+              parent.style.backgroundColor = avatarColor;
+              parent.style.color = "white";
               parent.textContent = initials;
             }
           }}
@@ -114,7 +140,10 @@ export function TokenAvatar({
     );
   }
   return (
-    <div className="tc-avatar tc-avatar--fallback" style={style}>
+    <div
+      className="tc-avatar tc-avatar--fallback"
+      style={{ ...style, backgroundColor: avatarColor, color: "white" }}
+    >
       {initials}
     </div>
   );

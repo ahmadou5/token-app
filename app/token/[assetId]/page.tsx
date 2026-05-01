@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useOHLCV, type OHLCVTimeframe } from "@/hooks/useOHLCV";
 import {
   TokenAvatar,
@@ -674,6 +674,9 @@ export default function TokenDetailPage({
 }) {
   const { assetId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mint = searchParams.get("mint");
+
   const { tokens } = useTokens();
   const { isConnected } = useWallet();
   const connector = useConnector();
@@ -704,23 +707,24 @@ export default function TokenDetailPage({
     isLoading: chartLoading,
     timeframe,
     setTimeframe,
-  } = useOHLCV(assetId);
+  } = useOHLCV(assetId, mint);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const [res, otherData] = await Promise.all([
-          fetch(`/api/getToken?assetId=${assetId}`),
+          fetch(`/api/getVariant?assetId=${assetId}${mint ? `&mint=${mint}` : ""}`),
           tokenRequest.getAsset(assetId, true),
         ]);
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
-        const json: TokenAssetResponse = await res.json();
+        const json = await res.json();
+        const assetData: TokenAssetResponse = json.asset || json; // Handle both old and new structures
         if (!cancelled) {
-          setData(json);
+          setData(assetData);
           setOther(otherData);
           setVariants(
-            flattenVariantGroups(json.variantGroups, json.name, json.symbol),
+            flattenVariantGroups(assetData.variantGroups, assetData.name, assetData.symbol),
           );
         }
       } catch (e) {
@@ -734,7 +738,7 @@ export default function TokenDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [assetId]);
+  }, [assetId, mint]);
 
   if (isLoadingPage || !data) {
     return <PageSkeleton onBack={() => router.back()} />;
@@ -743,12 +747,26 @@ export default function TokenDetailPage({
   const profile = other?.includes?.profile?.data ?? null;
   const risk = other?.includes?.risk?.data ?? null;
 
-  const price = profile?.price ?? data.stats.price ?? null;
+  const activeVariant = useMemo(() => {
+    if (!mint || !variants.length) return data?.primaryVariant ?? null;
+    const found = variants.find((v) => v.mint === mint);
+    if (!found) return data?.primaryVariant ?? null;
+    return found;
+  }, [mint, variants, data]);
+
+  const price = activeVariant?.price ?? profile?.price ?? data.stats.price ?? null;
   const change24h =
-    profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
-  const volume = profile?.volume24h ?? data.stats.volume24hUSD ?? null;
-  const liquidity = data.stats.liquidity ?? null;
-  const mcap = profile?.marketCap ?? data.stats.marketCap ?? null;
+    activeVariant?.change24h ?? profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
+  const volume = activeVariant?.volume24h ?? profile?.volume24h ?? data.stats.volume24hUSD ?? null;
+  const liquidity = activeVariant?.liquidity ?? data.stats.liquidity ?? null;
+  const mcap = activeVariant?.marketCap ?? profile?.marketCap ?? data.stats.marketCap ?? null;
+
+  const currentSymbol = activeVariant?.symbol ?? data.symbol;
+  const currentMint = activeVariant?.mint ?? null;
+  const mintDisplay = currentMint
+    ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
+    : null;
+
   const fdv = profile?.fdv ?? null;
   const supply = profile?.circulatingSupply ?? null;
   const totalSupply = profile?.totalSupply ?? null;
@@ -756,11 +774,12 @@ export default function TokenDetailPage({
   const website = profile?.links?.website ?? null;
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
-  const imageUrl = data.imageUrl ?? fallbackToken?.imageUrl ?? null;
-  const currentMint = data.primaryVariant?.mint ?? null;
-  const mintDisplay = currentMint
-    ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
-    : null;
+  const imageUrl =
+    activeVariant?.logoURI ??
+    data.imageUrl ??
+    data.primaryVariant?.market?.logoURI ??
+    fallbackToken?.imageUrl ??
+    null;
 
   const STABLE_SYMBOLS = [
     "USDC",
@@ -894,8 +913,8 @@ export default function TokenDetailPage({
                 </svg>
               </div>
               <div className="td-header__pills">
-                {data.symbol && (
-                  <span className="td-pill td-pill--sym">${data.symbol}</span>
+                {currentSymbol && (
+                  <span className="td-pill td-pill--sym">${currentSymbol}</span>
                 )}
                 {variants.length > 0 && (
                   <VariantPicker

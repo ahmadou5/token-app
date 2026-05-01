@@ -78,11 +78,15 @@ function groupVariants(variants: RawVariant[]): VariantGroups {
 
 export const GET = async (request: Request): Promise<Response> => {
   const { searchParams } = new URL(request.url);
+  const assetId = searchParams.get("assetId");
   const mint = searchParams.get("mint");
+  const interval = searchParams.get("ohlcvInterval") || "1H";
+  const from = searchParams.get("ohlcvFrom");
+  const to = searchParams.get("ohlcvTo");
 
-  if (!mint) {
+  if (!assetId) {
     return new Response(
-      JSON.stringify({ error: "Missing required query param: mint" }),
+      JSON.stringify({ error: "Missing required query param: assetId" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
@@ -94,27 +98,30 @@ export const GET = async (request: Request): Promise<Response> => {
   };
 
   try {
-    // 2 parallel fetches:
-    // 1. Canonical asset + all includes (markets, profile, risk) in one request
-    // 2. Variants endpoint (separate path, can't be included)
-    const [canonicalRes, variantsRes] = await Promise.all([
-      axios.get<RawCanonicalResponse>(
-        `${base}/assets/${mint}?include=markets&include=profile&include=risk&marketsOffset=0&marketsLimit=50`,
-        { headers },
-      ),
-      axios.get<RawVariantsResponse>(
-        `${base}/assets/${mint}/variants?groupBy=asset`,
-        { headers },
-      ),
-    ]);
+    // 1. Fetch the asset data with all includes from the upstream API
+    // We include markets, profile, risk, and OHLCV
+    let url = `${base}/assets/${assetId}?include=markets&include=profile&include=risk&include=ohlcv&marketsOffset=0&marketsLimit=50`;
+    
+    if (mint) url += `&mint=${mint}`;
+    if (interval) url += `&ohlcvInterval=${interval}`;
+    if (from) url += `&ohlcvFrom=${from}`;
+    if (to) url += `&ohlcvTo=${to}`;
 
-    const { asset, includes } = canonicalRes.data;
+    const res = await axios.get(url, { headers });
+    const { asset, includes } = res.data;
+
+    // 2. Fetch variants separately as they are on a different endpoint
+    const variantsRes = await axios.get<RawVariantsResponse>(
+      `${base}/assets/${assetId}/variants?groupBy=asset`,
+      { headers },
+    );
 
     const marketsData = includes.markets?.data;
     const profile = includes.profile?.data ?? null;
     const risk = includes.risk?.data ?? null;
+    const ohlcv = includes.ohlcv ?? null;
 
-    // Group the flat variants[] by kind, fall back to what canonical embeds
+    // Group the flat variants[] by kind
     const variantGroups: VariantGroups = variantsRes.data.variants?.length
       ? groupVariants(variantsRes.data.variants)
       : asset.variantGroups;
@@ -148,14 +155,23 @@ export const GET = async (request: Request): Promise<Response> => {
       marketsLimit: marketsData?.limit ?? 50,
     };
 
-    return new Response(JSON.stringify(merged), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("[token-asset] Failed to fetch:", error);
+    // Return the structure requested by the user: { asset: TokenAssetResponse, includes: { ohlcv } }
     return new Response(
-      JSON.stringify({ error: "Failed to fetch token asset data" }),
+      JSON.stringify({
+        asset: merged,
+        includes: {
+          ohlcv,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    console.error("[getVariant] Failed to fetch:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch variant data" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
