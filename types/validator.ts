@@ -48,6 +48,7 @@ export interface ValidatorInfo {
   skipRate: number;
   dataCenter: string;
   website?: string;
+  keybase?: string;
   description: string;
   avatar: string;
   status: "active" | "delinquent";

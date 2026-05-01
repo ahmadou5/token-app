@@ -18,12 +18,15 @@ export function NativeStakeCard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("https://solanabeach.io/api/v1/epoch-info");
+        const res = await fetch("/api/validators");
         if (res.ok) {
           const data = await res.json();
-          // Solana Beach returns rewardRate as a fraction, e.g. 0.0712
-          if (data.rewardRate) {
-            setApy(data.rewardRate * 100);
+          const validators = data.validators || [];
+          if (validators.length > 0) {
+            // Calculate average APY of top 10 validators as a proxy for network APY
+            const topValidators = validators.slice(0, 10);
+            const avgApy = topValidators.reduce((acc: number, v: any) => acc + (v.apy || 0), 0) / topValidators.length;
+            setApy(avgApy);
           }
         }
       } catch (err) {
@@ -93,10 +96,10 @@ export function NativeStakeCard() {
                 className="flex justify-between items-center p-2 rounded-lg bg-[var(--tc-bg-muted)] border border-[var(--tc-border)]"
               >
                 <div className="flex flex-direction-column">
-                  <span className="text-[12px] font-medium text-[var(--tc-text-primary)]">
-                    {s.validator}
+                  <span className="text-[12px] font-medium text-[var(--tc-text-primary)] font-mono">
+                    {s.validator.length > 20 ? `${s.validator.slice(0, 4)}...${s.validator.slice(-4)}` : s.validator}
                   </span>
-                  <span className="text-[10px] text-[var(--tc-text-muted)]">
+                  <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-bold tracking-tight">
                     {s.status}
                   </span>
                 </div>

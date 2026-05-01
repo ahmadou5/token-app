@@ -42,6 +42,7 @@ function mapStakeWizToValidatorInfo(v: StakeWizValidator): ValidatorInfo {
     dataCenter: v.ip_org || v.ip_asn || "Unknown",
 
     website: v.website || undefined,
+    keybase: v.keybase || undefined,
     description: v.description || "Solana validator node",
     avatar: v.image || "",
 
