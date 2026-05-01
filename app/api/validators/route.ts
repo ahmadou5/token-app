@@ -13,8 +13,9 @@ export async function GET() {
       validators,
       currentEpochInfo: null,
     });
-  } catch (error) {
-    console.error("Error fetching validators from StakeWiz:", error);
+  } catch (error: unknown) {
+    if(error instanceof Error) 
+    console.error("Error fetching validators from StakeWiz:", error.message);
     return NextResponse.json(
       {
         error: "Failed to fetch validators from StakeWiz",

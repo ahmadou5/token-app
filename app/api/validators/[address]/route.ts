@@ -25,10 +25,11 @@ export async function GET(
     }
 
     return NextResponse.json({ response: validator });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if(error instanceof Error)
     console.error("API Error:", error.message || error);
     return NextResponse.json(
-      { error: "Failed to fetch validator data", details: error.message },
+      { error: "Failed to fetch validator data", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
