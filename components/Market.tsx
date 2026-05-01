@@ -189,6 +189,7 @@ export function MarketsSection({
             <div
               key={`${mkt.address}-${i}`}
               className={`mkt-row mkt-row--with-action${isCLMM ? " mkt-row--clmm" : ""}${isActive ? " mkt-row--active-liq" : ""}`}
+              onClick={() => isCLMM && onAddLiquidity(mkt)}
             >
               {/* Pair */}
               <div className="mkt-col--pair mkt-pair">

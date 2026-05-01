@@ -4380,12 +4380,17 @@ body {
 
   /* Markets */
   .mkt-header,
-  .mkt-row {
-    grid-template-columns: 2fr 1fr 1fr;
+  .mkt-row,
+  .mkt-header--with-action,
+  .mkt-row--with-action {
+    grid-template-columns: 1fr 80px 80px;
+    gap: 0 4px;
+    padding: 8px 12px;
   }
 
   .mkt-col--trades,
-  .mkt-col--wallets {
+  .mkt-col--wallets,
+  .mkt-col--action {
     display: none;
   }
 
