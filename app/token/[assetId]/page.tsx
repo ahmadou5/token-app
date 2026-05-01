@@ -754,15 +754,69 @@ export default function TokenDetailPage({
     return found;
   }, [mint, variants, data]);
 
-  const price = activeVariant?.price ?? profile?.price ?? data.stats.price ?? null;
-  const change24h =
-    activeVariant?.change24h ?? profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
-  const volume = activeVariant?.volume24h ?? profile?.volume24h ?? data.stats.volume24hUSD ?? null;
-  const liquidity = activeVariant?.liquidity ?? data.stats.liquidity ?? null;
-  const mcap = activeVariant?.marketCap ?? profile?.marketCap ?? data.stats.marketCap ?? null;
+  const { price, change24h, volume, liquidity, mcap, currentSymbol, currentMint, imageUrl } =
+    useMemo(() => {
+      const basePrice = profile?.price ?? data.stats.price ?? null;
+      const baseChange = profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
+      const baseVolume = profile?.volume24h ?? data.stats.volume24hUSD ?? null;
+      const baseLiquidity = data.stats.liquidity ?? null;
+      const baseMcap = profile?.marketCap ?? data.stats.marketCap ?? null;
 
-  const currentSymbol = activeVariant?.symbol ?? data.symbol;
-  const currentMint = activeVariant?.mint ?? null;
+      if (!activeVariant) {
+        return {
+          price: basePrice,
+          change24h: baseChange,
+          volume: baseVolume,
+          liquidity: baseLiquidity,
+          mcap: baseMcap,
+          currentSymbol: data.symbol,
+          currentMint: data.primaryVariant?.mint ?? null,
+          imageUrl:
+            data.imageUrl ??
+            data.primaryVariant?.market?.logoURI ??
+            fallbackToken?.imageUrl ??
+            null,
+        };
+      }
+
+      // If it's a VariantRow (from variants state)
+      if ("variantId" in activeVariant && "price" in activeVariant) {
+        return {
+          price: activeVariant.price ?? basePrice,
+          change24h: activeVariant.change24h ?? baseChange,
+          volume: activeVariant.volume24h ?? baseVolume,
+          liquidity: activeVariant.liquidity ?? baseLiquidity,
+          mcap: activeVariant.marketCap ?? baseMcap,
+          currentSymbol: activeVariant.symbol ?? data.symbol,
+          currentMint: activeVariant.mint ?? null,
+          imageUrl:
+            activeVariant.logoURI ??
+            data.imageUrl ??
+            data.primaryVariant?.market?.logoURI ??
+            fallbackToken?.imageUrl ??
+            null,
+        };
+      }
+
+      // If it's an AssetVariant (data.primaryVariant)
+      const v = activeVariant;
+      return {
+        price: v.market?.price ?? basePrice,
+        change24h: v.market?.priceChange24hPercent ?? baseChange,
+        volume: v.market?.volume24hUSD ?? baseVolume,
+        liquidity: v.market?.liquidity ?? baseLiquidity,
+        mcap: v.market?.marketCap ?? baseMcap,
+        currentSymbol: v.symbol ?? data.symbol,
+        currentMint: v.mint ?? null,
+        imageUrl:
+          v.market?.logoURI ??
+          data.imageUrl ??
+          data.primaryVariant?.market?.logoURI ??
+          fallbackToken?.imageUrl ??
+          null,
+      };
+    }, [activeVariant, data, profile, fallbackToken]);
+
   const mintDisplay = currentMint
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
@@ -774,12 +828,6 @@ export default function TokenDetailPage({
   const website = profile?.links?.website ?? null;
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
-  const imageUrl =
-    activeVariant?.logoURI ??
-    data.imageUrl ??
-    data.primaryVariant?.market?.logoURI ??
-    fallbackToken?.imageUrl ??
-    null;
 
   const STABLE_SYMBOLS = [
     "USDC",
@@ -836,8 +884,8 @@ export default function TokenDetailPage({
   const sheetTitle =
     sheetMode === "liquidity" && activeMarket
       ? `Add Liquidity · ${activeMarket.base?.symbol ?? ""}/${activeMarket.quote?.symbol ?? ""}`
-      : data.symbol
-        ? `Trade $${data.symbol}`
+      : currentSymbol
+        ? `Trade $${currentSymbol}`
         : `Trade ${data.name}`;
 
   return (
@@ -860,11 +908,11 @@ export default function TokenDetailPage({
           <nav className="td-breadcrumb">
             <span className="td-breadcrumb__sep">›</span>
             <span className="td-breadcrumb__item">{data.name}</span>
-            {data.symbol && (
+            {currentSymbol && (
               <>
                 <span className="td-breadcrumb__sep">›</span>
                 <span className="td-breadcrumb__item td-breadcrumb__item--mint">
-                  ${data.symbol}
+                  ${currentSymbol}
                 </span>
               </>
             )}
@@ -1014,7 +1062,7 @@ export default function TokenDetailPage({
           {/* Chart */}
           <div className="td-chart-section">
             <div className="td-chart-label">
-              <span className="td-chart-label__sym">{data.symbol}</span>
+              <span className="td-chart-label__sym">{currentSymbol}</span>
               <span className="td-chart-label__text"> price is currently</span>
               <div className="td-chart-label__price">{fmtPrice(price)}</div>
               <ChangeChip value={change24h} />
@@ -1121,7 +1169,7 @@ export default function TokenDetailPage({
           {(showNativeStake || showEarn) && (
             <div className="mt-6 flex flex-col gap-6">
               {showNativeStake && <NativeStakeCard />}
-              {showEarn && <EarnVault mint={currentMint} symbol={data.symbol} />}
+              {showEarn && <EarnVault mint={currentMint} symbol={currentSymbol} />}
             </div>
           )}
 
