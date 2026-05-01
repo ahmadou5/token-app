@@ -10,7 +10,6 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       defaultTheme="dark"
       enableSystem={false}
       disableTransitionOnChange={false}
-      scriptProps={{ "data-cfasync": "false" }} // suppresses React script warning
       {...props}
     >
       {children}

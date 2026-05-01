@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useOHLCV, type OHLCVTimeframe } from "@/hooks/useOHLCV";
 import {
@@ -667,7 +667,7 @@ function SidebarPanel({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function TokenDetailPage({
+function TokenDetailPageContent({
   params,
 }: {
   params: Promise<{ assetId: string }>;
@@ -702,6 +702,7 @@ export default function TokenDetailPage({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
   const {
     candles,
     isLoading: chartLoading,
@@ -740,10 +741,6 @@ export default function TokenDetailPage({
     };
   }, [assetId, mint]);
 
-  if (isLoadingPage || !data) {
-    return <PageSkeleton onBack={() => router.back()} />;
-  }
-
   const profile = other?.includes?.profile?.data ?? null;
   const risk = other?.includes?.risk?.data ?? null;
 
@@ -756,24 +753,24 @@ export default function TokenDetailPage({
 
   const { price, change24h, volume, liquidity, mcap, currentSymbol, currentMint, imageUrl } =
     useMemo(() => {
-      const basePrice = profile?.price ?? data.stats.price ?? null;
-      const baseChange = profile?.priceChange24h ?? data.stats.priceChange24hPercent ?? null;
-      const baseVolume = profile?.volume24h ?? data.stats.volume24hUSD ?? null;
-      const baseLiquidity = data.stats.liquidity ?? null;
-      const baseMcap = profile?.marketCap ?? data.stats.marketCap ?? null;
+      const basePrice = profile?.price ?? data?.stats.price ?? null;
+      const baseChange = profile?.priceChange24h ?? data?.stats.priceChange24hPercent ?? null;
+      const baseVolume = profile?.volume24h ?? data?.stats.volume24hUSD ?? null;
+      const baseLiquidity = data?.stats.liquidity ?? null;
+      const baseMcap = profile?.marketCap ?? data?.stats.marketCap ?? null;
 
-      if (!activeVariant) {
+      if (!activeVariant || !data) {
         return {
           price: basePrice,
           change24h: baseChange,
           volume: baseVolume,
           liquidity: baseLiquidity,
           mcap: baseMcap,
-          currentSymbol: data.symbol,
-          currentMint: data.primaryVariant?.mint ?? null,
+          currentSymbol: data?.symbol ?? "",
+          currentMint: data?.primaryVariant?.mint ?? null,
           imageUrl:
-            data.imageUrl ??
-            data.primaryVariant?.market?.logoURI ??
+            data?.imageUrl ??
+            data?.primaryVariant?.market?.logoURI ??
             fallbackToken?.imageUrl ??
             null,
         };
@@ -828,6 +825,10 @@ export default function TokenDetailPage({
   const website = profile?.links?.website ?? null;
   const twitter = profile?.links?.twitter ?? null;
   const reddit = profile?.links?.reddit ?? null;
+
+  if (isLoadingPage || !data) {
+    return <PageSkeleton onBack={() => router.back()} />;
+  }
 
   const STABLE_SYMBOLS = [
     "USDC",
@@ -1293,14 +1294,18 @@ export default function TokenDetailPage({
               </div>
             </div>
           )}
-          {/**sheetMode === "liquidity" && activeMarket && (
-            <AddLiquidityCard
-              market={activeMarket}
-              onClose={() => setSheetMode(null)}
-            />
-          )**/}
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function TokenDetailPage(props: {
+  params: Promise<{ assetId: string }>;
+}) {
+  return (
+    <Suspense fallback={<PageSkeleton onBack={() => {}} />}>
+      <TokenDetailPageContent {...props} />
+    </Suspense>
   );
 }

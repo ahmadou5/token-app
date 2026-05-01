@@ -1,14 +1,18 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useTransition } from "react";
+import { useTransition, useState, useEffect } from "react";
 
 export function ThemeToggle() {
+  const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [isPending, startTransition] = useTransition();
 
-  // Avoid hydration mismatch by deferring theme operations
-  if (isPending || !resolvedTheme) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || isPending || !resolvedTheme) {
     return (
       <div className="theme-toggle theme-toggle--placeholder" aria-hidden />
     );
