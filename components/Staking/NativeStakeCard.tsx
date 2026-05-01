@@ -29,7 +29,7 @@ export function NativeStakeCard() {
           if (validators.length > 0) {
             // Sort by stake and take top 7
             const sorted = [...validators].sort((a, b) => b.stake - a.stake);
-            setTopValidators(sorted.slice(0, 7));
+            setTopValidators(sorted.slice(0, 4));
 
             // Calculate average APY of top 10 validators as a proxy for network APY
             const top10 = sorted.slice(0, 10);
@@ -162,7 +162,7 @@ export function NativeStakeCard() {
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute left-0 right-0 bottom-[calc(100%+8px)] z-50 bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="absolute left-0 right-0 bottom-[calc(100%+8px)] z-50 bg-[var(--tc-bg)]  border border-[var(--tc-border)] rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="p-2 border-b border-[var(--tc-divider)] bg-[var(--tc-surface)]">
                 <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider px-2">
                   Top Validators
