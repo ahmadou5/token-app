@@ -29,6 +29,7 @@ import { AddLiquidityCard } from "@/components/Liquidity/AddLiquidityCard";
 import { useConnector, useWallet } from "@solana/connector";
 import { ConnectedPill } from "@/components/Swap";
 import { EarnVault } from "@/components/Earn/EarnVault";
+import { NativeStakeCard } from "@/components/Staking/NativeStakeCard";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -771,6 +772,8 @@ export default function TokenDetailPage({
     "FDUSD",
   ];
   const isStable = STABLE_SYMBOLS.includes(data.symbol?.toUpperCase() ?? "");
+  const isNativeSOL =
+    data.symbol?.toUpperCase() === "SOL" && !data.primaryVariant?.mint;
 
   // Called from MarketsSection when user clicks "Add" on a row
   function handleAddLiquidity(market: MarketEntry) {
@@ -1091,6 +1094,8 @@ export default function TokenDetailPage({
               <EarnVault mint={currentMint} symbol={data.symbol} />
             </div>
           )}
+
+          {isNativeSOL && <NativeStakeCard />}
 
           {/* Mobile FAB — label changes based on context */}
           {isMobile && sheetMode === null && (

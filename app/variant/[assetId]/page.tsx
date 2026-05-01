@@ -27,6 +27,7 @@ import { SpotSwap } from "@/components/Swap/SpotSwap";
 import { useConnector, useWallet } from "@solana/connector";
 import { ConnectedPill } from "@/components/Swap";
 import { EarnVault } from "@/components/Earn/EarnVault";
+import { NativeStakeCard } from "@/components/Staking/NativeStakeCard";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -765,6 +766,8 @@ export default function TokenDetailPage({
     "FDUSD",
   ];
   const isStable = STABLE_SYMBOLS.includes(data.symbol?.toUpperCase() ?? "");
+  const isNativeSOL =
+    data.symbol?.toUpperCase() === "SOL" && !data.primaryVariant?.mint;
 
   return (
     <div className="td-page">
@@ -1039,6 +1042,8 @@ export default function TokenDetailPage({
               <EarnVault mint={currentMint} symbol={data.symbol} />
             </div>
           )}
+
+          {isNativeSOL && <NativeStakeCard />}
 
           {description && (
             <ExpandableDescription
