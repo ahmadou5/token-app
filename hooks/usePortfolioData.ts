@@ -184,33 +184,38 @@ async function fetchStakePositions(
     "https://api.mainnet-beta.solana.com";
 
   try {
-    // Get all stake accounts for this wallet
-    const res = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "stake",
-        method: "getProgramAccounts",
-        params: [
-          "Stake11111111111111111111111111111111111111",
-          {
-            encoding: "jsonParsed",
-            filters: [
-              {
-                memcmp: {
-                  offset: 44,
-                  bytes: wallet,
+    const [stakeData, validatorRes] = await Promise.all([
+      fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "stake",
+          method: "getProgramAccounts",
+          params: [
+            "Stake11111111111111111111111111111111111111",
+            {
+              encoding: "jsonParsed",
+              filters: [
+                {
+                  memcmp: {
+                    offset: 44,
+                    bytes: wallet,
+                  },
                 },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+              ],
+            },
+          ],
+        }),
+      }).then((r) => r.json()),
+      fetch("/api/validators").then((r) => (r.ok ? r.json() : { validators: [] })),
+    ]);
 
-    const data = await res.json();
-    const accounts: any[] = data?.result ?? [];
+    const accounts: any[] = stakeData?.result ?? [];
+    const validatorMap = new Map<string, string>();
+    (validatorRes.validators || []).forEach((v: any) => {
+      validatorMap.set(v.votingPubkey, v.name);
+    });
 
     return accounts
       .map((acc): StakePosition | null => {
@@ -236,6 +241,7 @@ async function fetchStakePositions(
         return {
           stakeAccount: acc.pubkey,
           validatorVoteAccount: voteAccount,
+          validatorName: validatorMap.get(voteAccount),
           stakedLamports: lamports,
           stakedSol,
           status,
