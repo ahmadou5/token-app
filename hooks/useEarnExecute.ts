@@ -131,12 +131,7 @@ export function useEarnExecute(): UseEarnExecuteReturn {
       try {
         const { rpc } = client;
 
-        const sig = await sendTransaction(
-          txBase64,
-          signer,
-          rpc,
-          setStatus,
-        );
+        const sig = await sendTransaction(txBase64, signer, rpc, setStatus);
 
         setTxSignature(sig);
         setStatus("confirmed");

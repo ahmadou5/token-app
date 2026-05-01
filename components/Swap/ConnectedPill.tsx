@@ -92,17 +92,17 @@ export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
           </div>
           <div className="sw-connected-menu__divider" />
           <button
-              className="sw-connected-menu__portfolio"
-              onClick={() => {
-                setOpen(false);
-                openPortfolio();
-              }}
-            >
-              <TagChevronIcon />
-              View Portfolio
-            </button>
- 
-            <div className="sw-connected-menu__divider" />
+            className="sw-connected-menu__portfolio"
+            onClick={() => {
+              setOpen(false);
+              openPortfolio();
+            }}
+          >
+            <TagChevronIcon />
+            View Portfolio
+          </button>
+
+          <div className="sw-connected-menu__divider" />
           <button
             className="sw-connected-menu__disconnect"
             role="menuitem"

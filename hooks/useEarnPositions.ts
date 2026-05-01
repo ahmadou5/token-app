@@ -23,7 +23,6 @@ export function useEarnPositions() {
     // so we check isConnected and use the address if available.
     // In this app, we can get the address from useConnector().account or similar.
     // Based on SpotSwap.tsx, connector.account is the pubkey.
-    
     // We'll use a window event or just poll for now as simplified.
     // For this implementation, we'll just fetch once on mount if connected.
   }, []);

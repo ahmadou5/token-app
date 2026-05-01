@@ -1,7 +1,10 @@
 "use client";
 
 import { TxToast } from "@/components/TxModall/TxModalToast";
-import { WalletSuccessToast, useWalletConnectToast } from "@/components/connector/WalletSuccessModal";
+import {
+  WalletSuccessToast,
+  useWalletConnectToast,
+} from "@/components/connector/WalletSuccessModal";
 
 function WalletConnectWatcher() {
   useWalletConnectToast();

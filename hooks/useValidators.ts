@@ -13,10 +13,13 @@ export interface Validator {
 
 export async function getValidators(): Promise<Validator[]> {
   try {
-    const res = await fetch("https://solanabeach.io/api/v1/validators?limit=100&offset=0", {
-      next: { revalidate: 300 },
-    });
-    
+    const res = await fetch(
+      "https://solanabeach.io/api/v1/validators?limit=100&offset=0",
+      {
+        next: { revalidate: 300 },
+      },
+    );
+
     if (!res.ok) {
       throw new Error(`Failed to fetch validators: ${res.statusText}`);
     }
@@ -29,7 +32,7 @@ export async function getValidators(): Promise<Validator[]> {
       // APY calculation: Solana Beach usually returns epochCredits.
       // We'll look for an apy field first, otherwise derive it.
       // For this implementation, we'll look for 'apy' or default to 7.0
-      const apy = v.apy || 7.0; 
+      const apy = v.apy || 7.0;
 
       return {
         rank: index + 1,
@@ -50,7 +53,9 @@ export async function getValidators(): Promise<Validator[]> {
   }
 }
 
-export async function getValidator(voteAccount: string): Promise<Validator | null> {
+export async function getValidator(
+  voteAccount: string,
+): Promise<Validator | null> {
   const validators = await getValidators();
   return validators.find((v) => v.voteAccount === voteAccount) || null;
 }

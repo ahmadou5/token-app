@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTxModal } from '@/context/TxModalContext';
+import { useTxModal } from "@/context/TxModalContext";
 
 // ─── Animated checkmark SVG ───────────────────────────────────────────────────
 
@@ -194,12 +194,10 @@ export function TxToast() {
             </a>
           )}
 
-          {isSuccess && txPayload.secondaryCta && (
-            txPayload.secondaryCta.href ? (
-              <a
-                href={txPayload.secondaryCta.href}
-                className="txm-toast__btn"
-              >
+          {isSuccess &&
+            txPayload.secondaryCta &&
+            (txPayload.secondaryCta.href ? (
+              <a href={txPayload.secondaryCta.href} className="txm-toast__btn">
                 {txPayload.secondaryCta.label}
               </a>
             ) : (
@@ -212,8 +210,7 @@ export function TxToast() {
               >
                 {txPayload.secondaryCta.label}
               </button>
-            )
-          )}
+            ))}
 
           {/* Default secondary if none provided but we have a signature */}
           {isSuccess && !txPayload.secondaryCta && explorerUrl && (

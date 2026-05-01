@@ -95,7 +95,6 @@ export function TxModalProvider({ children }: { children: React.ReactNode }) {
 
 export function useTxModal() {
   const ctx = useContext(TxModalContext);
-  if (!ctx)
-    throw new Error("useTxModal must be used within TxModalProvider");
+  if (!ctx) throw new Error("useTxModal must be used within TxModalProvider");
   return ctx;
 }

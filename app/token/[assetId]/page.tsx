@@ -764,6 +764,7 @@ export default function TokenDetailPage({
 
   const STABLE_SYMBOLS = [
     "USDC",
+    "USD",
     "USDT",
     "USDG",
     "DAI",
