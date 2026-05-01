@@ -9,6 +9,7 @@ import "@/lib/suppressDevToolsNoise";
 import { ClientProviders } from "./ClientProvider";
 import { TxModalProvider } from "@/context/TxModalContext";
 import { TxModalRoot } from "@/components/TxModall/TxModalRoot";
+import { PortfolioDrawer } from "@/components/Portfolio/PortfolioDrawer";
 import { PortfolioDrawerProvider } from "@/context/PortfolioDrawerContext";
 
 const geistSans = DM_Mono({
@@ -41,6 +42,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <SolanaProviders>
           <PortfolioDrawerProvider>
+            <PortfolioDrawer />
 <SwapSettingsProvider>
             <ThemeProvider>
               <TxModalProvider>
@@ -56,3 +58,4 @@ export default function RootLayout({
     </html>
   );
 }
+
