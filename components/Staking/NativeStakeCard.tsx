@@ -33,7 +33,11 @@ export function NativeStakeCard() {
 
             // Calculate average APY of top 10 validators as a proxy for network APY
             const top10 = sorted.slice(0, 10);
-            const avgApy = top10.reduce((acc: number, v: any) => acc + (v.apy || 0), 0) / top10.length;
+            const avgApy =
+              top10.reduce(
+                (acc: number, v: Validator) => acc + (v.apy || 0),
+                0,
+              ) / top10.length;
             setApy(avgApy);
           }
         }
@@ -46,7 +50,10 @@ export function NativeStakeCard() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -87,7 +94,7 @@ export function NativeStakeCard() {
         </div>
       </div>
 
-      <div className="p-4 flex flex-direction-column gap-4">
+      <div className="p-4 flex flex-col gap-4">
         <div className="sw-earn-card__apy-box">
           <span className="sw-earn-card__apy-label">Network APY</span>
           <div className="sw-earn-card__apy-value">
@@ -115,7 +122,9 @@ export function NativeStakeCard() {
               >
                 <div className="flex flex-direction-column">
                   <span className="text-[12px] font-medium text-[var(--tc-text-primary)] font-mono">
-                    {s.validator.length > 20 ? `${s.validator.slice(0, 4)}...${s.validator.slice(-4)}` : s.validator}
+                    {s.validator.length > 20
+                      ? `${s.validator.slice(0, 4)}...${s.validator.slice(-4)}`
+                      : s.validator}
                   </span>
                   <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-bold tracking-tight">
                     {s.status}
@@ -155,7 +164,9 @@ export function NativeStakeCard() {
           {isDropdownOpen && (
             <div className="absolute left-0 right-0 bottom-[calc(100%+8px)] z-50 bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="p-2 border-b border-[var(--tc-divider)] bg-[var(--tc-surface)]">
-                <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider px-2">Top Validators</span>
+                <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider px-2">
+                  Top Validators
+                </span>
               </div>
               <div className="max-h-[280px] overflow-y-auto">
                 {topValidators.map((v) => (
@@ -165,18 +176,38 @@ export function NativeStakeCard() {
                     className="flex items-center gap-3 p-3 hover:bg-[var(--tc-bg-hover)] transition-colors no-underline group"
                   >
                     {v.avatar ? (
-                      <img src={v.avatar} alt={v.name} className="w-8 h-8 rounded-full border border-[var(--tc-border)]" />
+                      <img
+                        src={v.avatar}
+                        alt={v.name}
+                        className="w-8 h-8 rounded-full border border-[var(--tc-border)]"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] flex items-center justify-center text-[10px] font-bold text-[var(--tc-text-primary)]">
                         {v.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-semibold text-[var(--tc-text-primary)] truncate">{v.name}</span>
-                      <span className="text-[10px] text-[var(--tc-accent-up)] font-medium">{v.apy.toFixed(2)}% APY</span>
+                      <span className="text-[13px] font-semibold text-[var(--tc-text-primary)] truncate">
+                        {v.name}
+                      </span>
+                      <span className="text-[10px] text-[var(--tc-accent-up)] font-medium">
+                        {v.apy.toFixed(2)}% APY
+                      </span>
                     </div>
-                    <svg viewBox="0 0 16 16" fill="none" width="14" height="14" className="text-[var(--tc-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">
-                      <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      width="14"
+                      height="14"
+                      className="text-[var(--tc-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <path
+                        d="M6 12l4-4-4-4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </Link>
                 ))}
@@ -188,7 +219,13 @@ export function NativeStakeCard() {
               >
                 Explore more
                 <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
-                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path
+                    d="M3 8h10M9 4l4 4-4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </Link>
             </div>
