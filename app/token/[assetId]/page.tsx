@@ -771,12 +771,18 @@ export default function TokenDetailPage({
     "USDS",
     "PYUSD",
     "FDUSD",
+    "ZBC", // Adding some others that might have vaults
   ];
   const isStable = STABLE_SYMBOLS.includes(data.symbol?.toUpperCase() ?? "");
   const isNativeSOL =
     data.symbol?.toUpperCase() === "SOL" &&
     (!data.primaryVariant?.mint ||
       data.primaryVariant.mint === "So11111111111111111111111111111111111111112");
+
+  // Show EarnVault for stables or SOL (lending)
+  const showEarn = isStable || isNativeSOL;
+  // Show NativeStake only for native SOL
+  const showNativeStake = isNativeSOL;
 
   // Called from MarketsSection when user clicks "Add" on a row
   function handleAddLiquidity(market: MarketEntry) {
@@ -1093,10 +1099,10 @@ export default function TokenDetailPage({
           </div>
 
           {/* Yield Opportunities Section */}
-          {(isStable || isNativeSOL) && (
+          {(showNativeStake || showEarn) && (
             <div className="mt-6 flex flex-col gap-6">
-              {isNativeSOL && <NativeStakeCard />}
-              {isStable && <EarnVault mint={currentMint} symbol={data.symbol} />}
+              {showNativeStake && <NativeStakeCard />}
+              {showEarn && <EarnVault mint={currentMint} symbol={data.symbol} />}
             </div>
           )}
 

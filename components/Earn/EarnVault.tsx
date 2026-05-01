@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { GearSixIcon } from "@phosphor-icons/react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { GearSixIcon, CaretDown, Check, Info } from "@phosphor-icons/react";
 import { useWallet, useBalance } from "@solana/connector";
 import { useConnector } from "@solana/connector/react";
 import {
   useSwapSettings,
   EARN_PROVIDER_META,
+  EarnProvider,
 } from "@/context/SwapSettingsContext";
 import { useVaultQuote } from "@/hooks/useVaultQuote";
 import { useEarnExecute } from "@/hooks/useEarnExecute";
@@ -19,11 +20,18 @@ interface EarnVaultProps {
   symbol: string | null;
 }
 
+const PROVIDER_ICONS: Record<EarnProvider, string> = {
+  kamino: "https://kamino.finance/favicon.ico",
+  marginfi: "https://app.marginfi.com/favicon.ico",
+  drift: "https://app.drift.trade/favicon.ico",
+  jupiter: "https://jup.ag/favicon.ico",
+};
+
 export function EarnVault({ mint, symbol }: EarnVaultProps) {
   const { isConnected } = useWallet();
   const connector = useConnector();
   const wallet = connector.account;
-  const { settings } = useSwapSettings();
+  const { settings, setEarnProvider } = useSwapSettings();
   const { earnProvider } = settings;
   const providerMeta = EARN_PROVIDER_META[earnProvider];
 
@@ -37,6 +45,15 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
   const [amount, setAmount] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [allAPYs, setAllAPYs] = useState<Record<EarnProvider, number | null>>({
+    kamino: null,
+    marginfi: null,
+    drift: null,
+    jupiter: null,
+  });
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { positions, load: loadPositions } = useEarnPositions();
 
@@ -45,6 +62,36 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
       loadPositions(wallet);
     }
   }, [isConnected, wallet, loadPositions]);
+
+  // Fetch APYs for all providers to show in dropdown
+  useEffect(() => {
+    async function fetchAllAPYs() {
+      if (!symbol) return;
+      try {
+        const res = await fetch(`/api/yield/quote/all?symbol=${symbol}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAllAPYs(data.apyMap);
+        }
+      } catch (err) {
+        console.error("Error fetching all APYs:", err);
+      }
+    }
+    fetchAllAPYs();
+  }, [symbol]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const currentPosition = useMemo(
     () => positions.find((p) => p.provider === earnProvider && p.mint === mint),
@@ -104,70 +151,40 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
         {showWalletModal && (
           <WalletConnectModal onClose={() => setShowWalletModal(false)} />
         )}
-        <div className="sw-card sw-earn-card">
-          <div className="sw-tabs">
+        <div className="sw-card">
+           <div className="sw-tabs">
             <div className="sw-tab sw-tab--active">
               <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
-                <path
-                  d="M7 2v10M2 7h10"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="2.5"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                />
+                <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.3" />
               </svg>
-              Earn
+              Earn Yield
             </div>
-            <div className="flex-1" />
-            <button className="sw-gear" onClick={() => setShowSettings(true)}>
-              <GearSixIcon size={19} />
-            </button>
           </div>
-
-          <div className="sw-perp-connect">
-            <div className="sw-perp-connect__icon">
-              <svg viewBox="0 0 48 48" fill="none" width="36" height="36">
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="18"
-                  stroke="var(--tc-accent)"
-                  strokeWidth="2"
-                  opacity="0.2"
-                />
-                <path
-                  d="M24 12v24M12 24h24"
-                  stroke="var(--tc-accent)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <p className="sw-perp-connect__title">
-              Earn yield on your {symbol}
-            </p>
-            <p className="sw-perp-connect__sub">
-              Deposit your stables into {providerMeta.label} vaults to earn
-              automated yield.
-            </p>
-            <button
-              className="sw-connect-btn"
-              onClick={() => setShowWalletModal(true)}
-            >
-              Connect Wallet
-            </button>
-            <p className="sw-perp-connect__powered">
-              Powered by{" "}
-              <span className="sw-perp-connect__badge">
-                {providerMeta.label}
-              </span>
-            </p>
+          
+          <div className="p-5 flex flex-col items-center text-center gap-4">
+             <div className="w-12 h-12 rounded-full bg-[var(--tc-accent-bg)] flex items-center justify-center text-[var(--tc-accent)]">
+                <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+             </div>
+             <div className="flex flex-col gap-1">
+                <h4 className="text-[15px] font-bold text-[var(--tc-text-primary)]">Deposit & Earn</h4>
+                <p className="text-[12px] text-[var(--tc-text-muted)] leading-relaxed">
+                  Earn automated yield on your {symbol} across top Solana protocols like Kamino and Jupiter.
+                </p>
+             </div>
+             <button 
+                className="sw-connect-btn w-full mt-2"
+                onClick={() => setShowWalletModal(true)}
+              >
+                Connect Wallet to Start
+              </button>
+              <div className="flex items-center gap-3 mt-2 opacity-50 grayscale">
+                <img src={PROVIDER_ICONS.kamino} className="w-4 h-4 rounded-full" alt="Kamino" />
+                <img src={PROVIDER_ICONS.jupiter} className="w-4 h-4 rounded-full" alt="Jupiter" />
+                <img src={PROVIDER_ICONS.drift} className="w-4 h-4 rounded-full" alt="Drift" />
+              </div>
           </div>
         </div>
       </>
@@ -183,171 +200,184 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
         />
       )}
 
-      <div className="td-card">
+      <div className="sw-card">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[var(--tc-accent-bg)] flex items-center justify-center text-[var(--tc-accent)]">
-              <svg viewBox="0 0 14 14" fill="none" width="16" height="16">
-                <path
-                  d="M7 2v10M2 7h10"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="2.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </div>
-            <h3 className="text-[15px] font-bold text-[var(--tc-text-primary)]">Earn Yield</h3>
+        <div className="sw-tabs">
+          <div className="sw-tab sw-tab--active">
+            <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
+            Earn Yield
           </div>
-          <button className="p-2 rounded-lg hover:bg-[var(--tc-bg-hover)] text-[var(--tc-text-muted)] transition-colors" onClick={() => setShowSettings(true)}>
-            <GearSixIcon size={20} />
+          <div className="flex-1" />
+          <button className="sw-gear" onClick={() => setShowSettings(true)}>
+            <GearSixIcon size={19} />
           </button>
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div className="p-4 flex flex-col gap-4">
           {/* APY Display */}
-          <div className="bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] rounded-2xl p-5 flex flex-col items-center gap-1 shadow-sm">
-            <span className="text-[11px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">Estimated APY</span>
-            <div className="text-[36px] font-bold text-[var(--tc-accent-up)] font-mono leading-none py-1">
-              {isQuoteLoading ? (
+          <div className="sw-earn-card__apy-box">
+            <span className="sw-earn-card__apy-label">Estimated APY</span>
+            <div className="sw-earn-card__apy-value">
+              {isQuoteLoading && !quote ? (
                 <span className="animate-pulse opacity-50">...</span>
               ) : (
-                `${quote?.apy ?? "0.00"}%`
+                `${quote?.apy.toFixed(2) ?? allAPYs[earnProvider]?.toFixed(2) ?? "0.00"}%`
               )}
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--tc-surface)] border border-[var(--tc-border)] text-[10px] font-medium text-[var(--tc-text-secondary)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--tc-accent)]" />
+            <div className="sw-earn-card__provider-tag">
+              <img src={PROVIDER_ICONS[earnProvider]} className="w-3 h-3 rounded-full mr-1" alt={earnProvider} />
               via {providerMeta.label}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1 p-3 rounded-xl border border-[var(--tc-border)] bg-[var(--tc-surface)]">
-              <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-tight">Your Deposit</span>
-              <span className="text-[13px] font-semibold text-[var(--tc-text-primary)] truncate">
-                {currentPosition
-                  ? `${currentPosition.amount.toLocaleString()} ${symbol}`
-                  : "0.00"}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1 p-3 rounded-xl border border-[var(--tc-border)] bg-[var(--tc-surface)]">
-              <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-tight">Total Earned</span>
-              <span className="text-[13px] font-semibold text-[var(--tc-accent-up)]">
-                {currentPosition
-                  ? `+$${currentPosition.yieldUsd.toFixed(2)}`
-                  : "—"}
-              </span>
-            </div>
-          </div>
-
-          {/* Action Area */}
-          <div className="flex flex-col gap-3">
-            <div className="flex p-1 bg-[var(--tc-bg-muted)] rounded-xl gap-1">
+          {/* Action Selector */}
+          <div className="flex p-1 bg-[var(--tc-bg-muted)] rounded-xl gap-1">
+            <button
+              className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeAction === "deposit" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
+              onClick={() => {
+                setActiveAction("deposit");
+                resetExec();
+              }}
+            >
+              Deposit
+            </button>
+            {currentPosition && (
               <button
-                className={`flex-1 py-2 text-[12px] font-bold rounded-lg transition-all ${activeAction === "deposit" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
+                className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeAction === "withdraw" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
                 onClick={() => {
-                  setActiveAction("deposit");
+                  setActiveAction("withdraw");
                   resetExec();
                 }}
               >
-                Deposit
+                Withdraw
               </button>
-              {currentPosition && (
-                <button
-                  className={`flex-1 py-2 text-[12px] font-bold rounded-lg transition-all ${activeAction === "withdraw" ? "bg-[var(--tc-bg)] text-[var(--tc-text-primary)] shadow-sm" : "text-[var(--tc-text-muted)] hover:text-[var(--tc-text-secondary)]"}`}
-                  onClick={() => {
-                    setActiveAction("withdraw");
-                    resetExec();
-                  }}
-                >
-                  Withdraw
-                </button>
-              )}
-            </div>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[11px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">
-                  Amount
-                </span>
-                <button className="text-[11px] font-bold text-[var(--tc-accent)] hover:opacity-80 transition-opacity" onClick={handleMax}>
-                  MAX: {activeAction === "deposit" ? balanceUi : (currentPosition?.amount ?? 0)}
-                </button>
-              </div>
-              <div className="relative group">
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  className="w-full h-12 pl-4 pr-16 rounded-xl bg-[var(--tc-surface)] border border-[var(--tc-border)] text-[16px] font-mono text-[var(--tc-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--tc-accent)] focus:ring-opacity-20 transition-all group-hover:border-[var(--tc-border-hover)]"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    resetExec();
-                  }}
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--tc-text-muted)]">
-                  {symbol}
-                </span>
-              </div>
+          {/* Input Area */}
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">
+                {activeAction === "deposit" ? "Supply" : "Unsupply"} Amount
+              </span>
+              <button className="text-[10px] font-bold text-[var(--tc-accent)] hover:opacity-80 transition-opacity" onClick={handleMax}>
+                MAX: {activeAction === "deposit" ? balanceUi : (currentPosition?.amount ?? 0)}
+              </button>
+            </div>
+            <div className="relative group">
+              <input
+                type="number"
+                placeholder="0.00"
+                className="sw-swap-input text-[18px] h-12"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  resetExec();
+                }}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--tc-text-muted)]">
+                {symbol}
+              </span>
             </div>
           </div>
 
-          {/* Quote & Submit */}
-          <div className="flex flex-col gap-4">
+          {/* Strategy Selector */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              className={`sw-swap-btn w-full flex items-center justify-between px-4 h-11 ${isDropdownOpen ? "bg-[var(--tc-bg-muted)] ring-1 ring-[var(--tc-border)]" : ""}`}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+              <div className="flex items-center gap-2">
+                <img src={PROVIDER_ICONS[earnProvider]} className="w-5 h-5 rounded-full" alt={earnProvider} />
+                <span className="text-[12px] font-bold text-[var(--tc-text-primary)]">{providerMeta.label}</span>
+              </div>
+              <CaretDown size={14} className={`transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute left-0 right-0 bottom-[calc(100%+8px)] z-50 bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="p-3 border-b border-[var(--tc-divider)] bg-[var(--tc-surface)]">
+                   <h5 className="text-[10px] font-bold text-[var(--tc-text-muted)] uppercase tracking-widest">Yield Strategies</h5>
+                </div>
+                <div className="max-h-[200px] overflow-y-auto">
+                  {(Object.keys(EARN_PROVIDER_META) as EarnProvider[]).map((p) => (
+                    <button
+                      key={p}
+                      className="w-full flex items-center justify-between p-3 hover:bg-[var(--tc-bg-hover)] transition-colors group"
+                      onClick={() => {
+                        setEarnProvider(p);
+                        setIsDropdownOpen(false);
+                        resetExec();
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img src={PROVIDER_ICONS[p]} className="w-6 h-6 rounded-full border border-[var(--tc-border)]" alt={p} />
+                        <div className="flex flex-col items-start">
+                          <span className="text-[12px] font-bold text-[var(--tc-text-primary)]">
+                            {EARN_PROVIDER_META[p].label}
+                          </span>
+                          <span className="text-[10px] text-[var(--tc-text-muted)]">
+                            {EARN_PROVIDER_META[p].description.split(".")[0]}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {allAPYs[p] !== null && (
+                          <span className="text-[11px] font-mono font-bold text-[var(--tc-accent-up)]">
+                            {allAPYs[p]?.toFixed(2)}%
+                          </span>
+                        )}
+                        {earnProvider === p && <Check size={14} className="text-[var(--tc-accent)]" />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats & Submit */}
+          <div className="flex flex-col gap-3">
             {quote && parseFloat(amount) > 0 && !isQuoteLoading && (
-              <div className="flex flex-col gap-2 p-3 rounded-xl bg-[var(--tc-accent-bg)] border border-[var(--tc-accent)] border-opacity-10">
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-[var(--tc-text-secondary)]">Daily Earnings</span>
-                  <span className="font-bold text-[var(--tc-accent-up)]">${quote.dailyEarningsUsd.toFixed(4)}</span>
+              <div className="p-3 rounded-xl bg-[var(--tc-surface)] border border-[var(--tc-border)] flex flex-col gap-2">
+                 <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[var(--tc-text-muted)] flex items-center gap-1">
+                    Daily Estimate <Info size={12} />
+                  </span>
+                  <span className="font-bold text-[var(--tc-accent-up)] font-mono">+${quote.dailyEarningsUsd.toFixed(4)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-[var(--tc-text-secondary)]">Protocol Fee</span>
+                  <span className="text-[var(--tc-text-muted)]">Platform Fee</span>
                   <span className="font-bold text-[var(--tc-text-primary)]">{quote.protocolFeePercent}%</span>
                 </div>
               </div>
             )}
 
-            {isQuoteLoading && parseFloat(amount) > 0 && (
-              <div className="flex items-center justify-center gap-2 p-3 text-[11px] text-[var(--tc-text-muted)] animate-pulse">
-                <div className="w-3 h-3 rounded-full border-2 border-[var(--tc-accent)] border-t-transparent animate-spin" />
-                Fetching live quote...
-              </div>
-            )}
-
             {(quoteError || execError) && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-[11px] text-red-600 dark:text-red-400 flex gap-2">
-                <svg viewBox="0 0 14 14" fill="none" width="14" height="14" className="shrink-0 mt-0.5">
-                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M7 4.5v3M7 9.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-500 flex gap-2">
+                <Info size={14} className="shrink-0 mt-0.5" />
                 {quoteError ?? execError}
               </div>
             )}
 
             <button
-              className={`w-full h-12 rounded-2xl font-bold text-[14px] transition-all flex items-center justify-center gap-2 ${canSubmit ? "bg-[var(--tc-accent)] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5" : "bg-[var(--tc-bg-muted)] text-[var(--tc-text-muted)] cursor-not-allowed"}`}
+              className={`sw-swap-btn w-full h-12 text-[14px] ${canSubmit ? "" : "opacity-50 grayscale pointer-events-none"}`}
               disabled={!canSubmit}
               onClick={handleAction}
             >
               {isExecuting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               {isExecuting
-                ? "Processing Transaction..."
+                ? "Processing..."
                 : `${activeAction === "deposit" ? "Deposit" : "Withdraw"} ${symbol}`}
             </button>
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-[var(--tc-divider)] flex items-center justify-center gap-1.5 opacity-50">
-          <span className="text-[9px] font-bold text-[var(--tc-text-muted)] uppercase tracking-widest">Powered by</span>
-          <span className="text-[10px] font-bold text-[var(--tc-text-primary)]">{providerMeta.label}</span>
+        <div className="sw-powered">
+          <span>Powered by {providerMeta.label}</span>
         </div>
       </div>
     </>

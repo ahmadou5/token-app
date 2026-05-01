@@ -85,7 +85,7 @@ export const PERP_PROVIDER_META: Record<
 
 // ─── Earn provider types ──────────────────────────────────────────────────────
 
-export type EarnProvider = "kamino" | "marginfi" | "drift";
+export type EarnProvider = "kamino" | "marginfi" | "drift" | "jupiter";
 
 export const EARN_PROVIDER_META: Record<
   EarnProvider,
@@ -113,6 +113,12 @@ export const EARN_PROVIDER_META: Record<
     badge: null,
     description: "Spot + perp DEX. Earn yield on idle stable collateral.",
     apiBase: "https://drift-public-api.drift.trade",
+  },
+  jupiter: {
+    label: "Jupiter Earn",
+    badge: "High TVL",
+    description: "Yield-generating vaults powered by Jupiter's lending engine.",
+    apiBase: "https://api.jup.ag",
   },
 };
 
