@@ -6,15 +6,17 @@ import {
   PROVIDER_META,
   EXECUTION_META,
   PERP_PROVIDER_META,
+  EARN_PROVIDER_META,
   type SwapProvider,
   type ExecutionStrategy,
   type PerpProvider,
+  type EarnProvider,
 } from "@/context/SwapSettingsContext";
 
 interface SettingsModalProps {
   onClose: () => void;
   /** Which tab is active in SpotSwap — controls which settings panel opens first */
-  activeTab?: "spot" | "perp";
+  activeTab?: "spot" | "perp" | "earn";
 }
 
 const SLIPPAGE_PRESETS = [0.1, 0.5, 1.0];
@@ -29,10 +31,11 @@ export function SettingsModal({
     setExecutionStrategy,
     setSlippage,
     setPerpProvider,
+    setEarnProvider,
     resetSettings,
   } = useSwapSettings();
 
-  const [panel, setPanel] = useState<"spot" | "perp">(activeTab);
+  const [panel, setPanel] = useState<"spot" | "perp" | "earn">(activeTab);
   const [customSlip, setCustomSlip] = useState("");
   const [customActive, setCustomActive] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -75,6 +78,12 @@ export function SettingsModal({
               onClick={() => setPanel("perp")}
             >
               Perp
+            </button>
+            <button
+              className={`sw-settings-panel-tab ${panel === "earn" ? "sw-settings-panel-tab--active" : ""}`}
+              onClick={() => setPanel("earn")}
+            >
+              Earn
             </button>
           </div>
           <button
@@ -485,6 +494,89 @@ export function SettingsModal({
                 {PERP_PROVIDER_META[settings.perpProvider].badge && (
                   <span className="sw-modal-summary__badge">
                     {PERP_PROVIDER_META[settings.perpProvider].badge}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── EARN PANEL ── */}
+        {panel === "earn" && (
+          <div className="sw-modal__body">
+            {/* Earn Provider */}
+            <div className="sw-modal-section">
+              <div className="sw-modal-section__label">
+                <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
+                  <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
+                Earn Provider
+              </div>
+              <div className="sw-modal-providers">
+                {(Object.keys(EARN_PROVIDER_META) as EarnProvider[]).map((p) => {
+                  const meta = EARN_PROVIDER_META[p];
+                  const active = settings.earnProvider === p;
+                  return (
+                    <button
+                      key={p}
+                      className={`sw-modal-provider ${active ? "sw-modal-provider--active" : ""}`}
+                      onClick={() => setEarnProvider(p)}
+                    >
+                      <div className="sw-modal-provider__top">
+                        <span className="sw-modal-provider__name">
+                          {meta.label}
+                        </span>
+                        {meta.badge && (
+                          <span className="sw-modal-provider__badge">
+                            {meta.badge}
+                          </span>
+                        )}
+                        {active && (
+                          <span className="sw-modal-provider__check">
+                            <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      <span className="sw-modal-provider__desc">
+                        {meta.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Slippage — display only, dimmed */}
+            <div className="sw-modal-section sw-modal-section--dimmed">
+              <div className="sw-modal-section__label">
+                <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
+                  <path d="M2 12L12 2M5 2H2v3M12 9v3h-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Slippage Tolerance
+                <span className="sw-modal-section__note">
+                  Managed by protocol ({settings.slippage}%)
+                </span>
+              </div>
+              <div className="sw-modal-slippage sw-modal-slippage--disabled">
+                {SLIPPAGE_PRESETS.map((p) => (
+                  <div key={p} className={`sw-slip-pill ${settings.slippage === p ? "sw-slip-pill--active" : ""}`}>
+                    {p}%
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="sw-modal-summary">
+              <div className="sw-modal-summary__chip">
+                <span className="sw-modal-summary__dot" />
+                {EARN_PROVIDER_META[settings.earnProvider].label}
+                {EARN_PROVIDER_META[settings.earnProvider].badge && (
+                  <span className="sw-modal-summary__badge">
+                    {EARN_PROVIDER_META[settings.earnProvider].badge}
                   </span>
                 )}
               </div>

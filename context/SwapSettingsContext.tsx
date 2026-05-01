@@ -83,6 +83,39 @@ export const PERP_PROVIDER_META: Record<
   },
 };
 
+// ─── Earn provider types ──────────────────────────────────────────────────────
+
+export type EarnProvider = "kamino" | "marginfi" | "drift";
+
+export const EARN_PROVIDER_META: Record<
+  EarnProvider,
+  {
+    label: string;
+    badge?: string | null;
+    description: string;
+    apiBase: string;
+  }
+> = {
+  kamino: {
+    label: "Kamino Finance",
+    badge: "Default",
+    description: "Automated liquidity vaults. Single-sided stable deposits.",
+    apiBase: "https://api.kamino.finance",
+  },
+  marginfi: {
+    label: "MarginFi",
+    badge: null,
+    description: "Lending protocol. Earn interest by supplying stables.",
+    apiBase: "https://marginfi.com/api",
+  },
+  drift: {
+    label: "Drift Protocol",
+    badge: null,
+    description: "Spot + perp DEX. Earn yield on idle stable collateral.",
+    apiBase: "https://drift-public-api.drift.trade",
+  },
+};
+
 // ─── Settings shape ───────────────────────────────────────────────────────────
 
 export interface SwapSettings {
@@ -92,6 +125,8 @@ export interface SwapSettings {
   slippage: number;
   // Perp
   perpProvider: PerpProvider;
+  // Earn
+  earnProvider: EarnProvider;
 }
 
 const DEFAULT_SETTINGS: SwapSettings = {
@@ -99,6 +134,7 @@ const DEFAULT_SETTINGS: SwapSettings = {
   executionStrategy: "standard",
   slippage: 0.5,
   perpProvider: "adrena",
+  earnProvider: "kamino",
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -109,6 +145,7 @@ interface SwapSettingsContextValue {
   setExecutionStrategy: (s: ExecutionStrategy) => void;
   setSlippage: (v: number) => void;
   setPerpProvider: (p: PerpProvider) => void;
+  setEarnProvider: (p: EarnProvider) => void;
   resetSettings: () => void;
 }
 
@@ -155,6 +192,10 @@ export function SwapSettingsProvider({
     (p: PerpProvider) => setSettings((s) => ({ ...s, perpProvider: p })),
     [],
   );
+  const setEarnProvider = useCallback(
+    (p: EarnProvider) => setSettings((s) => ({ ...s, earnProvider: p })),
+    [],
+  );
   const resetSettings = useCallback(() => setSettings(DEFAULT_SETTINGS), []);
 
   return (
@@ -165,6 +206,7 @@ export function SwapSettingsProvider({
         setExecutionStrategy,
         setSlippage,
         setPerpProvider,
+        setEarnProvider,
         resetSettings,
       }}
     >

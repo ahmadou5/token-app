@@ -26,6 +26,7 @@ import { useTokens } from "@/hooks/useToken";
 import { SpotSwap } from "@/components/Swap/SpotSwap";
 import { useConnector, useWallet } from "@solana/connector";
 import { ConnectedPill } from "@/components/Swap";
+import { EarnVault } from "@/components/Earn/EarnVault";
 
 function fmtPct(n: number | null | undefined) {
   if (n == null || isNaN(n)) return "—";
@@ -754,6 +755,17 @@ export default function TokenDetailPage({
     ? `${currentMint.slice(0, 4)}…${currentMint.slice(-4)}`
     : null;
 
+  const STABLE_SYMBOLS = [
+    "USDC",
+    "USDT",
+    "USDG",
+    "DAI",
+    "USDS",
+    "PYUSD",
+    "FDUSD",
+  ];
+  const isStable = STABLE_SYMBOLS.includes(data.symbol?.toUpperCase() ?? "");
+
   return (
     <div className="td-page">
       {/* Topbar */}
@@ -1021,6 +1033,12 @@ export default function TokenDetailPage({
               outputLogo={data.imageUrl ?? undefined} // token logo from your existing data
             />
           </div>
+
+          {isStable && (
+            <div className="mt-6">
+              <EarnVault mint={currentMint} symbol={data.symbol} />
+            </div>
+          )}
 
           {description && (
             <ExpandableDescription
