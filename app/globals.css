@@ -213,6 +213,14 @@ html.dark {
   }
 }
 
+.tg-navbar-glass {
+  background: var(--navbar-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--tc-divider);
+  transition: all var(--tc-ease);
+}
+
 /* ══════════════════════════════════════════════════════
    Shared atoms
    ══════════════════════════════════════════════════════ */
@@ -2844,7 +2852,8 @@ html.dark {
   }
 
   .srch-trigger {
-    width: 38px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     justify-content: center;
     background: transparent;
@@ -4682,7 +4691,15 @@ body {
   }
 
   .sw-connected-trigger {
-    padding: 4px 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  
+  .sw-connected-trigger__icon {
+    margin: 0;
   }
 
   /* Token grid */

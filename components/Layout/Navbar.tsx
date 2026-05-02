@@ -20,7 +20,7 @@ export function Navbar() {
         <WalletConnectModal onClose={() => setShowWalletModal(false)} />
       )}
       
-      <nav className="tg-topbar liquid-glass">
+      <nav className="tg-topbar tg-navbar-glass">
         {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
           <Link href="/" className="tg-topbar__left" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -68,7 +68,7 @@ export function Navbar() {
             ) : (
               <button 
                 className="hp-btn-primary" 
-                style={{ height: '36px', padding: '0 14px', fontSize: '13px', borderRadius: '40px' }}
+                style={{ height: '38px', padding: '0 16px', fontSize: '13px', borderRadius: '40px' }}
                 onClick={() => setShowWalletModal(true)}
               >
                 Connect
