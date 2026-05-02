@@ -10,58 +10,69 @@ import { ConnectedPill, WalletConnectModal } from "../Swap";
 
 export function Navbar() {
   const { searchOpen, setSearchOpen } = useSearchStore();
-const { isConnected } = useWallet();
+  const { isConnected } = useWallet();
   const connector = useConnector();
-    const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+
   return (
     <>
-     {showWalletModal && (
-            <WalletConnectModal onClose={() => setShowWalletModal(false)} />
-          )}
-      <div className="tg-topbar">
+      {showWalletModal && (
+        <WalletConnectModal onClose={() => setShowWalletModal(false)} />
+      )}
+      
+      <nav className="tg-topbar liquid-glass">
+        {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
-          <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
-            <circle
-              cx="10"
-              cy="10"
-              r="8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M6 10h8M10 6v8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="tg-topbar__brand">Tokens</span>
+          <Link href="/" className="tg-topbar__left" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
+              <circle
+                cx="10"
+                cy="10"
+                r="8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M6 10h8M10 6v8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span className="tg-topbar__brand">Check-it</span>
+          </Link>
         </div>
 
-        <div className="tg-topbar__center">
+        {/* Center: Search Trigger */}
+        <div className="tg-topbar__center" style={{ display: 'flex', justifyContent: 'center' }}>
           <SearchTrigger
             onClick={() => setSearchOpen(true)}
-            placeholder="Find tokens..."
+            placeholder="Search tokens..."
           />
         </div>
-  <Link href="/markets" className="hp-nav__link">
-            Explore Markets
-          </Link>
-          {isConnected ? (
-            <ConnectedPill onDisconnect={() => connector.disconnect()} />
-          ) : (
-            <button 
-              className="hp-btn-primary" 
-              style={{ height: '38px', padding: '0 16px', fontSize: '13px' }}
-              onClick={() => setShowWalletModal(true)}
-            >
-              Connect Wallet
-            </button>
-          )}
+
+        {/* Right: Actions */}
         <div className="tg-topbar__right">
-          <ThemeToggle />
+          <Link href="/markets" className="hp-nav__link" style={{ marginRight: '8px' }}>
+            Explore
+          </Link>
+          
+          <div className="tg-topbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isConnected ? (
+              <ConnectedPill onDisconnect={() => connector.disconnect()} />
+            ) : (
+              <button 
+                className="hp-btn-primary" 
+                style={{ height: '36px', padding: '0 14px', fontSize: '13px', borderRadius: '40px' }}
+                onClick={() => setShowWalletModal(true)}
+              >
+                Connect
+              </button>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
-      </div>
+      </nav>
 
       {/* Modal lives at Navbar level — portal-like, covers full viewport */}
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />

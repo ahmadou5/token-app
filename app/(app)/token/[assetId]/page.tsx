@@ -688,7 +688,7 @@ function TokenDetailPageContent({
 
   // ── Sheet state (mobile) ──────────────────────────────────────────────────
   // "swap" | "liquidity" | null (closed)
-  const [sheetMode, setSheetMode] = useState<"swap" | "liquidity" | null>(null);
+  const [sheetMode, setSheetMode] = useState<"swap" | "liquidity" | "earn" | null>(null);
 
   // ── Active liquidity market (shared between sidebar + sheet) ─────────────
   const [activeMarket, setActiveMarket] = useState<MarketEntry | null>(null);
@@ -892,9 +892,11 @@ function TokenDetailPageContent({
   const sheetTitle =
     sheetMode === "liquidity" && activeMarket
       ? `Add Liquidity · ${activeMarket.base?.symbol ?? ""}/${activeMarket.quote?.symbol ?? ""}`
-      : currentSymbol
-        ? `Trade $${currentSymbol}`
-        : `Trade ${data.name}`;
+      : sheetMode === "earn"
+        ? `Earn Yield · $${currentSymbol}`
+        : currentSymbol
+          ? `Trade $${currentSymbol}`
+          : `Trade ${data.name}`;
 
   return (
     <div className="td-page">
@@ -1123,7 +1125,7 @@ function TokenDetailPageContent({
             </div>
           </section>
 
-          {/* Markets — pass callback up 
+          {/* Markets — pass callback up */}
           {data.markets.length > 0 && (
             <MarketsSection
               markets={data.markets}
@@ -1131,7 +1133,7 @@ function TokenDetailPageContent({
               activeMarketAddress={activeMarket?.address ?? null}
               onAddLiquidity={handleAddLiquidity}
             />
-          )} */}
+          )}
 
           {risk && (
             <SecuritySection
@@ -1183,23 +1185,33 @@ function TokenDetailPageContent({
 
           {/* Mobile FAB — label changes based on context */}
           {isMobile && sheetMode === null && (
-            <button className="td-trade-fab" onClick={handleFabClick}>
-              {activeMarket ? (
-                <>
-                  <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
-                    <path
-                      d="M7 1v12M1 7h12"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Add Liquidity
-                </>
-              ) : (
-                "Trade"
+            <div className="td-fab-container">
+              <button className="td-trade-fab" onClick={handleFabClick}>
+                {activeMarket ? (
+                  <>
+                    <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+                      <path
+                        d="M7 1v12M1 7h12"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Add Liquidity
+                  </>
+                ) : (
+                  "Trade"
+                )}
+              </button>
+              {showEarn && !activeMarket && (
+                <button 
+                  className="td-trade-fab td-trade-fab--earn" 
+                  onClick={() => setSheetMode("earn")}
+                >
+                  Earn
+                </button>
               )}
-            </button>
+            </div>
           )}
 
           {/* Mobile Bottom Sheet */}
@@ -1235,6 +1247,8 @@ function TokenDetailPageContent({
                       market={activeMarket}
                       onClose={() => setSheetMode(null)}
                     />
+                  ) : sheetMode === "earn" ? (
+                    <EarnVault mint={currentMint} symbol={currentSymbol} />
                   ) : (
                     <SpotSwap
                       outputMint={currentMint ?? ""}

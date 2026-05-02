@@ -80,6 +80,10 @@ body {
   --tc-tooltip-bg: #ffffff;
   --tc-tooltip-border: rgba(0, 0, 0, 0.10);
   --tc-chart-skel: rgba(0, 0, 0, 0.07);
+
+  /* Hero Glows */
+  --hp-hero-glow-1: rgba(153, 69, 255, 0.15);
+  --hp-hero-glow-2: rgba(99, 153, 255, 0.1);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -127,6 +131,10 @@ html.dark {
   --tc-tooltip-bg: #2A2520;
   --tc-tooltip-border: rgba(255, 255, 255, 0.10);
   --tc-chart-skel: rgba(255, 255, 255, 0.07);
+
+  /* Hero Glows - Dark mode */
+  --hp-hero-glow-1: rgba(153, 69, 255, 0.25);
+  --hp-hero-glow-2: rgba(99, 153, 255, 0.15);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -9756,8 +9764,8 @@ html.dark .pf-drawer {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(153, 69, 255, 0.15) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(99, 153, 255, 0.1) 0%, transparent 60%);
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, var(--hp-hero-glow-1) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, var(--hp-hero-glow-2) 0%, transparent 60%);
 }
 
 .hp-hero__spline {

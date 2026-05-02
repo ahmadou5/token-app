@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import Link from "next/link";
+
+const Spline = lazy(() => import("@splinetool/react-spline"));
 
 interface Stats {
   tvl: string;
@@ -41,14 +43,14 @@ export function HeroSection() {
 
   return (
     <section className="hp-hero">
-      {/* Background */}
-      {/* TODO: replace with actual Spline scene URL */}
-      <iframe
-        src="https://my.spline.design/particles-REPLACE_WITH_ACTUAL_SCENE_URL/"
-        className="hp-hero__spline"
-        title="3D background"
-        loading="lazy"
-      />
+      {/* Background Spline Scene */}
+      <div className="hp-hero__spline">
+        <Suspense fallback={<div className="hp-hero__spline-placeholder" />}>
+          <Spline 
+            scene="https://app.spline.design/community/file/dc934dad-135e-42bd-ad4d-8234b6cfd7bc" 
+          />
+        </Suspense>
+      </div>
 
       <div className="hp-hero__content">
         <span className="hp-label hp-anim-fade-up">

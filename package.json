@@ -35,6 +35,7 @@
     "@solana/rpc": "^6.7.0",
     "@solana/spl-stake-pool": "^1.1.8",
     "@solana/web3.js": "^1.98.4",
+    "@splinetool/react-spline": "^4.1.0",
     "@vitejs/plugin-react": "^6.0.1",
     "@wallet-standard/app": "^1.1.0",
     "@xyflow/react": "^12.10.2",
