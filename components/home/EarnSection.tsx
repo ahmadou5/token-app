@@ -164,7 +164,7 @@ export function EarnSection() {
         style={{ width: '350px', height: '350px', background: 'rgba(74,222,128,0.05)', bottom: '-100px', right: '-100px', animation: 'hpFloat 12s ease-in-out infinite', animationDelay: '4s' }} 
       />
 
-      <div style={{ position: 'relative', z-index: 1, textAlign: 'center', marginBottom: '48px' }}>
+      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: '48px' }}>
         <div className="hp-label hp-anim-fade-up">Yield Vaults</div>
         <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1">Put your stables to work.</h2>
       </div>
