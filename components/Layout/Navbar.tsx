@@ -20,26 +20,15 @@ export function Navbar() {
         <WalletConnectModal onClose={() => setShowWalletModal(false)} />
       )}
       
-      <nav className="tg-topbar tg-navbar-glass">
+      <nav className="tg-topbar liquid-glass">
         {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
-          <Link href="/" className="tg-topbar__left" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link href="/" className="tg-topbar__logo-link">
             <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
-              <circle
-                cx="10"
-                cy="10"
-                r="8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M6 10h8M10 6v8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
+              <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M6 10h8M10 6v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span className="tg-topbar__brand">Check-it</span>
+            <span className="tg-topbar__brand tg-desktop-only">Check-it</span>
           </Link>
         </div>
 
@@ -53,12 +42,11 @@ export function Navbar() {
 
         {/* Right: Actions */}
         <div className="tg-topbar__right">
-          <Link href="/markets" className="hp-nav__link" style={{ marginRight: '8px' }}>
-            Explore
-          </Link>
-          
-          <div className="tg-topbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Search Trigger (Mobile only) */}
+          <div className="tg-topbar__actions">
+            <Link href="/markets" className="hp-nav__link tg-desktop-only">
+              Explore
+            </Link>
+            
             <div className="tg-mobile-only">
               <SearchTrigger onClick={() => setSearchOpen(true)} />
             </div>
@@ -67,8 +55,7 @@ export function Navbar() {
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             ) : (
               <button 
-                className="hp-btn-primary" 
-                style={{ height: '38px', padding: '0 16px', fontSize: '13px', borderRadius: '40px' }}
+                className="hp-btn-primary tg-nav-btn" 
                 onClick={() => setShowWalletModal(true)}
               >
                 Connect

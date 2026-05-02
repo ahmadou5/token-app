@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeNav } from "@/app/(home)/HomeNav";
+
 import { HeroSection } from "@/components/home/HeroSection";
 import TradingSection from "@/components/home/TradingSection";
 import { EarnSection } from "@/components/home/EarnSection";
