@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { GearSix, CheckCircle } from "@phosphor-icons/react";
 import Link from "next/link";
+import { EARN_PROVIDER_META, EarnProvider } from "@/context/SwapSettingsContext";
+import { getProviderColor, getProviderIcon } from "@/lib/yieldPrivider";
 
 interface VaultProps {
   protocol: string;
@@ -67,7 +69,7 @@ function VaultCard({ protocol, color, apy, tvl, delay }: VaultProps) {
     >
       <div className="hp-earn-card__header">
         <div className="hp-earn-card__logo" style={{ background: color }}>
-          {protocol[0]}
+          <img className="w-full h-full rounded-xl" src={getProviderIcon(protocol as EarnProvider)} alt={protocol} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -104,7 +106,7 @@ function VaultCard({ protocol, color, apy, tvl, delay }: VaultProps) {
       </div>
 
       <Link 
-        href="/markets" 
+        href="/token/usd?mint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" 
         className="hp-earn-card__cta"
         onMouseEnter={(e) => {
           e.currentTarget.style.background = color;
@@ -148,7 +150,7 @@ export function EarnSection() {
     <section 
       id="earn" 
       ref={sectionRef}
-      className={`hp-section hp-earn-section ${isVisible ? 'hp-is-visible' : ''}`}
+      className={`hp-section hp-earn-section ${isVisible ? 'hp-is-visible' : ''} rounded-2xl`}
     >
       {/* Animated background detail */}
       <div 
@@ -170,9 +172,16 @@ export function EarnSection() {
       </div>
 
       <div className="hp-earn-grid">
-        <VaultCard protocol="Kamino" color="#9945FF" apy={8.4} tvl="$124M" delay="0ms" />
-        <VaultCard protocol="MarginFi" color="#6399FF" apy={7.1} tvl="$82M" delay="150ms" />
-        <VaultCard protocol="Drift" color="#FFA500" apy={9.2} tvl="$156M" delay="300ms" />
+        {Object.entries(EARN_PROVIDER_META).map(([protocol, meta]) => (
+          <VaultCard 
+            key={protocol}
+            protocol={meta.label}
+            color={getProviderColor(meta.label as unknown as EarnProvider)}
+            apy={8.9}
+            tvl={'$252M'}
+            delay="0ms"
+          />
+        ))}
       </div>
 
       <div className="hp-settings-hint hp-anim-fade-up hp-anim-delay-4">
