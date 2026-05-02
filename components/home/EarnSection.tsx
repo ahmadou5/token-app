@@ -182,7 +182,7 @@ export function EarnSection() {
             key={protocol}
             protocol={protocol}
             label={meta.label}
-            color={getProviderColor(meta.label as unknown as EarnProvider)}
+            color={getProviderColor(protocol as EarnProvider)}
             apy={8.9}
             tvl={'$252M'}
             delay="0ms"
