@@ -1,4 +1,5 @@
 import axios from "axios";
+import { limiter } from "@/lib/rate-limit";
 import type {
   TokenAssetResponse,
   AssetVariant,
@@ -10,6 +11,7 @@ import type {
   MarketEntry,
   CanonicalMarket,
   AssetStats,
+  OHLCVEntry,
 } from "@/types/token.types"; // adjust to your actual path
 
 // ─── Raw shapes from the upstream API ────────────────────────────────────────
@@ -48,6 +50,10 @@ interface RawCanonicalResponse {
       ok: boolean;
       data: AssetRisk;
     };
+    ohlcv?: {
+      ok: boolean;
+      data: OHLCVEntry[];
+    };
   };
 }
 
@@ -80,6 +86,20 @@ export const GET = async (request: Request): Promise<Response> => {
   const { searchParams } = new URL(request.url);
   const assetId = searchParams.get("assetId");
 
+  // 1. Rate Limiting Check
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+  const isAllowed = limiter.check(100, ip);
+  if (!isAllowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const interval = searchParams.get("ohlcvInterval") || "1H";
+  const from = searchParams.get("ohlcvFrom");
+  const to = searchParams.get("ohlcvTo");
+
   if (!assetId) {
     return new Response(
       JSON.stringify({ error: "Missing required query param: assetId" }),
@@ -94,14 +114,16 @@ export const GET = async (request: Request): Promise<Response> => {
   };
 
   try {
-    // 2 parallel fetches:
-    // 1. Canonical asset + all includes (markets, profile, risk) in one request
-    // 2. Variants endpoint (separate path, can't be included)
+    // 1. Fetch the asset data with all includes from the upstream API
+    let url = `${base}/assets/${assetId}?include=markets&include=profile&include=risk&include=ohlcv&marketsOffset=0&marketsLimit=50`;
+    
+    if (interval) url += `&ohlcvInterval=${interval}`;
+    if (from) url += `&ohlcvFrom=${from}`;
+    if (to) url += `&ohlcvTo=${to}`;
+
+    // 2. Parallel fetch for variants
     const [canonicalRes, variantsRes] = await Promise.all([
-      axios.get<RawCanonicalResponse>(
-        `${base}/assets/${assetId}?include=markets&include=profile&include=risk&marketsOffset=0&marketsLimit=50`,
-        { headers },
-      ),
+      axios.get<RawCanonicalResponse>(url, { headers }),
       axios.get<RawVariantsResponse>(
         `${base}/assets/${assetId}/variants?groupBy=asset`,
         { headers },
@@ -113,6 +135,7 @@ export const GET = async (request: Request): Promise<Response> => {
     const marketsData = includes.markets?.data;
     const profile = includes.profile?.data ?? null;
     const risk = includes.risk?.data ?? null;
+    const ohlcv = includes.ohlcv ?? null;
 
     // Group the flat variants[] by kind, fall back to what canonical embeds
     const variantGroups: VariantGroups = variantsRes.data.variants?.length
@@ -148,12 +171,23 @@ export const GET = async (request: Request): Promise<Response> => {
       marketsLimit: marketsData?.limit ?? 50,
     };
 
-    return new Response(JSON.stringify(merged), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Standardized response structure matching the user's requirement
+    return new Response(
+      JSON.stringify({
+        asset: merged,
+        includes: {
+          ohlcv,
+          profile,
+          risk,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    console.error("[token-asset] Failed to fetch:", error);
+    console.error("[getToken] Failed to fetch:", error);
     return new Response(
       JSON.stringify({ error: "Failed to fetch token asset data" }),
       { status: 500, headers: { "Content-Type": "application/json" } },

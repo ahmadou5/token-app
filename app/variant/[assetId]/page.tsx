@@ -703,16 +703,20 @@ export default function TokenDetailPage({
           tokenRequest.getAsset(assetId, true),
         ]);
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
-        const json: TokenAssetResponse = await res.json();
+        const json = await res.json();
         if (cancelled) return;
-        console.log("[VariantDetailPage] Loaded data:", { json, otherData });
-        setData(json);
+
+        // Standardized structure is { asset, includes }
+        const assetData: TokenAssetResponse = json.asset || json;
+
+        console.log("[VariantDetailPage] Loaded data:", { assetData, otherData });
+        setData(assetData);
         setOther(otherData);
 
         const rows = flattenVariantGroups(
-          json.variantGroups,
-          json.name,
-          json.symbol,
+          assetData.variantGroups,
+          assetData.name,
+          assetData.symbol,
         );
         const currentRow = rows.find((r) => r.mint === mint);
         setSelectedVariant(currentRow ?? null);

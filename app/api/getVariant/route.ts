@@ -1,4 +1,5 @@
 import axios from "axios";
+import { limiter } from "@/lib/rate-limit";
 import type {
   TokenAssetResponse,
   AssetVariant,
@@ -10,6 +11,7 @@ import type {
   MarketEntry,
   CanonicalMarket,
   AssetStats,
+  OHLCVEntry,
 } from "@/types/token.types"; // adjust to your actual path
 
 // ─── Raw shapes from the upstream API ────────────────────────────────────────
@@ -48,6 +50,10 @@ interface RawCanonicalResponse {
       ok: boolean;
       data: AssetRisk;
     };
+    ohlcv?: {
+      ok: boolean;
+      data: OHLCVEntry[];
+    };
   };
 }
 
@@ -80,6 +86,17 @@ export const GET = async (request: Request): Promise<Response> => {
   const { searchParams } = new URL(request.url);
   const assetId = searchParams.get("assetId");
   const mint = searchParams.get("mint");
+
+  // 1. Rate Limiting Check
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+  const isAllowed = limiter.check(100, ip);
+  if (!isAllowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   const interval = searchParams.get("ohlcvInterval") || "1H";
   const from = searchParams.get("ohlcvFrom");
   const to = searchParams.get("ohlcvTo");
@@ -155,12 +172,14 @@ export const GET = async (request: Request): Promise<Response> => {
       marketsLimit: marketsData?.limit ?? 50,
     };
 
-    // Return the structure requested by the user: { asset: TokenAssetResponse, includes: { ohlcv } }
+    // Standardized response structure
     return new Response(
       JSON.stringify({
         asset: merged,
         includes: {
           ohlcv,
+          profile,
+          risk,
         },
       }),
       {

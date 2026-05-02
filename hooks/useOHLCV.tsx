@@ -24,16 +24,16 @@ interface UseOHLCVReturn {
   setTimeframe: (t: OHLCVTimeframe) => void;
 }
 
-// Map timeframe → appropriate interval + limit
+// Map timeframe → appropriate interval + limit + duration (seconds)
 const TIMEFRAME_CONFIG: Record<
   OHLCVTimeframe,
-  { interval: OHLCVInterval; limit: number }
+  { interval: OHLCVInterval; limit: number; duration: number }
 > = {
-  "24H": { interval: "1H", limit: 24 },
-  "7D": { interval: "4H", limit: 42 }, // 7 days × 6 candles/day
-  "30D": { interval: "1D", limit: 30 },
-  "90D": { interval: "1D", limit: 90 },
-  "1Y": { interval: "1W", limit: 52 },
+  "24H": { interval: "1H", limit: 24, duration: 24 * 3600 },
+  "7D": { interval: "4H", limit: 42, duration: 7 * 24 * 3600 },
+  "30D": { interval: "1D", limit: 30, duration: 30 * 24 * 3600 },
+  "90D": { interval: "1D", limit: 90, duration: 90 * 24 * 3600 },
+  "1Y": { interval: "1W", limit: 52, duration: 365 * 24 * 3600 },
 };
 export function useOHLCV(
   assetId: string | null,
@@ -49,14 +49,17 @@ export function useOHLCV(
     setIsLoading(true);
     setError(null);
     try {
-      const { interval } = TIMEFRAME_CONFIG[timeframe];
+      const { interval, duration } = TIMEFRAME_CONFIG[timeframe];
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - duration;
+      const to = now;
 
-      // Use the new getVariant API which returns the exact structure requested
-      let url = `/api/getVariant?assetId=${assetId}&ohlcvInterval=${interval}&include=ohlcv`;
-      if (mint) url += `&mint=${mint}`;
+      // Use the upgraded APIs which support ohlcvFrom/ohlcvTo
+      let url = `/api/getToken?assetId=${assetId}&ohlcvInterval=${interval}&ohlcvFrom=${from}&ohlcvTo=${to}&include=ohlcv`;
+      if (mint) {
+        url = `/api/getVariant?assetId=${assetId}&mint=${mint}&ohlcvInterval=${interval}&ohlcvFrom=${from}&ohlcvTo=${to}&include=ohlcv`;
+      }
 
-      // For timeframe calculation, we might need 'from'/'to' but the configurator uses limit
-      // Let's stick to the configuration we have or map limit to from/to
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch OHLCV");
       const json = await res.json();

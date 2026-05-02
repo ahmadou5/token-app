@@ -714,13 +714,20 @@ function TokenDetailPageContent({
     let cancelled = false;
     async function load() {
       try {
+        const url = mint
+          ? `/api/getVariant?assetId=${assetId}&mint=${mint}`
+          : `/api/getToken?assetId=${assetId}`;
+
         const [res, otherData] = await Promise.all([
-          fetch(`/api/getVariant?assetId=${assetId}${mint ? `&mint=${mint}` : ""}`),
+          fetch(url),
           tokenRequest.getAsset(assetId, true),
         ]);
         if (!res.ok) throw new Error(`Token API error: ${res.status}`);
         const json = await res.json();
-        const assetData: TokenAssetResponse = json.asset || json; // Handle both old and new structures
+
+        // Standardized structure is { asset, includes }
+        const assetData: TokenAssetResponse = json.asset || json;
+
         if (!cancelled) {
           setData(assetData);
           setOther(otherData);
