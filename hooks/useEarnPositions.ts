@@ -39,8 +39,8 @@ export function useEarnPositions() {
       } else {
         setError(data.err);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as { message: string }).message);
     } finally {
       setIsLoading(false);
     }

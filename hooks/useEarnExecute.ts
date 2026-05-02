@@ -113,7 +113,7 @@ async function sendTransaction(
     .setFeePayerSigner(signer)
     .addInstructions(kitInstructions)
     .execute({
-      rpcSubscriptions: rpcSubscriptions as any,
+      rpcSubscriptions: rpcSubscriptions,
       commitment: "confirmed",
       skipPreflight: true,
     });
@@ -179,8 +179,9 @@ export function useEarnExecute(): UseEarnExecuteReturn {
           },
         });
         return sig;
-      } catch (err: any) {
-        const msg = err.message || "Transaction failed";
+      } catch (err: unknown) {
+        const msg =
+          (err as { message: string }).message || "Transaction failed";
         const isUserDismissal =
           msg.toLowerCase().includes("reject") ||
           msg.toLowerCase().includes("cancel") ||
