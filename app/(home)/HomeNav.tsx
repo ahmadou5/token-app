@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useConnector, useWallet } from "@solana/connector";
 import { ConnectedPill } from "@/components/Swap/ConnectedPill";
 import { WalletConnectModal } from "@/components/Swap/modals/WalletConnectModal";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function HomeNav() {
   const { isConnected } = useWallet();
@@ -42,6 +43,7 @@ export function HomeNav() {
               Connect Wallet
             </button>
           )}
+          <ThemeToggle/>
         </div>
       </nav>
     </>

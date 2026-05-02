@@ -9,7 +9,7 @@ export default function MarketsLayout({
 }) {
   return (
     <div className="w-auto">
-      <Navbar />
+     
       {children}
     </div>
   );

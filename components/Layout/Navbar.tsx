@@ -3,12 +3,21 @@
 import { SearchTrigger, SearchModal } from "@/components/SearcModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSearchStore } from "@/store/useSearchStore";
+import { useConnector, useWallet } from "@solana/connector";
+import Link from "next/link";
+import { useState } from "react";
+import { ConnectedPill, WalletConnectModal } from "../Swap";
 
 export function Navbar() {
   const { searchOpen, setSearchOpen } = useSearchStore();
-
+const { isConnected } = useWallet();
+  const connector = useConnector();
+    const [showWalletModal, setShowWalletModal] = useState(false);
   return (
     <>
+     {showWalletModal && (
+            <WalletConnectModal onClose={() => setShowWalletModal(false)} />
+          )}
       <div className="tg-topbar">
         <div className="tg-topbar__left">
           <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
@@ -35,7 +44,20 @@ export function Navbar() {
             placeholder="Find tokens..."
           />
         </div>
-
+  <Link href="/markets" className="hp-nav__link">
+            Explore Markets
+          </Link>
+          {isConnected ? (
+            <ConnectedPill onDisconnect={() => connector.disconnect()} />
+          ) : (
+            <button 
+              className="hp-btn-primary" 
+              style={{ height: '38px', padding: '0 16px', fontSize: '13px' }}
+              onClick={() => setShowWalletModal(true)}
+            >
+              Connect Wallet
+            </button>
+          )}
         <div className="tg-topbar__right">
           <ThemeToggle />
         </div>

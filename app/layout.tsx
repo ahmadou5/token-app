@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Mono, Instrument_Sans } from "next/font/google";
 import "@/lib/suppressDevToolsNoise";
 import { Providers } from "@/components/Providers";
+import { Navbar } from "@/components/Layout/Navbar";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -31,7 +32,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers>
+          <Navbar />
+          {children}
+          </Providers>
       </body>
     </html>
   );

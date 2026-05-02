@@ -11,7 +11,7 @@ import { HomeFooter } from "@/components/home/HomeFooter";
 export function HomePage() {
   return (
     <>
-      <HomeNav />
+    
       <HeroSection />
       <TradingSection />
       <EarnSection />
