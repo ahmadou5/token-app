@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useOHLCV, type OHLCVTimeframe } from "@/hooks/useOHLCV";
 import {
   TokenAvatar,
@@ -900,7 +901,7 @@ function TokenDetailPageContent({
 
   return (
     <div className="td-page">
-      {/* Topbar */}
+      {/* Topbar 
       <div className="td-topbar">
         <div className="td-topbar__left">
           <button className="td-back" onClick={() => router.back()}>
@@ -913,23 +914,28 @@ function TokenDetailPageContent({
                 strokeLinejoin="round"
               />
             </svg>
+          <Link href="/" className="td-back" style={{ textDecoration: 'none' }}>
             Tokens
-          </button>
+          </Link>
           <nav className="td-breadcrumb">
             <span className="td-breadcrumb__sep">›</span>
-            <span className="td-breadcrumb__item">{data.name}</span>
-            {currentSymbol && (
+            {currentMint !== data.primaryVariant?.mint ? (
               <>
+                <Link href={`/token/${assetId}`} className="td-breadcrumb__item">
+                  {data.name}
+                </Link>
                 <span className="td-breadcrumb__sep">›</span>
                 <span className="td-breadcrumb__item td-breadcrumb__item--mint">
                   ${currentSymbol}
                 </span>
               </>
+            ) : (
+              <span className="td-breadcrumb__item">{data.name}</span>
             )}
           </nav>
         </div>
         <ThemeToggle />
-      </div>
+      </div> */}
 
       <div className="td-layout">
         {/* ── Main column ── */}
@@ -1175,8 +1181,8 @@ function TokenDetailPageContent({
             )}
           </div>
 
-          {/* Yield Opportunities Section */}
-          {(showNativeStake || showEarn) && (
+          {/* Yield Opportunities Section — Desktop Only */}
+          {!isMobile && (showNativeStake || showEarn) && (
             <div className="mt-6 flex flex-col gap-6">
               {showNativeStake && <NativeStakeCard />}
               {showEarn && <EarnVault mint={currentMint} symbol={currentSymbol} />}
@@ -1248,7 +1254,10 @@ function TokenDetailPageContent({
                       onClose={() => setSheetMode(null)}
                     />
                   ) : sheetMode === "earn" ? (
-                    <EarnVault mint={currentMint} symbol={currentSymbol} />
+                    <div className="flex flex-col gap-4 pb-8">
+                      {showNativeStake && <NativeStakeCard />}
+                      {showEarn && <EarnVault mint={currentMint} symbol={currentSymbol} />}
+                    </div>
                   ) : (
                     <SpotSwap
                       outputMint={currentMint ?? ""}

@@ -43,8 +43,8 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Center: Search Trigger */}
-        <div className="tg-topbar__center" style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* Center: Search Trigger (Desktop only) */}
+        <div className="tg-topbar__center tg-desktop-only">
           <SearchTrigger
             onClick={() => setSearchOpen(true)}
             placeholder="Search tokens..."
@@ -57,7 +57,12 @@ export function Navbar() {
             Explore
           </Link>
           
-          <div className="tg-topbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="tg-topbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Search Trigger (Mobile only) */}
+            <div className="tg-mobile-only">
+              <SearchTrigger onClick={() => setSearchOpen(true)} />
+            </div>
+            
             {isConnected ? (
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             ) : (

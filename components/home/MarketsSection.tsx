@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useEffect, useRef, useState, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
+import { fmtCompact } from "@/components/TokenCard";
 
 interface Token {
   symbol: string;
@@ -21,10 +22,26 @@ const CATEGORIES = [
   { id: "gaming", label: "Gaming" },
 ];
 
-export default function MarketsSection() {
+export default function MarketsSection({ initialTokens = [] }: { initialTokens?: any[] }) {
   const [activeCat, setActiveCat] = useState("all");
-  const [tokens, setTokens] = useState<Token[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Helper to map API token to our UI format
+  const mapToken = (t: any) => ({
+    symbol: t.symbol || "Unknown",
+    name: t.name || "Unknown",
+    price: t.stats?.price || 0,
+    change24h: t.stats?.priceChange24hPercent || 0,
+    volume24h: fmtCompact(t.stats?.volume24hUSD || 0),
+    logoUri: t.imageUrl || t.primaryVariant?.market?.logoURI || ""
+  });
+
+  const [tokens, setTokens] = useState<Token[]>(() => {
+    if (initialTokens.length > 0) {
+      return initialTokens.map(mapToken);
+    }
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(initialTokens.length === 0);
   const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0 });
   
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -43,12 +60,37 @@ export default function MarketsSection() {
   }, []);
 
   useEffect(() => {
+    // If we have initial tokens and we are on "all", don't refetch
+    if (activeCat === "all" && initialTokens.length > 0 && tokens.length === initialTokens.length) {
+      return;
+    }
+
     async function fetchTokens() {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/home/markets?category=${activeCat}`);
-        const data = await res.json();
-        setTokens(data);
+        // If we are filtering "all", we can just use initialTokens if available
+        if (activeCat === "all" && initialTokens.length > 0) {
+          setTokens(initialTokens.map(mapToken));
+          setIsLoading(false);
+          return;
+        }
+
+        // For other categories, we currently fetch from mock API.
+        // In a real app, we would filter initialTokens locally if it contains all categories,
+        // or fetch from a real filtered API.
+        // Since useTokens derives categories, let's filter locally if possible.
+        const filtered = initialTokens.filter(t => 
+          activeCat === "all" || t.category?.toLowerCase() === activeCat.toLowerCase()
+        );
+
+        if (filtered.length > 0) {
+          setTokens(filtered.map(mapToken));
+        } else {
+           // Fallback to API if local filter is empty (e.g. data hasn't loaded all categories)
+           const res = await fetch(`/api/home/markets?category=${activeCat}`);
+           const data = await res.json();
+           setTokens(data);
+        }
       } catch (err) {
         console.error("Failed to fetch tokens:", err);
       } finally {
@@ -56,7 +98,7 @@ export default function MarketsSection() {
       }
     }
     fetchTokens();
-  }, [activeCat]);
+  }, [activeCat, initialTokens]);
 
   useLayoutEffect(() => {
     const activeTab = tabsRef.current?.querySelector(`[data-id="${activeCat}"]`) as HTMLElement;

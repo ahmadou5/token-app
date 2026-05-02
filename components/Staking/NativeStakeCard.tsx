@@ -72,7 +72,7 @@ export function NativeStakeCard() {
   }, [isConnected, account, fetchActiveStakes]);
 
   return (
-    <div className="sw-card mt-6">
+    <div className="sw-card">
       <div className="sw-tabs">
         <div className="sw-tab sw-tab--active">
           <svg viewBox="0 0 14 14" fill="none" width="11" height="11">

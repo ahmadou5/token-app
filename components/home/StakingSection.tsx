@@ -13,10 +13,24 @@ interface Validator {
   activatedStake: number;
 }
 
-export default function StakingSection() {
-  const [validators, setValidators] = useState<Validator[]>([]);
-  const [avgApy, setAvgApy] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+export default function StakingSection({ initialValidators = [] }: { initialValidators?: any[] }) {
+  const [validators, setValidators] = useState<Validator[]>(() => {
+    return initialValidators.slice(0, 10).map((v, i) => ({
+      rank: i + 1,
+      name: v.name || "Unknown",
+      voteAccount: v.voteAccount,
+      apyEstimate: v.apyEstimate || 0,
+      commission: v.commission || 0,
+      activatedStake: v.activatedStake || 0,
+    }));
+  });
+  const [avgApy, setAvgApy] = useState(() => {
+    if (initialValidators.length === 0) return 7.42;
+    const top10 = initialValidators.slice(0, 10);
+    const avg = top10.reduce((acc, v) => acc + (v.apyEstimate || 0), 0) / top10.length;
+    return avg || 7.42;
+  });
+  const [isLoading, setIsLoading] = useState(initialValidators.length === 0);
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -32,11 +46,14 @@ export default function StakingSection() {
   }, []);
 
   useEffect(() => {
+    if (initialValidators.length > 0) return;
+
     async function fetchValidators() {
       try {
         const res = await fetch("/api/validators");
         const data = await res.json();
-        const top10 = data.slice(0, 10).map((v: any, i: number) => ({
+        const validatorsData = data.validators || data; // handle both shapes
+        const top10 = validatorsData.slice(0, 10).map((v: any, i: number) => ({
           rank: i + 1,
           name: v.name || "Unknown",
           voteAccount: v.voteAccount,
@@ -56,7 +73,7 @@ export default function StakingSection() {
       }
     }
     fetchValidators();
-  }, []);
+  }, [initialValidators]);
 
   const formatStake = (num: number) => {
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M SOL`;

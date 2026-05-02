@@ -135,6 +135,9 @@ html.dark {
   --navbar-glass-bg: rgba(27, 24, 19, 0.75);
 }
 
+.tg-mobile-only { display: none; }
+.tg-desktop-only { display: block; }
+
 /* ══════════════════════════════════════════════════════
    Theme Toggle
    ══════════════════════════════════════════════════════ */
@@ -192,6 +195,33 @@ html.dark {
 
 html.dark .theme-toggle__thumb {
   left: 18px;
+}
+
+@media (max-width: 768px) {
+  .theme-toggle {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+  }
+  .theme-toggle__track {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-toggle__thumb {
+    position: static;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--tc-text-primary);
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2851,6 +2881,17 @@ html.dark .theme-toggle__thumb {
   }
 
   .hp-nav__link {
+    display: none;
+  }
+
+  .tg-topbar__center {
+    display: none;
+  }
+
+  .tg-mobile-only {
+    display: block;
+  }
+  .tg-desktop-only {
     display: none;
   }
 }
