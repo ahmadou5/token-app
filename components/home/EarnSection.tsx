@@ -152,6 +152,10 @@ export function EarnSection() {
       ref={sectionRef}
       className={`hp-section hp-earn-section ${isVisible ? 'hp-is-visible' : ''} rounded-2xl`}
     >
+       <div 
+        className="hp-blur-circle" 
+        style={{ width: '400px', height: '400px', background: 'rgba(153,69,255,0.06)', top: '-100px', left: '-100px', animation: 'hpFloat 8s ease-in-out infinite' }} 
+      />
       {/* Animated background detail 
       <div 
         className="hp-blur-circle" 
