@@ -47,7 +47,7 @@ export function HeroSection() {
       <div className="hp-hero__spline">
         <Suspense fallback={<div className="hp-hero__spline-placeholder" />}>
           <Spline 
-            scene="https://app.spline.design/community/file/dc934dad-135e-42bd-ad4d-8234b6cfd7bc" 
+            scene="https://prod.spline.design/6Wq1Q7YElM8zSnvC/scene.splinecode" 
           />
         </Suspense>
       </div>
