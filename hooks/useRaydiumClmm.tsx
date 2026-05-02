@@ -226,15 +226,19 @@ export function useRaydiumCLMM() {
         // 9. Execute via Pipeit Builder
         const txBuilder = new TransactionBuilder({
           rpc: rpc as Rpc<SolanaRpcApi>,
-          computeUnits: { strategy: "fixed", units: 600_000n }, // CLMM is heavy, 600k is safer
-          priorityFee: { strategy: "fixed", microLamports: 100_000n },
+          computeUnits: { strategy: "fixed", units: 600_000 }, // CLMM is heavy, 600k is safer
+          priorityFee: { strategy: "fixed", microLamports: 100_000 },
           autoRetry: false,
         })
-          .setFeePayerSigner(params.signer)
-          .addInstructions(kitInstructions);
+          .setFeePayerSigner(params.signer);
+
+        // Attach extra signers to the instructions
+        const instructionsWithSigners = kitInstructions.map((ix, i) =>
+          i === 0 ? { ...ix, signers: extraKitSigners } : ix,
+        );
 
         const signature = await txBuilder
-          .addSigners(extraKitSigners)
+          .addInstructions(instructionsWithSigners)
           .execute({
           rpcSubscriptions: rpcSubscriptions as RpcSubscriptions<
             SignatureNotificationsApi &

@@ -128,8 +128,8 @@ export function useStakePoolDeposit() {
         // ── 6. Execute via TransactionBuilder ─────────────────────────────
         const signature: string = await new TransactionBuilder({
           rpc: params.rpc,
-          computeUnits: { strategy: "fixed", units: 200_000n },
-          priorityFee: { strategy: "fixed", microLamports: 100_000n },
+          computeUnits: { strategy: "fixed", units: 200_000 },
+          priorityFee: { strategy: "fixed", microLamports: 100_000 },
           autoRetry: false,
         })
           .setFeePayerSigner(params.signer)

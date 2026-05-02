@@ -106,8 +106,8 @@ async function sendTransaction(
   onStatus("signing");
   const sig: string = await new (TransactionBuilder as any)({
     rpc,
-    computeUnits: { strategy: "fixed", units: 400_000n },
-    priorityFee: { strategy: "fixed", microLamports: 100_000n },
+    computeUnits: { strategy: "fixed", units: 400_000 },
+    priorityFee: { strategy: "fixed", microLamports: 100_000 },
     autoRetry: false,
   })
     .setFeePayerSigner(signer)

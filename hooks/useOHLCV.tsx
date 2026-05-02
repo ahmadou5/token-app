@@ -87,7 +87,7 @@ export function useOHLCV(
           close: Number(c.close || 0),
           volume: Number(c.volume || 0),
         };
-      }).filter(c => c.time > 0); // Remove invalid entries
+      }).filter((c: OHLCVCandle) => c.time > 0); // Remove invalid entries
 
       setCandles(parsed);
     } catch (err) {
