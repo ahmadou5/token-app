@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { GearSix, CheckCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { EARN_PROVIDER_META, EarnProvider } from "@/context/SwapSettingsContext";
-import { getProviderColor, getProviderIcon } from "@/lib/yieldPrivider";
+import { getProviderColor, getProviderIcon, PROVIDER_ICONS } from "@/lib/yieldPrivider";
 
 interface VaultProps {
   protocol: string;
@@ -69,7 +69,7 @@ function VaultCard({ protocol, color, apy, tvl, delay }: VaultProps) {
     >
       <div className="hp-earn-card__header">
         <div className="hp-earn-card__logo" style={{ background: color }}>
-          <img className="w-full h-full rounded-xl" src={getProviderIcon(protocol as EarnProvider)} alt={protocol} />
+          <img className="w-full h-full rounded-xl" src={PROVIDER_ICONS[protocol as EarnProvider]} alt={protocol} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

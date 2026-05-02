@@ -33,4 +33,4 @@ const getProviderName = (provider: EarnProvider | undefined): string => {
   return provider && PROTOCOL_NAMES[provider] ? PROTOCOL_NAMES[provider] : "";
 };
 
-export { getProviderIcon, getProviderColor, getProviderName };
+export { getProviderIcon, getProviderColor, getProviderName , PROVIDER_ICONS };
