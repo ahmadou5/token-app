@@ -9,12 +9,13 @@ import { getProviderColor, getProviderIcon, PROVIDER_ICONS } from "@/lib/yieldPr
 interface VaultProps {
   protocol: string;
   color: string;
+  label: string;
   apy: number;
   tvl: string;
   delay: string;
 }
 
-function VaultCard({ protocol, color, apy, tvl, delay }: VaultProps) {
+function VaultCard({ protocol, color, apy, tvl, delay, label }: VaultProps) {
   const [currentApy, setCurrentApy] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -73,7 +74,7 @@ function VaultCard({ protocol, color, apy, tvl, delay }: VaultProps) {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontWeight: 700 }}>{protocol}</span>
+            <span style={{ fontWeight: 700 }}>{label}</span>
             <CheckCircle size={14} weight="fill" style={{ color: 'var(--tc-accent)' }} />
           </div>
           <span className="hp-label" style={{ fontSize: '9px' }}>Verified</span>
@@ -179,7 +180,8 @@ export function EarnSection() {
         {Object.entries(EARN_PROVIDER_META).map(([protocol, meta]) => (
           <VaultCard 
             key={protocol}
-            protocol={meta.label}
+            protocol={protocol}
+            label={meta.label}
             color={getProviderColor(meta.label as unknown as EarnProvider)}
             apy={8.9}
             tvl={'$252M'}
