@@ -153,15 +153,8 @@ export function EarnSection() {
       ref={sectionRef}
       className={`hp-section hp-earn-section ${isVisible ? 'hp-is-visible' : ''} rounded-2xl`}
     >
-       <div 
-        className="hp-blur-circle" 
-        style={{ width: '400px', height: '400px', background: 'rgba(153,69,255,0.06)', top: '-100px', left: '-100px', animation: 'hpFloat 8s ease-in-out infinite' }} 
-      />
-           <div 
-        className="hp-blur-circle" 
-        style={{ width: '350px', height: '350px', background: 'rgba(74,222,128,0.05)', bottom: '-100px', right: '-100px', animation: 'hpFloat 12s ease-in-out infinite', animationDelay: '4s' }} 
-      /> 
-      {/* Animated background detail 
+       
+   
       <div 
         className="hp-blur-circle" 
         style={{ width: '400px', height: '400px', background: 'rgba(153,69,255,0.06)', top: '-100px', left: '-100px', animation: 'hpFloat 8s ease-in-out infinite' }} 
@@ -173,7 +166,7 @@ export function EarnSection() {
       <div 
         className="hp-blur-circle" 
         style={{ width: '350px', height: '350px', background: 'rgba(74,222,128,0.05)', bottom: '-100px', right: '-100px', animation: 'hpFloat 12s ease-in-out infinite', animationDelay: '4s' }} 
-      /> */}
+      /> 
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: '48px' }}>
         <div className="hp-label hp-anim-fade-up">Yield Vaults</div>
