@@ -115,7 +115,8 @@ export const GET = async (request: Request): Promise<Response> => {
 
   try {
     // 1. Fetch the asset data with all includes from the upstream API
-    let url = `${base}/assets/${assetId}?include=markets&include=profile&include=risk&include=ohlcv&marketsOffset=0&marketsLimit=50`;
+    // We use a comma-separated list for includes as expected by the upstream API
+    let url = `${base}/assets/${assetId}?include=markets,profile,risk,ohlcv&marketsOffset=0&marketsLimit=50`;
     
     if (interval) url += `&ohlcvInterval=${interval}`;
     if (from) url += `&ohlcvFrom=${from}`;
@@ -132,10 +133,14 @@ export const GET = async (request: Request): Promise<Response> => {
 
     const { asset, includes } = canonicalRes.data;
 
-    const marketsData = includes.markets?.data;
-    const profile = includes.profile?.data ?? null;
-    const risk = includes.risk?.data ?? null;
-    const ohlcv = includes.ohlcv ?? null;
+    if (!includes) {
+      console.warn(`[getToken] Upstream API for ${assetId} returned no "includes" object.`);
+    }
+
+    const marketsData = includes?.markets?.data;
+    const profile = includes?.profile?.data ?? null;
+    const risk = includes?.risk?.data ?? null;
+    const ohlcv = includes?.ohlcv ?? null;
 
     // Group the flat variants[] by kind, fall back to what canonical embeds
     const variantGroups: VariantGroups = variantsRes.data.variants?.length

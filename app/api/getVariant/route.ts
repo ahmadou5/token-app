@@ -116,8 +116,8 @@ export const GET = async (request: Request): Promise<Response> => {
 
   try {
     // 1. Fetch the asset data with all includes from the upstream API
-    // We include markets, profile, risk, and OHLCV
-    let url = `${base}/assets/${assetId}?include=markets&include=profile&include=risk&include=ohlcv&marketsOffset=0&marketsLimit=50`;
+    // We include markets, profile, risk, and OHLCV (using comma-separated format)
+    let url = `${base}/assets/${assetId}?include=markets,profile,risk,ohlcv&marketsOffset=0&marketsLimit=50`;
     
     if (mint) url += `&mint=${mint}`;
     if (interval) url += `&ohlcvInterval=${interval}`;
@@ -127,16 +127,20 @@ export const GET = async (request: Request): Promise<Response> => {
     const res = await axios.get(url, { headers });
     const { asset, includes } = res.data;
 
+    if (!includes) {
+      console.warn(`[getVariant] Upstream API for ${assetId} returned no "includes" object.`);
+    }
+
     // 2. Fetch variants separately as they are on a different endpoint
     const variantsRes = await axios.get<RawVariantsResponse>(
       `${base}/assets/${assetId}/variants?groupBy=asset`,
       { headers },
     );
 
-    const marketsData = includes.markets?.data;
-    const profile = includes.profile?.data ?? null;
-    const risk = includes.risk?.data ?? null;
-    const ohlcv = includes.ohlcv ?? null;
+    const marketsData = includes?.markets?.data;
+    const profile = includes?.profile?.data ?? null;
+    const risk = includes?.risk?.data ?? null;
+    const ohlcv = includes?.ohlcv ?? null;
 
     // Group the flat variants[] by kind
     const variantGroups: VariantGroups = variantsRes.data.variants?.length
