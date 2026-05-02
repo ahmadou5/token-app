@@ -1123,7 +1123,7 @@ function TokenDetailPageContent({
             </div>
           </section>
 
-          {/* Markets — pass callback up */}
+          {/* Markets — pass callback up 
           {data.markets.length > 0 && (
             <MarketsSection
               markets={data.markets}
@@ -1131,7 +1131,7 @@ function TokenDetailPageContent({
               activeMarketAddress={activeMarket?.address ?? null}
               onAddLiquidity={handleAddLiquidity}
             />
-          )}
+          )} */}
 
           {risk && (
             <SecuritySection
