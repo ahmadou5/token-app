@@ -18,8 +18,8 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
     return initialValidators.slice(0, 10).map((v, i) => ({
       rank: i + 1,
       name: v.name || "Unknown",
-      voteAccount: v.voteAccount,
-      apyEstimate: v.apyEstimate || 0,
+      voteAccount: v.votingPubkey || v.address || "",
+      apyEstimate: v.apy || 0,
       commission: v.commission || 0,
       activatedStake: v.activatedStake || 0,
     }));
@@ -27,7 +27,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
   const [avgApy, setAvgApy] = useState(() => {
     if (initialValidators.length === 0) return 7.42;
     const top10 = initialValidators.slice(0, 10);
-    const avg = top10.reduce((acc, v) => acc + (v.apyEstimate || 0), 0) / top10.length;
+    const avg = top10.reduce((acc, v) => acc + (v.apy || 0), 0) / top10.length;
     return avg || 7.42;
   });
   const [isLoading, setIsLoading] = useState(initialValidators.length === 0);
@@ -56,8 +56,8 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
         const top10 = validatorsData.slice(0, 10).map((v: any, i: number) => ({
           rank: i + 1,
           name: v.name || "Unknown",
-          voteAccount: v.voteAccount,
-          apyEstimate: v.apyEstimate || 0,
+          voteAccount: v.votingPubkey || v.address || v.voteAccount || "",
+          apyEstimate: v.apy || v.apyEstimate || 0,
           commission: v.commission || 0,
           activatedStake: v.activatedStake || 0,
         }));
@@ -130,7 +130,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
                     {v.name.length > 24 ? v.name.slice(0, 24) + '...' : v.name}
                   </div>
                   <div style={{ fontSize: '10px', fontFamily: 'var(--tc-font-mono)', color: 'var(--tc-text-muted)' }}>
-                    {v.voteAccount.slice(0, 4)}...{v.voteAccount.slice(-4)}
+                    {v.voteAccount ? `${v.voteAccount.slice(0, 4)}...${v.voteAccount.slice(-4)}` : 'Unknown'}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
