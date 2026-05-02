@@ -44,13 +44,7 @@ export function HeroSection() {
   return (
     <section className="hp-hero">
       {/* Background Spline Scene */}
-      <div className="hp-hero__spline">
-        <Suspense fallback={<div className="hp-hero__spline-placeholder" />}>
-          <Spline 
-            scene="https://prod.spline.design/ATZ-S5L8tYV2Z6bB/scene.splinecode" 
-          />
-        </Suspense>
-      </div>
+     
 
       <div className="hp-hero__content">
         <span className="hp-label hp-anim-fade-up">
