@@ -509,23 +509,7 @@ function ChartControls({
 function PageSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <div className="td-page">
-      <div className="td-topbar">
-        <div className="td-topbar__left">
-          <button className="td-back" onClick={onBack}>
-            <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-              <path
-                d="M10 3L5 8l5 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Tokens
-          </button>
-        </div>
-        <ThemeToggle />
-      </div>
+
       <div className="td-skel-page">
         <div className="td-skel-page__main">
           <div className="td-skel-row" style={{ marginBottom: 24 }}>

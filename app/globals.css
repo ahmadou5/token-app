@@ -135,8 +135,13 @@ html.dark {
   --navbar-glass-bg: rgba(27, 24, 19, 0.75);
 }
 
-.tg-mobile-only { display: none; }
-.tg-desktop-only { display: block; }
+.tg-mobile-only {
+  display: none;
+}
+
+.tg-desktop-only {
+  display: block;
+}
 
 /* ══════════════════════════════════════════════════════
    Theme Toggle
@@ -205,6 +210,7 @@ html.dark .theme-toggle__thumb {
     border-radius: 50%;
     justify-content: center;
   }
+
   .theme-toggle__track {
     width: 100%;
     height: 100%;
@@ -213,6 +219,7 @@ html.dark .theme-toggle__thumb {
     align-items: center;
     justify-content: center;
   }
+
   .theme-toggle__thumb {
     position: static;
     width: 18px;
@@ -1006,7 +1013,6 @@ html.dark .theme-toggle__thumb {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: var(--tc-bg);
   border-bottom: 1px solid var(--tc-border);
   box-shadow: var(--tc-shadow-topbar);
   display: flex;
@@ -1014,7 +1020,6 @@ html.dark .theme-toggle__thumb {
   justify-content: space-between;
   padding: 0 24px;
   height: 52px;
-  transition: background var(--tc-ease), border-color var(--tc-ease);
 }
 
 .td-topbar__left {
@@ -2852,7 +2857,7 @@ html.dark .theme-toggle__thumb {
     padding: 0 12px;
     gap: 8px;
   }
-  
+
   .tg-topbar__brand {
     display: none;
   }
@@ -2864,7 +2869,7 @@ html.dark .theme-toggle__thumb {
     background: transparent;
     border-color: transparent;
   }
-  
+
   .srch-trigger:hover {
     background: var(--tc-bg-hover);
   }
@@ -2873,7 +2878,7 @@ html.dark .theme-toggle__thumb {
   .srch-trigger__kbd {
     display: none;
   }
-  
+
   .srch-trigger__icon {
     width: 18px;
     height: 18px;
@@ -2891,6 +2896,7 @@ html.dark .theme-toggle__thumb {
   .tg-mobile-only {
     display: block;
   }
+
   .tg-desktop-only {
     display: none;
   }
@@ -5723,10 +5729,12 @@ html.dark .sw-perp-form__market-provider--flash {
 }
 
 @media (max-width: 1280px) {
+
   .mkt-header--with-action,
   .mkt-row--with-action {
     grid-template-columns: 2fr 1fr 1fr 96px;
   }
+
   .mkt-col--trades,
   .mkt-col--wallets {
     display: none;
@@ -5734,11 +5742,13 @@ html.dark .sw-perp-form__market-provider--flash {
 }
 
 @media (max-width: 900px) {
+
   .mkt-header--with-action,
   .mkt-row--with-action {
     grid-template-columns: 1fr 80px 80px;
     padding: 8px 12px;
   }
+
   .mkt-col--action {
     display: none;
   }
@@ -6361,10 +6371,12 @@ html:not(.dark) .alm-slip-btn {
 }
 
 @media (max-width: 1280px) {
+
   .mkt-header--with-action,
   .mkt-row--with-action {
     grid-template-columns: 2fr 1fr 1fr 96px;
   }
+
   .mkt-col--trades,
   .mkt-col--wallets {
     display: none;
@@ -6372,11 +6384,13 @@ html:not(.dark) .alm-slip-btn {
 }
 
 @media (max-width: 900px) {
+
   .mkt-header--with-action,
   .mkt-row--with-action {
     grid-template-columns: 1fr 80px 80px;
     padding: 8px 12px;
   }
+
   .mkt-col--action {
     display: none;
   }
@@ -9501,6 +9515,7 @@ html.dark .pf-drawer {
     padding: 8px 12px;
   }
 }
+
 /* ── Earn Vault ── */
 
 .sw-earn-card {
@@ -9616,7 +9631,8 @@ html.dark .pf-drawer {
 
 /* ── Native Staking ── */
 
-.vl-page, .vs-page {
+.vl-page,
+.vs-page {
   animation: tcFadeUp 400ms both cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -9633,11 +9649,13 @@ html.dark .pf-drawer {
   box-shadow: var(--tc-shadow-lg);
 }
 
-.vs-stake-card, .vs-unstake-card {
+.vs-stake-card,
+.vs-unstake-card {
   height: 100%;
 }
 
 @media (max-width: 768px) {
+
   .vl-thead th:nth-child(3),
   .vl-thead th:nth-child(5),
   .vl-thead th:nth-child(6),
