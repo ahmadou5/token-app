@@ -119,8 +119,8 @@ export function useMeteoraDLMM() {
 
       const signature: string = await new TransactionBuilder({
         rpc: params.rpc,
-        computeUnits: { strategy: "fixed", units: 400_000 },
-        priorityFee: { strategy: "fixed", microLamports: 150_000 },
+        computeUnits: { strategy: "fixed", units: 400_000n },
+        priorityFee: { strategy: "fixed", microLamports: 150_000n },
         autoRetry: false,
       })
         .setFeePayerSigner(params.signer)
@@ -193,8 +193,8 @@ export function useMeteoraDynamicAMM() {
 
       const signature: string = await new TransactionBuilder({
         rpc: params.rpc,
-        computeUnits: { strategy: "fixed", units: 300_000 },
-        priorityFee: { strategy: "fixed", microLamports: 100_000 },
+        computeUnits: { strategy: "fixed", units: 300_000n },
+        priorityFee: { strategy: "fixed", microLamports: 100_000n },
         autoRetry: false,
       })
         .setFeePayerSigner(params.signer)

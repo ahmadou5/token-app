@@ -226,16 +226,16 @@ export function useRaydiumCLMM() {
         // 9. Execute via Pipeit Builder
         const txBuilder = new TransactionBuilder({
           rpc: rpc as Rpc<SolanaRpcApi>,
-          computeUnits: { strategy: "fixed", units: 600_000 }, // CLMM is heavy, 600k is safer
-          priorityFee: { strategy: "fixed", microLamports: 100_000 },
+          computeUnits: { strategy: "fixed", units: 600_000n }, // CLMM is heavy, 600k is safer
+          priorityFee: { strategy: "fixed", microLamports: 100_000n },
           autoRetry: false,
         })
           .setFeePayerSigner(params.signer)
           .addInstructions(kitInstructions);
 
-        // Add the NFT position mint signers
-
-        const signature = await txBuilder.execute({
+        const signature = await txBuilder
+          .addSigners(extraKitSigners)
+          .execute({
           rpcSubscriptions: rpcSubscriptions as RpcSubscriptions<
             SignatureNotificationsApi &
               SlotNotificationsApi &

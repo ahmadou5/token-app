@@ -118,8 +118,8 @@ async function executeMetis(
     return new TransactionBuilder({
       rpc: rpc,
       // Simulate to set CU limit (and surface simulation logs if it fails).
-      computeUnits: { strategy: "fixed", units: 300_000 },
-      priorityFee: { strategy: "fixed", microLamports: 200_000 },
+      computeUnits: { strategy: "fixed", units: 300_000n },
+      priorityFee: { strategy: "fixed", microLamports: 200_000n },
       autoRetry: false,
       lookupTableAddresses:
         lookupTableAddresses.length > 0 ? lookupTableAddresses : undefined,

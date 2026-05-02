@@ -65,34 +65,58 @@ async function sendTransaction(
   txBase64: string,
   signer: any,
   rpc: any,
+  rpcSubscriptions: any,
   onStatus: (s: EarnExecuteStatus) => void,
 ): Promise<string> {
-  const { VersionedTransaction } = await import("@solana/web3.js");
+  const [
+    { TransactionBuilder },
+    { address },
+    { VersionedTransaction },
+    { Buffer },
+  ] = await Promise.all([
+    import("@pipeit/core"),
+    import("@solana/kit"),
+    import("@solana/web3.js"),
+    import("buffer"),
+  ]);
+
   const txBytes = Buffer.from(txBase64, "base64");
   const tx = VersionedTransaction.deserialize(txBytes);
+  const message = tx.message;
 
+  // 1. Extract instructions and convert to Kit format
+  const accountKeys = message.staticAccountKeys.map((k) => k.toBase58());
+  const kitInstructions = message.compiledInstructions.map((ix) => {
+    const programId = accountKeys[ix.programIdIndex];
+    return {
+      programAddress: address(programId),
+      accounts: ix.accountKeyIndexes.map((idx) => {
+        const isSigner = message.isAccountSigner(idx);
+        const isWritable = message.isAccountWritable(idx);
+        return {
+          address: address(accountKeys[idx]),
+          role: (isSigner ? 2 : 0) | (isWritable ? 1 : 0),
+        };
+      }),
+      data: ix.data,
+    };
+  });
+
+  // 2. Build and Execute via Pipeit
   onStatus("signing");
-  const rawSigner = signer as any;
-  let signedTx: InstanceType<typeof VersionedTransaction>;
-  if (typeof rawSigner.signTransaction === "function") {
-    signedTx = await rawSigner.signTransaction(tx);
-  } else if (typeof rawSigner.wallet?.signTransaction === "function") {
-    signedTx = await rawSigner.wallet.signTransaction(tx);
-  } else {
-    throw new Error("Wallet does not support signTransaction");
-  }
-
-  onStatus("sending");
-  const sig: string = await rpc
-    .sendTransaction(signedTx.serialize(), {
-      encoding: "base64",
-      skipPreflight: false,
-      maxRetries: 3,
-    })
-    .send();
-
-  onStatus("confirming");
-  await waitForConfirmation(rpc, sig);
+  const sig: string = await new (TransactionBuilder as any)({
+    rpc,
+    computeUnits: { strategy: "fixed", units: 400_000n },
+    priorityFee: { strategy: "fixed", microLamports: 100_000n },
+    autoRetry: false,
+  })
+    .setFeePayerSigner(signer)
+    .addInstructions(kitInstructions)
+    .execute({
+      rpcSubscriptions: rpcSubscriptions as any,
+      commitment: "confirmed",
+      skipPreflight: true,
+    });
 
   return sig;
 }
@@ -129,9 +153,15 @@ export function useEarnExecute(): UseEarnExecuteReturn {
       setStatus("signing");
 
       try {
-        const { rpc } = client;
+        const { rpc, rpcSubscriptions } = client;
 
-        const sig = await sendTransaction(txBase64, signer, rpc, setStatus);
+        const sig = await sendTransaction(
+          txBase64,
+          signer,
+          rpc,
+          rpcSubscriptions,
+          setStatus,
+        );
 
         setTxSignature(sig);
         setStatus("confirmed");

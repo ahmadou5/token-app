@@ -66,14 +66,28 @@ export function useOHLCV(
 
       const ohlcvData = json.includes?.ohlcv?.data || [];
 
-      const parsed: OHLCVCandle[] = ohlcvData.map((c: any) => ({
-        time: c.time * 1000,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-        volume: c.volume,
-      }));
+      const parsed: OHLCVCandle[] = ohlcvData.map((c: any) => {
+        // Handle Tuple format: [time, open, high, low, close, volume]
+        if (Array.isArray(c)) {
+          return {
+            time: (c[0] || 0) * 1000,
+            open: Number(c[1] || 0),
+            high: Number(c[2] || 0),
+            low: Number(c[3] || 0),
+            close: Number(c[4] || 0),
+            volume: Number(c[5] || 0),
+          };
+        }
+        // Handle Object format (with fallbacks for different key names)
+        return {
+          time: (c.time || c.timestamp || 0) * 1000,
+          open: Number(c.open || 0),
+          high: Number(c.high || 0),
+          low: Number(c.low || 0),
+          close: Number(c.close || 0),
+          volume: Number(c.volume || 0),
+        };
+      }).filter(c => c.time > 0); // Remove invalid entries
 
       setCandles(parsed);
     } catch (err) {
