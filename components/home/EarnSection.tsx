@@ -69,7 +69,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label }: VaultProps) {
       style={{ animationDelay: delay }}
     >
       <div className="hp-earn-card__header">
-        <div className="hp-earn-card__logo" style={{ background: color }}>
+        <div className="hp-earn-card__logo">
           <img className="w-full h-full rounded-xl" src={PROVIDER_ICONS[protocol as EarnProvider]} alt={protocol} />
         </div>
         <div style={{ flex: 1 }}>
