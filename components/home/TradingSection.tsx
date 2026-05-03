@@ -111,7 +111,7 @@ export default function TradingSection() {
             ))}
           </div>
 
-          <Link href="/markets" className="hp-btn-primary" style={{ marginTop: 'auto' }}>
+          <Link href="/markets" className="tg-btn-primary tg-btn-lg" style={{ marginTop: 'auto' }}>
             Trade Spot →
           </Link>
         </div>
@@ -185,7 +185,7 @@ export default function TradingSection() {
             ))}
           </div>
 
-          <Link href="/markets?tab=perp" className="hp-btn-primary" style={{ marginTop: 'auto', background: 'var(--tc-accent-down)' }}>
+          <Link href="/markets?tab=perp" className="tg-btn-primary tg-btn-lg" style={{ marginTop: 'auto', background: 'var(--tc-accent-down)' }}>
             Trade Perps →
           </Link>
         </div>

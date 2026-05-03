@@ -74,8 +74,8 @@ function categoryLabel(raw: string): string {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useTokens(): UseTokensReturn {
-  const [tokens, setTokens] = useState<TokenAsset[]>([]);
+export function useTokens(initialTokens: TokenAsset[] = []): UseTokensReturn {
+  const [tokens, setTokens] = useState<TokenAsset[]>(initialTokens);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [activeCategory, setActiveCategory] = useState<TokenCategory>("all");
   const [searchQuery, setSearchQueryState] = useState("");

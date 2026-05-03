@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════
+   Base theme
+   ══════════════════════════════════════════════════════ */
+:root {
+  --background: #f7f6f2;
+  --foreground: #1a1714;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+/* ══════════════════════════════════════════════════════
+   Token Design System — LIGHT MODE (default)
+   ══════════════════════════════════════════════════════ */
+:root {
+  /* Surfaces */
+  --tc-bg: #ffffff;
+  --tc-bg-hover: #f0eeea;
+  --tc-surface: #fafaf8;
+  --tc-page: #f7f6f2;
+
+  /* Borders */
+  --tc-border: rgba(0, 0, 0, 0.09);
+  --tc-border-hover: rgba(0, 0, 0, 0.18);
+
+  /* Shadows */
+  --tc-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --tc-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.10), 0 12px 32px rgba(0, 0, 0, 0.06);
+  --tc-shadow-topbar: 0 1px 0 rgba(0, 0, 0, 0.07);
+
+  /* Text */
+  --tc-text-primary: #1a1714;
+  --tc-text-secondary: #6b6560;
+  --tc-text-muted: #a09890;
+
+  /* Accents — Solana purple */
+  --tc-accent: #9945FF;
+  --tc-accent-bg: rgba(153, 69, 255, 0.08);
+  --tc-accent-up: #16a34a;
+  --tc-accent-up-bg: #f0fdf4;
+  --tc-accent-down: #dc2626;
+  --tc-accent-down-bg: #fef2f2;
+
+  /* Badges */
+  --tc-badge-t1-c: #9945FF;
+  --tc-badge-t1-bg: rgba(153, 69, 255, 0.08);
+  --tc-badge-t2-c: #7c3aed;
+  --tc-badge-t2-bg: #f5f3ff;
+  --tc-badge-t3-c: #92400e;
+  --tc-badge-t3-bg: #fffbeb;
+
+  /* Avatar */
+  --tc-avatar-bg: #efefed;
+  --tc-avatar-c: #6b6560;
+
+  /* Misc */
+  --tc-divider: rgba(0, 0, 0, 0.07);
+  --tc-font-sans: "Instrument Sans", system-ui, sans-serif;
+  --tc-font-mono: "DM Mono", "SF Mono", monospace;
+  --tc-radius: 16px;
+  --tc-radius-sm: 10px;
+  --tc-radius-xs: 5px;
+  --tc-ease: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Chart / tooltip */
+  --tc-tooltip-bg: #ffffff;
+  --tc-tooltip-border: rgba(0, 0, 0, 0.10);
+  --tc-chart-skel: rgba(0, 0, 0, 0.07);
+
+  /* Navbar Glass */
+  --navbar-glass-bg: rgba(255, 255, 255, 0.75);
+}
+
+/* ══════════════════════════════════════════════════════
+   Token Design System — DARK MODE
+   ══════════════════════════════════════════════════════ */
+html.dark {
+  --background: #1B1813;
+  --foreground: #E8E3DC;
+
+  --tc-bg: #231F1A;
+  --tc-bg-hover: #2A2520;
+  --tc-surface: #1F1B17;
+  --tc-page: #1B1813;
+
+  --tc-border: rgba(255, 255, 255, 0.08);

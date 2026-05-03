@@ -85,10 +85,10 @@ export function HeroSection() {
         </div>
 
         <div className="hp-hero__ctas hp-anim-fade-up hp-anim-delay-6" style={{ marginTop: '12px' }}>
-          <Link href="/markets" className="hp-btn-primary">
+          <Link href="/markets" className="tg-btn-primary tg-btn-lg">
             Enter App
           </Link>
-          <a href="#trading" className="hp-btn-secondary" onClick={(e) => {
+          <a href="#trading" className="tg-btn-secondary tg-btn-lg" onClick={(e) => {
             e.preventDefault();
             document.querySelector('#trading')?.scrollIntoView({ behavior: 'smooth' });
           }}>

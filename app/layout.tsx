@@ -3,6 +3,7 @@ import { DM_Mono, Instrument_Sans } from "next/font/google";
 import "@/lib/suppressDevToolsNoise";
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Layout/Navbar";
+import "./globals.css";
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -31,6 +32,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="stylesheet" href="./globals.css" />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           <Navbar />

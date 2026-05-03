@@ -3,27 +3,16 @@
 import { useEffect, useRef, useState, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
 import { fmtCompact } from "@/components/TokenCard";
-
-interface Token {
-  symbol: string;
-  name: string;
-  price: number;
-  change24h: number;
-  volume24h: string;
-  logoUri: string;
-}
-
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "defi", label: "DeFi" },
-  { id: "meme", label: "Meme" },
-  { id: "lst", label: "LST" },
-  { id: "stables", label: "Stables" },
-  { id: "gaming", label: "Gaming" },
-];
+import { useTokens } from "@/hooks/useToken";
 
 export default function MarketsSection({ initialTokens = [] }: { initialTokens?: any[] }) {
-  const [activeCat, setActiveCat] = useState("all");
+  const {
+    filtered,
+    categories,
+    activeCategory,
+    setActiveCategory,
+    isLoading
+  } = useTokens(initialTokens);
   
   // Helper to map API token to our UI format
   const mapToken = (t: any) => ({
@@ -35,13 +24,7 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
     logoUri: t.imageUrl || t.primaryVariant?.market?.logoURI || ""
   });
 
-  const [tokens, setTokens] = useState<Token[]>(() => {
-    if (initialTokens.length > 0) {
-      return initialTokens.map(mapToken);
-    }
-    return [];
-  });
-  const [isLoading, setIsLoading] = useState(initialTokens.length === 0);
+  const tokens = useMemo(() => filtered.slice(0, 10).map(mapToken), [filtered]);
   const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0 });
   
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -59,56 +42,15 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    // If we have initial tokens and we are on "all", don't refetch
-    if (activeCat === "all" && initialTokens.length > 0 && tokens.length === initialTokens.length) {
-      return;
-    }
-
-    async function fetchTokens() {
-      setIsLoading(true);
-      try {
-        // If we are filtering "all", we can just use initialTokens if available
-        if (activeCat === "all" && initialTokens.length > 0) {
-          setTokens(initialTokens.map(mapToken));
-          setIsLoading(false);
-          return;
-        }
-
-        // For other categories, we currently fetch from mock API.
-        // In a real app, we would filter initialTokens locally if it contains all categories,
-        // or fetch from a real filtered API.
-        // Since useTokens derives categories, let's filter locally if possible.
-        const filtered = initialTokens.filter(t => 
-          activeCat === "all" || t.category?.toLowerCase() === activeCat.toLowerCase()
-        );
-
-        if (filtered.length > 0) {
-          setTokens(filtered.map(mapToken));
-        } else {
-           // Fallback to API if local filter is empty (e.g. data hasn't loaded all categories)
-           const res = await fetch(`/api/home/markets?category=${activeCat}`);
-           const data = await res.json();
-           setTokens(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch tokens:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchTokens();
-  }, [activeCat, initialTokens]);
-
   useLayoutEffect(() => {
-    const activeTab = tabsRef.current?.querySelector(`[data-id="${activeCat}"]`) as HTMLElement;
+    const activeTab = tabsRef.current?.querySelector(`[data-id="${activeCategory}"]`) as HTMLElement;
     if (activeTab) {
       setSliderStyle({
         left: activeTab.offsetLeft,
         width: activeTab.offsetWidth,
       });
     }
-  }, [activeCat]);
+  }, [activeCategory, categories]); // Added categories to deps to ensure slider updates when tabs render
 
   return (
     <section 
@@ -129,12 +71,12 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
             width: `${sliderStyle.width}px` 
           }} 
         />
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
-            key={cat.id}
-            data-id={cat.id}
-            className={`hp-cat-tab ${activeCat === cat.id ? 'hp-cat-tab--active' : ''}`}
-            onClick={() => setActiveCat(cat.id)}
+            key={cat.key}
+            data-id={cat.key}
+            className={`hp-cat-tab ${activeCategory === cat.key ? 'hp-cat-tab--active' : ''}`}
+            onClick={() => setActiveCategory(cat.key)}
           >
             {cat.label}
           </button>
@@ -150,7 +92,7 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
           <span style={{ textAlign: 'right' }}>Volume</span>
         </div>
 
-        <div key={activeCat} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div key={activeCategory} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {isLoading ? (
             Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="hp-market-row" style={{ animationDelay: `${i * 40}ms`, opacity: 0.5 }}>

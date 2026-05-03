@@ -55,7 +55,7 @@ export function Navbar() {
               <ConnectedPill onDisconnect={() => connector.disconnect()} />
             ) : (
               <button 
-                className="hp-btn-primary tg-nav-btn" 
+                className="tg-btn-primary tg-nav-btn" 
                 onClick={() => setShowWalletModal(true)}
               >
                 Connect

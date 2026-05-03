@@ -21,7 +21,7 @@ interface EarnVaultProps {
 }
 
 const PROVIDER_ICONS: Record<EarnProvider, string> = {
-  kamino: "https://kamino.finance/favicon.ico",
+  kamino: "https://kamino.com/favicon.ico",
   marginfi: "https://app.marginfi.com/favicon.ico",
   drift: "https://app.drift.trade/favicon.ico",
   jupiter: "https://jup.ag/favicon.ico",
