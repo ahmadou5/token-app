@@ -9,7 +9,7 @@ import { useConnector, useWallet } from "@solana/connector";
 import Link from "next/link";
 import { useState } from "react";
 import { ConnectedPill, WalletConnectModal } from "../Swap";
-
+import Logo from '@/assets/logo.svg'
 export function Navbar() {
   const { searchOpen, setSearchOpen } = useSearchStore();
   const { isConnected } = useWallet();
@@ -26,11 +26,8 @@ export function Navbar() {
         {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
           <Link href="/" className="tg-topbar__logo-link">
-            <svg className="tg-topbar__logo" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M6 10h8M10 6v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <span className="tg-topbar__brand tg-desktop-only">Check-it</span>
+            <img src={Logo} alt="VELA" className="tg-topbar__logo" />
+            <span className="tg-topbar__brand tg-desktop-only">VELA</span>
           </Link>
         </div>
 

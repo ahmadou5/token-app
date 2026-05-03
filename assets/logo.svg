@@ -1,0 +1,87 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Outer ring gradient -->
+    <linearGradient id="vD_ring" x1="28" y1="28" x2="484" y2="484" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#C47FFF"/>
+      <stop offset="50%"  stop-color="#9945FF"/>
+      <stop offset="100%" stop-color="#4C9EFF"/>
+    </linearGradient>
+    <!-- Inner arcs gradient -->
+    <linearGradient id="vD_arcs" x1="116" y1="158" x2="396" y2="354" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#C47FFF"/>
+      <stop offset="50%"  stop-color="#9945FF"/>
+      <stop offset="100%" stop-color="#4C9EFF"/>
+    </linearGradient>
+    <!-- Bottom arc (green tint) -->
+    <linearGradient id="vD_bot" x1="172" y1="344" x2="340" y2="344" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#4C9EFF"/>
+      <stop offset="100%" stop-color="#14F195"/>
+    </linearGradient>
+    <!-- Fill tint inside circle -->
+    <radialGradient id="vD_fill" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#9945FF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#9945FF" stop-opacity="0.02"/>
+    </radialGradient>
+    <!-- Glow filters -->
+    <filter id="dGlow1" x="-20%" y="-60%" width="140%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+    <filter id="dGlow2" x="-20%" y="-60%" width="140%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+    <filter id="dGlowRing" x="-5%" y="-5%" width="110%" height="110%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feComposite in="SourceGraphic" in2="b" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Circle fill -->
+  <circle cx="256" cy="256" r="222" fill="url(#vD_fill)"/>
+
+  <!-- Outer ring glow -->
+  <circle cx="256" cy="256" r="222"
+          stroke="#9945FF" stroke-width="6" fill="none"
+          opacity="0.25" filter="url(#dGlowRing)"/>
+
+  <!-- Outer ring crisp -->
+  <circle cx="256" cy="256" r="222"
+          stroke="url(#vD_ring)" stroke-width="2.5" fill="none" opacity="0.5"/>
+
+  <!-- Inner decorative ring -->
+  <circle cx="256" cy="256" r="170"
+          stroke="#9945FF" stroke-width="1" fill="none" opacity="0.12"
+          stroke-dasharray="8 6"/>
+
+  <!-- Glow layer — arc 1 -->
+  <path d="M116 230 C172 158 340 158 396 230"
+        stroke="#9945FF" stroke-width="32" stroke-linecap="round"
+        fill="none" opacity="0.2" filter="url(#dGlow1)"/>
+
+  <!-- Arc 1 — top, thickest -->
+  <path d="M116 230 C172 158 340 158 396 230"
+        stroke="url(#vD_arcs)" stroke-width="38" stroke-linecap="round"
+        fill="none"/>
+
+  <!-- Glow layer — arc 2 -->
+  <path d="M144 288 C193 222 319 222 368 288"
+        stroke="#9945FF" stroke-width="22" stroke-linecap="round"
+        fill="none" opacity="0.18" filter="url(#dGlow2)"/>
+
+  <!-- Arc 2 — mid -->
+  <path d="M144 288 C193 222 319 222 368 288"
+        stroke="url(#vD_arcs)" stroke-width="26" stroke-linecap="round"
+        fill="none" opacity="0.82"/>
+
+  <!-- Arc 3 — bottom, thinnest, green tint -->
+  <path d="M172 346 C213 290 299 290 340 346"
+        stroke="url(#vD_bot)" stroke-width="17" stroke-linecap="round"
+        fill="none" opacity="0.75"/>
+
+  <!-- Accent dots on ring perimeter -->
+  <circle cx="256" cy="34"  r="7" fill="#C47FFF" opacity="0.9"/>
+  <circle cx="256" cy="478" r="5" fill="#14F195" opacity="0.7"/>
+  <circle cx="34"  cy="256" r="5" fill="#9945FF" opacity="0.6"/>
+  <circle cx="478" cy="256" r="5" fill="#4C9EFF" opacity="0.6"/>
+</svg>
