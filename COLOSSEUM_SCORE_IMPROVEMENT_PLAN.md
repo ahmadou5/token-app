@@ -4,6 +4,13 @@ Date: 2026-05-03
 Current crowdedness signal: ~255/500 (moderately crowded)
 Product baseline: Solana super app with spot swap, perps, staking, and earn.
 
+## Implementation Status
+
+- Phase 1: Completed on 2026-05-03
+- Phase 2: Completed on 2026-05-03 (MVP execution-prep flow)
+- Phase 3: Completed on 2026-05-03 (rebalance rules + API)
+- Phase 4: Completed on 2026-05-03 (analytics page + funnel events)
+
 ## Objective
 
 Improve your Colosseum positioning by moving from a generic "trading super app" into a sharper wedge with clear differentiation, stronger user outcomes, and better proof of execution.
@@ -50,6 +57,8 @@ Improve your Colosseum positioning by moving from a generic "trading super app" 
 
 ## Phase 1 (Week 1-2): Product Wedge + Data Model
 
+Status: Completed (implemented)
+
 Deliverables:
 - Define 3 initial intents and their decision logic.
 - Add strategy and risk schemas in `types/` and `lib/`.
@@ -65,6 +74,8 @@ Primary KPI:
 - `% of active wallets that open intent flow`.
 
 ## Phase 2 (Week 3-4): MVP Automation and One-Click Execution
+
+Status: Completed (implemented as dry-run execution orchestration API + UI trigger)
 
 Deliverables:
 - Execute composed transactions from one intent.
@@ -82,6 +93,8 @@ Primary KPI:
 
 ## Phase 3 (Week 5): Auto-Rebalance + Alerts
 
+Status: Completed (rebalance rule context + server-side drift evaluation API)
+
 Deliverables:
 - Rule-based rebalance settings.
 - Notifications/alerts for risk threshold breaches.
@@ -96,6 +109,8 @@ Primary KPI:
 - `7-day retention of wallets that enabled rebalancing`.
 
 ## Phase 4 (Week 6): Performance Proof + Submission Readiness
+
+Status: Completed (Goal Mode analytics page + tracked funnel metrics)
 
 Deliverables:
 - Public/internal analytics page with strategy outcomes.
@@ -137,8 +152,7 @@ This should improve your competitiveness by:
 
 ## Immediate Next Build Tickets
 
-1. Create `types/intent.ts`, `types/strategy.ts`, and `lib/riskEngine.ts`.
-2. Ship `POST /api/intent/quote` returning multi-step action plans.
-3. Build a minimal "Goal Mode" UI entry point on home/app screen.
-4. Track analytics events for open, preview, execute, and completion.
-
+1. Replace dry-run strategy execution with fully signed, chained on-chain execution using existing `solana/kit` + `@pipeit/core` transaction flows.
+2. Add native alert delivery channels (in-app notifications + optional webhook/Telegram).
+3. Connect analytics page to persistent backend storage (instead of local storage only).
+4. Add end-to-end tests for `intent/quote`, `strategy/execute`, and `portfolio/rebalance` APIs.

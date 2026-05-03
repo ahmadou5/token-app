@@ -8,6 +8,7 @@ import { TxModalRoot } from "@/components/TxModall/TxModalRoot";
 import { PortfolioDrawer } from "@/components/Portfolio/PortfolioDrawer";
 import { PortfolioDrawerProvider } from "@/context/PortfolioDrawerContext";
 import { ClientProviders } from "@/app/ClientProvider";
+import { RebalanceSettingsProvider } from "@/context/RebalanceSettingsContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,14 +16,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <PortfolioDrawerProvider>
         <PortfolioDrawer />
         <SwapSettingsProvider>
-          <ThemeProvider>
-            <ClientProviders>
-              <TxModalProvider>
-                <TxModalRoot />
-                {children}
-              </TxModalProvider>
-            </ClientProviders>
-          </ThemeProvider>
+          <RebalanceSettingsProvider>
+            <ThemeProvider>
+              <ClientProviders>
+                <TxModalProvider>
+                  <TxModalRoot />
+                  {children}
+                </TxModalProvider>
+              </ClientProviders>
+            </ThemeProvider>
+          </RebalanceSettingsProvider>
         </SwapSettingsProvider>
       </PortfolioDrawerProvider>
     </SolanaProviders>

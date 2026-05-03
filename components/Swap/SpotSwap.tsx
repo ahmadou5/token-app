@@ -7,11 +7,11 @@ import { useConnector } from "@solana/connector/react";
 import { useSwapSettings, PROVIDER_META } from "@/context/SwapSettingsContext";
 import { useSwapQuote } from "@/hooks/useSwapQuote";
 import { useSwapExecute } from "@/hooks/useSwapExecute";
+import { GoalModeCard } from "@/components/Strategy/GoalModeCard";
 
 import { TokenLogo } from "./TokenLogo";
 import { TokenSelect } from "./TokenSelect";
 import { QuoteDetails } from "./QuoteDetails";
-import { ConnectedPill } from "./ConnectedPill";
 import { SettingsModal } from "./modals/SettingsModal";
 import { WalletConnectModal } from "./modals/WalletConnectModal";
 import { PerpSwap } from "./PerpSwap";
@@ -317,6 +317,12 @@ export function SpotSwap({
                 slippage={settings.slippage}
               />
             )}
+
+            <GoalModeCard
+              inputMint={safeInputToken.mint}
+              outputMint={outputMint}
+              inputAmount={inputAmount}
+            />
 
             {(quoteError || swapError) && (
               <div className="sw-error">
