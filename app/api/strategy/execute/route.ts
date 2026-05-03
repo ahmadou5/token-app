@@ -42,13 +42,18 @@ export async function POST(req: NextRequest) {
       status: "queued",
     }));
 
+    const liveMode = body.dryRun !== true;
+
     return NextResponse.json({
       ok: true,
       executionId,
-      dryRun: body.dryRun ?? true,
+      dryRun: !liveMode,
       message:
-        "Strategy plan accepted. Execute actions client-side via existing solana/kit + pipeit transaction hooks.",
-      actions,
+        "Strategy plan accepted. Execute primary swap with existing solana/kit + pipeit hooks, then continue optional steps.",
+      actions: actions.map((a) => ({
+        ...a,
+        status: liveMode ? "ready" : "queued",
+      })),
     });
   } catch (error: unknown) {
     const message =

@@ -23,7 +23,7 @@ export type SwapExecuteStatus =
   | "error";
 
 export interface UseSwapExecuteReturn {
-  swap: (quote: SwapQuote) => Promise<void>;
+  swap: (quote: SwapQuote) => Promise<string | null>;
   status: SwapExecuteStatus;
   txSignature: string | null;
   error: string | null;
@@ -237,10 +237,10 @@ const { showTxModal } = useTxModal();
   }, []);
 
   const swap = useCallback(
-    async (quote: SwapQuote) => {
+    async (quote: SwapQuote): Promise<string | null> => {
       if (!account || !signerReady || !signer || !client) {
         setError("Wallet not connected");
-        return;
+        return null;
       }
 
       setStatus("signing");
@@ -306,6 +306,7 @@ showTxModal({
     onClick: () => window.dispatchEvent(new CustomEvent("open-portfolio-drawer")),
   },
 });
+        return sig as string;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Swap failed";
         setError(msg);
@@ -315,6 +316,7 @@ showTxModal({
   errorMessage: msg,
 });
         setStatus("error");
+        return null;
       }
     },
     [account, signerReady, signer, client, settings],

@@ -322,6 +322,11 @@ export function SpotSwap({
               inputMint={safeInputToken.mint}
               outputMint={outputMint}
               inputAmount={inputAmount}
+              quote={quote}
+              onExecutePrimarySwap={async () => {
+                if (!quote) return null;
+                return swap(quote);
+              }}
             />
 
             {(quoteError || swapError) && (

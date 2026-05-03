@@ -7,7 +7,7 @@ Product baseline: Solana super app with spot swap, perps, staking, and earn.
 ## Implementation Status
 
 - Phase 1: Completed on 2026-05-03
-- Phase 2: Completed on 2026-05-03 (MVP execution-prep flow)
+- Phase 2: Completed on 2026-05-03 (live signed primary swap execution via existing solana/kit + pipeit flow)
 - Phase 3: Completed on 2026-05-03 (rebalance rules + API)
 - Phase 4: Completed on 2026-05-03 (analytics page + funnel events)
 
