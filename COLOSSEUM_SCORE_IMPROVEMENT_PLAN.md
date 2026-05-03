@@ -10,6 +10,12 @@ Product baseline: Solana super app with spot swap, perps, staking, and earn.
 - Phase 2: Completed on 2026-05-03 (live signed primary swap execution via existing solana/kit + pipeit flow)
 - Phase 3: Completed on 2026-05-03 (rebalance rules + API)
 - Phase 4: Completed on 2026-05-03 (analytics page + funnel events)
+- Phase 5: Completed on 2026-05-03 (Goal Mode chained execution: swap -> stake/earn)
+- Phase 6: Completed on 2026-05-03 (swap-styled execution details with per-step tx links)
+- Phase 7: Completed on 2026-05-03 (in-app Alert Center with Goal Mode execution/risk alerts)
+- Phase 8: Completed on 2026-05-03 (automatic rebalance drift checks -> Alert Center notifications)
+- Phase 9: Completed on 2026-05-03 (in-modal Rebalance Controls panel inside Alert Center)
+- Phase 10: Completed on 2026-05-03 (per-alert actions: Run Check Now + Open Portfolio for rebalance alerts)
 
 ## Objective
 

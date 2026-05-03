@@ -9,25 +9,30 @@ import { PortfolioDrawer } from "@/components/Portfolio/PortfolioDrawer";
 import { PortfolioDrawerProvider } from "@/context/PortfolioDrawerContext";
 import { ClientProviders } from "@/app/ClientProvider";
 import { RebalanceSettingsProvider } from "@/context/RebalanceSettingsContext";
+import { AlertCenterProvider } from "@/context/AlertCenterContext";
+import { RebalanceAlertWatcher } from "@/components/Alerts/RebalanceAlertWatcher";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SolanaProviders>
-      <PortfolioDrawerProvider>
-        <PortfolioDrawer />
-        <SwapSettingsProvider>
-          <RebalanceSettingsProvider>
-            <ThemeProvider>
-              <ClientProviders>
-                <TxModalProvider>
-                  <TxModalRoot />
-                  {children}
-                </TxModalProvider>
-              </ClientProviders>
-            </ThemeProvider>
-          </RebalanceSettingsProvider>
-        </SwapSettingsProvider>
-      </PortfolioDrawerProvider>
+      <AlertCenterProvider>
+        <PortfolioDrawerProvider>
+          <PortfolioDrawer />
+          <SwapSettingsProvider>
+            <RebalanceSettingsProvider>
+              <ThemeProvider>
+                <ClientProviders>
+                  <TxModalProvider>
+                    <TxModalRoot />
+                    <RebalanceAlertWatcher />
+                    {children}
+                  </TxModalProvider>
+                </ClientProviders>
+              </ThemeProvider>
+            </RebalanceSettingsProvider>
+          </SwapSettingsProvider>
+        </PortfolioDrawerProvider>
+      </AlertCenterProvider>
     </SolanaProviders>
   );
 }

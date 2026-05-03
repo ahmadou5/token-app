@@ -2,6 +2,8 @@
 
 import { SearchTrigger, SearchModal } from "@/components/SearcModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AlertBellButton } from "@/components/Alerts/AlertBellButton";
+import { AlertCenterModal } from "@/components/Alerts/AlertCenterModal";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useConnector, useWallet } from "@solana/connector";
 import Link from "next/link";
@@ -61,6 +63,7 @@ export function Navbar() {
                 Connect
               </button>
             )}
+            <AlertBellButton />
             <ThemeToggle />
           </div>
         </div>
@@ -68,6 +71,7 @@ export function Navbar() {
 
       {/* Modal lives at Navbar level — portal-like, covers full viewport */}
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AlertCenterModal />
     </>
   );
 }
