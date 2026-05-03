@@ -287,14 +287,6 @@
   justify-content: center;
 }
 
-  }
-
-  .hp-nav__actions .hp-nav__link {
-    display: none;
-    /* Hide link on small mobile if it crowds */
-  }
-}
-
 /* Skeleton animation */
 .hp-skeleton {
   background: linear-gradient(90deg, var(--tc-bg-muted) 25%, var(--tc-border) 50%, var(--tc-bg-muted) 75%);
