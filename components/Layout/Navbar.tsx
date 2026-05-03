@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ConnectedPill, WalletConnectModal } from "../Swap";
 import Logo from '@/assets/logo.svg'
+import Image from "next/image";
 export function Navbar() {
   const { searchOpen, setSearchOpen } = useSearchStore();
   const { isConnected } = useWallet();
@@ -26,7 +27,7 @@ export function Navbar() {
         {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
           <Link href="/" className="tg-topbar__logo-link">
-            <img src={Logo} alt="VELA" className="tg-topbar__logo" />
+            <Image src={Logo} alt="VELA" className="tg-topbar__logo" />
             <span className="tg-topbar__brand tg-desktop-only">VELA</span>
           </Link>
         </div>
