@@ -21,6 +21,7 @@ export function RetentionLoopWatcher() {
 
   useEffect(() => {
     if (!isConnected || !account) return;
+    const ownerKey = String(account);
 
     async function runCheck() {
       try {
@@ -32,7 +33,7 @@ export function RetentionLoopWatcher() {
           .filter(
             (e) =>
               e.name === "intent_execute_confirmed" &&
-              String(e.payload?.owner ?? "") === account,
+              String(e.payload?.owner ?? "") === ownerKey,
           )
           .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
@@ -46,10 +47,10 @@ export function RetentionLoopWatcher() {
         if (elapsedMs < thresholdMs) return;
 
         const hoursInactive = Math.floor(elapsedMs / (60 * 60 * 1000));
-        const fingerprint = `${account}:${confirmedForWallet[0].ts}`;
+        const fingerprint = `${ownerKey}:${confirmedForWallet[0].ts}`;
         if (fingerprint === lastFingerprintRef.current) return;
 
-        const cooldownKey = buildCooldownKey(account);
+        const cooldownKey = buildCooldownKey(ownerKey);
         const lastAlertTs = Number(window.localStorage.getItem(cooldownKey) ?? "0");
         if (Number.isFinite(lastAlertTs) && Date.now() - lastAlertTs < ALERT_COOLDOWN_MS) return;
 
@@ -87,4 +88,3 @@ export function RetentionLoopWatcher() {
 
   return null;
 }
-
