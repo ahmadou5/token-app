@@ -12,7 +12,7 @@ import {
   type PerpProvider,
   type EarnProvider,
 } from "@/context/SwapSettingsContext";
-import { SWAP_PROVIDER_ICONS } from "@/lib/yieldPrivider";
+import { SWAP_PROVIDER_ICONS, PERP_PROVIDER_ICONS, PROVIDER_ICONS } from "@/lib/yieldPrivider";
 import Image from "next/image";
 
 interface SettingsModalProps {
@@ -138,13 +138,16 @@ export function SettingsModal({
                       onClick={() => setProvider(p)}
                     >
                       <div className="sw-modal-provider__top">
-                        <span className="sw-modal-provider__name">
-                          {meta.label}
-                        </span>
-                        
-                          <span className="sw-modal-provider__badge">
-                            <Image src={SWAP_PROVIDER_ICONS[p]} alt={`${p} icon`} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <img 
+                            src={SWAP_PROVIDER_ICONS[p]} 
+                            alt={`${p} icon`} 
+                            style={{ width: '20px', height: '20px', borderRadius: '50%' }} 
+                          />
+                          <span className="sw-modal-provider__name">
+                            {meta.label}
                           </span>
+                        </div>
                         
                         {active && (
                           <span className="sw-modal-provider__check">
@@ -355,16 +358,17 @@ export function SettingsModal({
                         onClick={() => setPerpProvider(p)}
                       >
                         <div className="sw-modal-provider__top">
-                          <span className="sw-modal-provider__name">
-                            {meta.label}
-                          </span>
-                          {meta.badge && (
-                            <span
-                              className={`sw-modal-provider__badge ${meta.badge === "New" ? "sw-modal-provider__badge--new" : ""}`}
-                            >
-                              {meta.badge}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <img 
+                              src={PERP_PROVIDER_ICONS[p]} 
+                              alt={`${p} icon`} 
+                              style={{ width: '20px', height: '20px', borderRadius: '50%' }} 
+                            />
+                            <span className="sw-modal-provider__name">
+                              {meta.label}
                             </span>
-                          )}
+                          </div>
+                          
                           {active && (
                             <span className="sw-modal-provider__check">
                               <svg
@@ -538,14 +542,17 @@ export function SettingsModal({
                         onClick={() => setEarnProvider(p)}
                       >
                         <div className="sw-modal-provider__top">
-                          <span className="sw-modal-provider__name">
-                            {meta.label}
-                          </span>
-                          {meta.badge && (
-                            <span className="sw-modal-provider__badge">
-                              {meta.badge}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <img 
+                              src={PROVIDER_ICONS[p]} 
+                              alt={`${p} icon`} 
+                              style={{ width: '20px', height: '20px', borderRadius: '50%' }} 
+                            />
+                            <span className="sw-modal-provider__name">
+                              {meta.label}
                             </span>
-                          )}
+                          </div>
+                          
                           {active && (
                             <span className="sw-modal-provider__check">
                               <svg

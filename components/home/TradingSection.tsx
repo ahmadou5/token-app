@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowsCounterClockwise } from "@phosphor-icons/react";
 import { TrendingUp } from "lucide-react";
+import { PROVIDER_META } from "@/context/SwapSettingsContext";
+import { SWAP_PROVIDER_ICONS, PERP_PROVIDER_ICONS } from "@/lib/yieldPrivider";
 
 interface PriceData {
   symbol: string;
@@ -77,7 +79,11 @@ export default function TradingSection() {
 
           <div className="hp-provider-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div className="hp-provider-row hp-anim-delay-2">
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--tc-accent)', opacity: 0.2 }} />
+              <img 
+                src={SWAP_PROVIDER_ICONS["metis"]} 
+                alt="Jupiter Metis" 
+                style={{ width: '24px', height: '24px', borderRadius: '50%' }} 
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 600 }}>Jupiter Metis</span>
@@ -87,7 +93,11 @@ export default function TradingSection() {
               </div>
             </div>
             <div className="hp-provider-row hp-anim-delay-3">
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--tc-accent)', opacity: 0.2 }} />
+              <img 
+                src={SWAP_PROVIDER_ICONS["titan"]} 
+                alt="Titan" 
+                style={{ width: '24px', height: '24px', borderRadius: '50%' }} 
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 600 }}>Titan</span>
@@ -129,7 +139,11 @@ export default function TradingSection() {
 
           <div className="hp-provider-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div className="hp-provider-row hp-provider-row--right hp-anim-delay-3">
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--tc-accent-down)', opacity: 0.2 }} />
+              <img 
+                src={PERP_PROVIDER_ICONS["adrena"]} 
+                alt="Adrena Protocol" 
+                style={{ width: '24px', height: '24px', borderRadius: '50%' }} 
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 600 }}>Adrena Protocol</span>
@@ -139,7 +153,11 @@ export default function TradingSection() {
               </div>
             </div>
             <div className="hp-provider-row hp-provider-row--right hp-anim-delay-4">
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--tc-accent-up)', opacity: 0.2 }} />
+              <img 
+                src={PERP_PROVIDER_ICONS["flash"]} 
+                alt="Flash Trade" 
+                style={{ width: '24px', height: '24px', borderRadius: '50%' }} 
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '14px', fontWeight: 600 }}>Flash Trade</span>
