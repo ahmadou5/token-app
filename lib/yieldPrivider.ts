@@ -1,4 +1,4 @@
-import { EarnProvider, SwapProvider } from "@/context/SwapSettingsContext";
+import { EarnProvider, SwapProvider, PerpProvider } from "@/context/SwapSettingsContext";
 
 const PROVIDER_ICONS: Record<EarnProvider, string> = {
   kamino: "https://kamino.com/favicon.ico",
@@ -10,6 +10,11 @@ const PROVIDER_ICONS: Record<EarnProvider, string> = {
 const SWAP_PROVIDER_ICONS: Record<SwapProvider, string> = {
   metis: "https://jup.ag/favicon.ico",
   titan: "https://jup.ag/favicon.ico",
+};
+
+const PERP_PROVIDER_ICONS: Record<PerpProvider, string> = {
+  adrena: "https://adrena.xyz/favicon.ico",
+  flash: "https://flash.trade/favicon.ico",
 };
 
 const PROTOCOL_COLORS: Record<EarnProvider, string> = {
@@ -38,4 +43,12 @@ const getProviderName = (provider: EarnProvider | undefined): string => {
   return provider && PROTOCOL_NAMES[provider] ? PROTOCOL_NAMES[provider] : "";
 };
 
-export { getProviderIcon, getProviderColor, getProviderName , PROVIDER_ICONS, SWAP_PROVIDER_ICONS};
+export { 
+  getProviderIcon, 
+  getProviderColor, 
+  getProviderName, 
+  PROVIDER_ICONS, 
+  SWAP_PROVIDER_ICONS, 
+  PERP_PROVIDER_ICONS 
+};
+

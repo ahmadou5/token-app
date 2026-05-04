@@ -27,7 +27,7 @@ export function Navbar() {
         {/* Left: Logo & Brand */}
         <div className="tg-topbar__left">
           <Link href="/" className="tg-topbar__logo-link">
-            <img src={typeof Logo === 'string' ? Logo : (Logo as any).src} alt="VELA" className="tg-topbar__logo" />
+            <img src={typeof Logo === 'string' ? Logo : (Logo as any).src} alt="VELA" className="h-8 w-8" />
             <span className="tg-topbar__brand tg-desktop-only">VELA</span>
           </Link>
         </div>

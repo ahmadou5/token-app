@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowsCounterClockwise } from "@phosphor-icons/react";
 import { TrendingUp } from "lucide-react";
-import { PROVIDER_META } from "@/context/SwapSettingsContext";
+import { useSwapSettings } from "@/context/SwapSettingsContext";
+import { PROVIDER_META, EXECUTION_META } from "@/context/SwapSettingsContext";
 import { SWAP_PROVIDER_ICONS, PERP_PROVIDER_ICONS } from "@/lib/yieldPrivider";
 
 interface PriceData {
@@ -15,9 +16,10 @@ interface PriceData {
 
 export default function TradingSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const { settings, setExecutionStrategy } = useSwapSettings();
   const [isVisible, setIsVisible] = useState(false);
-  const [activeExec, setActiveExec] = useState<string>("Fast");
   const [prices, setPrices] = useState<PriceData[]>([]);
+
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -49,11 +51,7 @@ export default function TradingSection() {
     fetchPrices();
   }, []);
 
-  const execOptions = [
-    { label: "Fast", icon: "⚡" },
-    { label: "Standard", icon: "⏱" },
-    { label: "Economical", icon: "🪙" },
-  ];
+
 
   return (
     <section 
@@ -109,17 +107,22 @@ export default function TradingSection() {
           </div>
 
           <div className="hp-exec-chips">
-            {execOptions.map((opt) => (
-              <button
-                key={opt.label}
-                className={`hp-exec-chip ${activeExec === opt.label ? 'hp-exec-chip--active' : ''}`}
-                onClick={() => setActiveExec(opt.label)}
-              >
-                <span>{opt.icon}</span>
-                <span>{opt.label}</span>
-              </button>
-            ))}
+            {(Object.keys(EXECUTION_META) as (keyof typeof EXECUTION_META)[]).map((key) => {
+              const opt = EXECUTION_META[key];
+              const isActive = settings.executionStrategy === key;
+              return (
+                <button
+                  key={key}
+                  className={`hp-exec-chip ${isActive ? 'hp-exec-chip--active' : ''}`}
+                  onClick={() => setExecutionStrategy(key)}
+                >
+                  <span>{opt.icon}</span>
+                  <span style={{ textTransform: 'capitalize' }}>{key}</span>
+                </button>
+              );
+            })}
           </div>
+
 
           <Link href="/markets" className="tg-btn-primary tg-btn-lg" style={{ marginTop: 'auto' }}>
             Trade Spot →
