@@ -3,9 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useAlertCenter } from "@/context/AlertCenterContext";
 import { useRebalanceSettings } from "@/context/RebalanceSettingsContext";
+import { trackEvent } from "@/lib/analytics";
 
 export function AlertCenterModal() {
-  const { alerts, isOpen, close, markAllRead, clearAll } = useAlertCenter();
+  const { alerts, delivery, updateDelivery, isOpen, close, markAllRead, clearAll } = useAlertCenter();
   const { settings, update, reset } = useRebalanceSettings();
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -24,13 +25,18 @@ export function AlertCenterModal() {
 
   if (!isOpen) return null;
 
-  function handleAlertAction(kind: "run_rebalance_now" | "open_portfolio") {
+  function handleAlertAction(kind: "run_rebalance_now" | "open_portfolio" | "resume_strategy_now") {
     if (kind === "run_rebalance_now") {
       window.dispatchEvent(new CustomEvent("rebalance-run-now"));
       return;
     }
     if (kind === "open_portfolio") {
       window.dispatchEvent(new CustomEvent("open-portfolio-drawer"));
+      close();
+    }
+    if (kind === "resume_strategy_now") {
+      trackEvent("retention_reengagement_clicked", { action: "resume_strategy_now" });
+      window.dispatchEvent(new CustomEvent("resume-goal-mode"));
       close();
     }
   }
@@ -114,6 +120,57 @@ export function AlertCenterModal() {
               />
             </label>
           </div>
+        </div>
+
+        <div className="alert-reb">
+          <div className="alert-reb__head">
+            <span className="sw-input-lbl">Delivery Channels</span>
+          </div>
+
+          <label className="alert-reb__toggle">
+            <input
+              type="checkbox"
+              checked={delivery.inApp}
+              onChange={(e) => updateDelivery({ inApp: e.target.checked })}
+            />
+            <span>In-app Alert Center</span>
+          </label>
+
+          <label className="alert-reb__toggle">
+            <input
+              type="checkbox"
+              checked={delivery.webhookEnabled}
+              onChange={(e) => updateDelivery({ webhookEnabled: e.target.checked })}
+            />
+            <span>Webhook delivery</span>
+          </label>
+          <label>
+            <span>Webhook URL</span>
+            <input
+              type="url"
+              placeholder="https://example.com/alerts"
+              value={delivery.webhookUrl}
+              onChange={(e) => updateDelivery({ webhookUrl: e.target.value.trim() })}
+            />
+          </label>
+
+          <label className="alert-reb__toggle">
+            <input
+              type="checkbox"
+              checked={delivery.telegramEnabled}
+              onChange={(e) => updateDelivery({ telegramEnabled: e.target.checked })}
+            />
+            <span>Telegram delivery</span>
+          </label>
+          <label>
+            <span>Telegram Chat ID</span>
+            <input
+              type="text"
+              placeholder="e.g. 123456789"
+              value={delivery.telegramChatId}
+              onChange={(e) => updateDelivery({ telegramChatId: e.target.value.trim() })}
+            />
+          </label>
         </div>
 
         <div className="alert-modal__list">

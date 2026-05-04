@@ -12,6 +12,8 @@ import {
   type PerpProvider,
   type EarnProvider,
 } from "@/context/SwapSettingsContext";
+import { SWAP_PROVIDER_ICONS } from "@/lib/yieldPrivider";
+import Image from "next/image";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -139,11 +141,11 @@ export function SettingsModal({
                         <span className="sw-modal-provider__name">
                           {meta.label}
                         </span>
-                        {meta.badge && (
+                        
                           <span className="sw-modal-provider__badge">
-                            {meta.badge}
+                            <Image src={SWAP_PROVIDER_ICONS[p]} alt={`${p} icon`} />
                           </span>
-                        )}
+                        
                         {active && (
                           <span className="sw-modal-provider__check">
                             <svg

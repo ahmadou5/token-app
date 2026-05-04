@@ -60,6 +60,7 @@ export function GoalModeCard({
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
   const [executionState, setExecutionState] = useState<"idle" | "running">("idle");
   const [executeMsg, setExecuteMsg] = useState<string | null>(null);
+  const [intentSessionId, setIntentSessionId] = useState<string | null>(null);
   const [lastExecution, setLastExecution] = useState<{
     swapTx: string;
     step2Tx: string | null;
@@ -76,9 +77,16 @@ export function GoalModeCard({
   async function handlePreview() {
     if (!canPreview) return;
 
+    const nextIntentSessionId = `intent_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setIntentSessionId(nextIntentSessionId);
     setExecuteMsg(null);
     setLastExecution(null);
-    trackEvent("intent_opened", { goal, riskProfile });
+    trackEvent("intent_opened", {
+      intentSessionId: nextIntentSessionId,
+      owner: account ?? null,
+      goal,
+      riskProfile,
+    });
 
     const result = await previewIntent({
       owner: account ?? undefined,
@@ -93,6 +101,8 @@ export function GoalModeCard({
 
     if (result) {
       trackEvent("intent_preview_ready", {
+        intentSessionId: nextIntentSessionId,
+        owner: account ?? null,
         goal,
         blocked: result.blocked,
         checks: result.riskChecks.length,
@@ -179,6 +189,14 @@ export function GoalModeCard({
     setExecutionState("running");
     setExecuteMsg("Validating plan...");
 
+    const executionStartedAt = Date.now();
+    trackEvent("intent_execute_started", {
+      intentSessionId,
+      owner: account,
+      goal,
+      provider: settings.provider,
+    });
+
     const res = await fetch("/api/strategy/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -199,6 +217,13 @@ export function GoalModeCard({
         message: data.err ?? "Could not validate execution plan.",
         level: "error",
       });
+      trackEvent("intent_execute_failed", {
+        intentSessionId,
+        owner: account,
+        goal,
+        stage: "plan_validation",
+        error: data.err ?? "Plan validation failed",
+      });
       return;
     }
 
@@ -217,6 +242,13 @@ export function GoalModeCard({
         title: "Primary execution failed",
         message: "Swap transaction failed or was rejected.",
         level: "error",
+      });
+      trackEvent("intent_execute_failed", {
+        intentSessionId,
+        owner: account,
+        goal,
+        stage: "primary_swap",
+        error: "Swap transaction failed or was rejected",
       });
       return;
     }
@@ -243,6 +275,13 @@ export function GoalModeCard({
         title: "Secondary step failed",
         message,
         level: "warning",
+      });
+      trackEvent("intent_execute_failed", {
+        intentSessionId,
+        owner: account,
+        goal,
+        stage: "secondary_step",
+        error: message,
       });
       return;
     }
@@ -274,11 +313,22 @@ export function GoalModeCard({
     });
 
     trackEvent("intent_execute_prepared", {
+      intentSessionId,
+      owner: account,
       executionId: data.executionId,
       txSignature: primarySignature,
       secondaryTxSignature: secondarySignature,
       mode: "live-chained",
       goal,
+    });
+    trackEvent("intent_execute_confirmed", {
+      intentSessionId,
+      owner: account,
+      executionId: data.executionId,
+      goal,
+      durationMs: Date.now() - executionStartedAt,
+      txSignature: primarySignature,
+      secondaryTxSignature: secondarySignature,
     });
   }
 

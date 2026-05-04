@@ -16,6 +16,11 @@ Product baseline: Solana super app with spot swap, perps, staking, and earn.
 - Phase 8: Completed on 2026-05-03 (automatic rebalance drift checks -> Alert Center notifications)
 - Phase 9: Completed on 2026-05-03 (in-modal Rebalance Controls panel inside Alert Center)
 - Phase 10: Completed on 2026-05-03 (per-alert actions: Run Check Now + Open Portfolio for rebalance alerts)
+- Phase 11: Completed on 2026-05-04 (native alert delivery channels: in-app + optional webhook/Telegram)
+- Phase 12: Completed on 2026-05-04 (Goal Mode analytics connected to persistent backend storage)
+- Phase 13: Completed on 2026-05-04 (end-to-end API tests for intent/quote, strategy/execute, portfolio/rebalance)
+- Phase 14: Completed on 2026-05-04 (KPI-driven retention + execution reliability instrumentation for WAOW/7d retention/confirm-time)
+- Phase 15: Completed on 2026-05-04 (retention loop triggers: inactivity re-engagement alerts + one-tap Goal Mode resume action)
 
 ## Objective
 
@@ -158,7 +163,4 @@ This should improve your competitiveness by:
 
 ## Immediate Next Build Tickets
 
-1. Replace dry-run strategy execution with fully signed, chained on-chain execution using existing `solana/kit` + `@pipeit/core` transaction flows.
-2. Add native alert delivery channels (in-app notifications + optional webhook/Telegram).
-3. Connect analytics page to persistent backend storage (instead of local storage only).
-4. Add end-to-end tests for `intent/quote`, `strategy/execute`, and `portfolio/rebalance` APIs.
+1. Add server-side retention automation (scheduled checks + persistent cooldowns per wallet) to avoid client-only trigger dependence.

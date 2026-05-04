@@ -11,6 +11,7 @@ import { ClientProviders } from "@/app/ClientProvider";
 import { RebalanceSettingsProvider } from "@/context/RebalanceSettingsContext";
 import { AlertCenterProvider } from "@/context/AlertCenterContext";
 import { RebalanceAlertWatcher } from "@/components/Alerts/RebalanceAlertWatcher";
+import { RetentionLoopWatcher } from "@/components/Alerts/RetentionLoopWatcher";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -25,6 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <TxModalProvider>
                     <TxModalRoot />
                     <RebalanceAlertWatcher />
+                    <RetentionLoopWatcher />
                     {children}
                   </TxModalProvider>
                 </ClientProviders>

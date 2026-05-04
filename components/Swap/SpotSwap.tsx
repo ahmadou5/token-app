@@ -1,7 +1,7 @@
 "use client";
 
 import { GearSixIcon } from "@phosphor-icons/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWallet, useBalance } from "@solana/connector";
 import { useConnector } from "@solana/connector/react";
 import { useSwapSettings, PROVIDER_META } from "@/context/SwapSettingsContext";
@@ -157,6 +157,21 @@ export function SpotSwap({
   };
 
   const walletAddress = wallet ?? null;
+
+  useEffect(() => {
+    function onResumeGoalMode() {
+      setActiveTab("spot");
+      window.setTimeout(() => {
+        const goalEl = document.querySelector(".sw-goal");
+        if (goalEl instanceof HTMLElement) {
+          goalEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 60);
+    }
+
+    window.addEventListener("resume-goal-mode", onResumeGoalMode);
+    return () => window.removeEventListener("resume-goal-mode", onResumeGoalMode);
+  }, []);
 
   return (
     <>

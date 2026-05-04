@@ -7,10 +7,13 @@ export function trackEvent(name: string, payload: Record<string, unknown> = {}) 
     };
 
     if (typeof window !== "undefined") {
-      const existing = window.localStorage.getItem("goal_mode_events");
-      const events = existing ? (JSON.parse(existing) as unknown[]) : [];
-      events.push(event);
-      window.localStorage.setItem("goal_mode_events", JSON.stringify(events.slice(-200)));
+      void fetch("/api/analytics/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      }).catch(() => {
+        // best effort analytics
+      });
     }
 
     console.info("[analytics]", event);
