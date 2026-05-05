@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { TwitterLogo, GithubLogo } from "@phosphor-icons/react";
+import Logo from "@/assets/vela.png";
 
 export function HomeFooter() {
   return (
@@ -9,18 +10,15 @@ export function HomeFooter() {
       <div className="hp-footer">
         <div className="hp-footer__row">
           <Link href="/" className="hp-nav__logo">
-            <svg viewBox="0 0 24 24" fill="none" width="24" height="24" style={{ color: 'var(--tc-accent)' }}>
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="hp-nav__logo-text" style={{ fontSize: '18px' }}>Check-it</span>
+          <img src={typeof Logo === 'string' ? Logo : (Logo as any).src} alt="VELA" className="h-12 w-12" />
+            <span className="hp-nav__logo-text" style={{ fontSize: '18px' }}>Vela</span>
           </Link>
 
           <nav style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <Link href="/markets" className="hp-nav__link">Markets</Link>
-            <Link href="/markets?tab=swap" className="hp-nav__link">Trade</Link>
-            <Link href="/markets?tab=earn" className="hp-nav__link">Earn</Link>
-            <Link href="/validators" className="hp-nav__link">Stake</Link>
+            <Link href="/token/sol" className="hp-nav__link">Trade</Link>
+            <Link href="/token/sol" className="hp-nav__link">Earn</Link>
+            <Link href="/token/sol" className="hp-nav__link">Stake</Link>
             <Link href="/validators" className="hp-nav__link">Validators</Link>
           </nav>
 
@@ -45,14 +43,14 @@ export function HomeFooter() {
 
         <div className="hp-footer__row" style={{ paddingTop: '32px', borderTop: '1px solid var(--tc-divider)' }}>
           <div style={{ fontSize: '12px', color: 'var(--tc-text-muted)' }}>
-            © 2025 Check-it. Not financial advice.
+            © 2026 Vela. Not financial advice.
           </div>
           
           <div style={{ display: 'flex', gap: '16px' }}>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tc-text-muted)', transition: 'color 160ms' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--tc-text-muted)'}>
+            <a href="https://twitter.com/4hamdou_5" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tc-text-muted)', transition: 'color 160ms' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--tc-text-muted)'}>
               <TwitterLogo size={20} weight="fill" />
             </a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tc-text-muted)', transition: 'color 160ms' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--tc-text-muted)'}>
+            <a href="https://github.com/ahmadou5/token-app" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tc-text-muted)', transition: 'color 160ms' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--tc-text-muted)'}>
               <GithubLogo size={20} weight="fill" />
             </a>
           </div>

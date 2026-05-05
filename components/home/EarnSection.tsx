@@ -129,6 +129,22 @@ function VaultCard({ protocol, color, apy, tvl, delay, label }: VaultProps) {
 export function EarnSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [yieldData, setYieldData] = useState<Record<string, { apy: number; tvlUsd: number }> | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/yield/quote/all?symbol=USDC");
+        const data = await res.json();
+        if (data.apyMap) {
+          setYieldData(data.apyMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch yield data:", err);
+      }
+    }
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -146,6 +162,12 @@ export function EarnSection() {
 
     return () => observer.disconnect();
   }, []);
+
+  const formatTVL = (usd: number) => {
+    if (usd >= 1e9) return `$${(usd / 1e9).toFixed(1)}B`;
+    if (usd >= 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
+    return `$${usd.toLocaleString()}`;
+  };
 
   return (
     <section 
@@ -174,17 +196,20 @@ export function EarnSection() {
       </div>
 
       <div className="hp-earn-grid">
-        {Object.entries(EARN_PROVIDER_META).map(([protocol, meta]) => (
-          <VaultCard 
-            key={protocol}
-            protocol={protocol}
-            label={meta.label}
-            color={getProviderColor(protocol as EarnProvider)}
-            apy={8.9}
-            tvl={'$252M'}
-            delay="0ms"
-          />
-        ))}
+        {Object.entries(EARN_PROVIDER_META).map(([protocol, meta], i) => {
+          const data = yieldData?.[protocol] || { apy: 0, tvlUsd: 0 };
+          return (
+            <VaultCard 
+              key={protocol}
+              protocol={protocol}
+              label={meta.label}
+              color={getProviderColor(protocol as EarnProvider)}
+              apy={data.apy || 8.9} // Fallback if 0
+              tvl={data.tvlUsd > 0 ? formatTVL(data.tvlUsd) : "$252M"} // Fallback if 0
+              delay={`${i * 100}ms`}
+            />
+          );
+        })}
       </div>
 
       <div className="hp-settings-hint hp-anim-fade-up hp-anim-delay-4">

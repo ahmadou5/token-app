@@ -577,17 +577,13 @@
 
 @media (max-width: 768px) {
   .hp-earn-grid {
-    grid-template-columns: repeat(3, 100%);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    grid-template-columns: 1fr;
     gap: 16px;
-    padding-bottom: 24px;
-    margin: 0 -24px;
-    padding: 0 24px;
+    padding: 0;
   }
 
   .hp-earn-card {
-    scroll-snap-align: start;
+    scroll-snap-align: none;
   }
 }
 
