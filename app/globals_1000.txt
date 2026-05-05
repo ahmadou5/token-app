@@ -147,18 +147,18 @@ html.dark {
    Theme Toggle
    ══════════════════════════════════════════════════════ */
 .theme-toggle {
+  position: relative;
   width: 38px;
   height: 38px;
-  background: var(--tc-surface);
-  border: 1px solid var(--tc-border);
   border-radius: 50%;
-  display: flex;
+  border: 1px solid var(--tc-border);
+  background: var(--tc-surface);
+  color: var(--tc-text-secondary);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--tc-ease);
-  outline: none;
-  padding: 0;
+  transition: border-color 140ms, color 140ms, background 140ms;
 }
 
 .theme-toggle:hover {

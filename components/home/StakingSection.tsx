@@ -41,7 +41,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
         const top10 = validatorsData.slice(0, 10);
         setValidators(top10);
 
-        const avg = top10.reduce((acc: number, v: any) => acc + (v.apyEstimate || 0), 0) / top10.length;
+        const avg = top10.reduce((acc: number, v: any) => acc + (v.apy || 0), 0) / top10.length;
         setAvgApy(avg || 7.42);
       } catch (err) {
         console.error("Failed to fetch validators:", err);
@@ -98,7 +98,11 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
                   className="hp-validator-rank hp-anim-scale-in" 
                   style={{ animationDelay: `${i * 60 + 200}ms` }}
                 >
-                  <img src={v.avatar} className="h-auto w-auto rounded-full " />
+                  <img 
+                    src={v.avatar} 
+                    alt={v.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                  />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div 

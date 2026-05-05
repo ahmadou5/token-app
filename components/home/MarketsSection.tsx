@@ -135,7 +135,7 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
                     color: token.change24h >= 0 ? 'var(--tc-accent-up)' : 'var(--tc-accent-down)'
                   }}
                 >
-                  {token.change24h >= 0 ? '▲' : '▼'} {(token.change24h.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: token.change24h < 1 ? 6 : 2 }))}%
+                  {token.change24h >= 0 ? '▲' : '▼'} {Math.abs(token.change24h).toFixed(2)}%
                 </div>
                 <div className="hp-market-row__volume" style={{ textAlign: 'right' }}>
                   ${token.volume24h}

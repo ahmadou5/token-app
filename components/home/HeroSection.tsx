@@ -48,7 +48,11 @@ export function HeroSection() {
 
       <div className="hp-hero__content">
         <div className="hp-label hp-anim-fade-up">
-          <img src={typeof Logo === 'string' ? Logo : (Logo as any).src} className=" h-[499px] w-[499px]"/>
+          <img 
+            src={typeof Logo === 'string' ? Logo : (Logo as any).src} 
+            className="h-auto w-[280px] md:w-[420px] object-contain"
+            alt="Logo"
+          />
         </div>
         <span className="hp-label hp-anim-fade-up">
           The Everything DeFi App on Solana
@@ -88,10 +92,10 @@ export function HeroSection() {
         </div>
 
         <div className="hp-hero__ctas hp-anim-fade-up hp-anim-delay-6" style={{ marginTop: '12px' }}>
-          <Link href="/markets" className="tg-btn-primary tg-btn-lg text-center">
+          <Link href="/markets" className="tg-btn-primary tg-btn-lg flex items-center justify-center text-center">
             Enter App
           </Link>
-          <a href="#trading" className="tg-btn-secondary tg-btn-lg text-center" onClick={(e) => {
+          <a href="#trading" className="tg-btn-secondary tg-btn-lg flex items-center justify-center text-center" onClick={(e) => {
             e.preventDefault();
             document.querySelector('#trading')?.scrollIntoView({ behavior: 'smooth' });
           }}>
