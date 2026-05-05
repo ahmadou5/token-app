@@ -3,6 +3,7 @@ import {
   applyYieldPositionDelta,
   listYieldPositions,
 } from "@/lib/services/yieldPositionsStore.service";
+import { fetchOnChainYieldPositions } from "@/lib/services/yield.service";
 
 function isValidBody(body: unknown): body is {
   wallet: string;
@@ -44,17 +45,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, err: "Missing wallet address" }, { status: 400 });
     }
 
-    const rows = await listYieldPositions(wallet);
+    const [storedRows, onChainRows] = await Promise.all([
+      listYieldPositions(wallet),
+      fetchOnChainYieldPositions(wallet).catch(() => []),
+    ]);
+
+    // Merge positions: prefer on-chain data, fallback to stored demo positions
+    const merged = [...onChainRows];
+    for (const s of storedRows) {
+      if (!merged.find((m) => m.mint === s.mint && m.provider === s.provider)) {
+        merged.push({
+          provider: s.provider,
+          mint: s.mint,
+          symbol: s.symbol,
+          amount: s.amount,
+          yieldUsd: s.yieldUsd,
+        });
+      }
+    }
 
     return NextResponse.json({
       ok: true,
-      positions: rows.map((p) => ({
-        provider: p.provider,
-        mint: p.mint,
-        symbol: p.symbol,
-        amount: p.amount,
-        yieldUsd: p.yieldUsd,
-      })),
+      positions: merged,
       err: null,
     });
   } catch (error: unknown) {

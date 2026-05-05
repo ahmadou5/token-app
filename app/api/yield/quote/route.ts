@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchYieldAPY } from "@/lib/services/yield.service";
+import { fetchYieldAPY, fetchJupiterYieldTx, fetchKaminoYieldTx } from "@/lib/services/yield.service";
 import type { EarnProvider } from "@/context/SwapSettingsContext";
 
 interface YieldQuoteBody {
@@ -34,6 +34,51 @@ export async function POST(req: NextRequest) {
     const amount = parseFloat(amountUi) || 0;
     const dailyEarningsUsd = (amount * (apy / 100)) / 365;
 
+    let transaction: string | null = null;
+    let executionAvailable = false;
+    let note = "Yield execution is not wired yet. Quote is informational only.";
+
+    const owner = (body as any).owner;
+    const mint = (body as any).mint;
+
+    if (provider === "jupiter" && owner && mint && amount > 0) {
+      // For Jupiter, we use a real swap-into-LST (jupSOL) transaction
+      const decimals = mint === "So11111111111111111111111111111111111111112" ? 9 : 6; // Default to 6 for SPL, 9 for SOL
+      const rawAmount = Math.floor(amount * Math.pow(10, decimals));
+      const action = (body as any).action || "deposit";
+      
+      transaction = await fetchJupiterYieldTx({
+        owner,
+        inputMint: mint === "So11111111111111111111111111111111111111112" 
+          ? "So11111111111111111111111111111111111111112" 
+          : mint,
+        amount: rawAmount,
+        action,
+      });
+
+      if (transaction) {
+        executionAvailable = true;
+        note = `Executing ${action} into Jupiter jupSOL vault via Jupiter Swap.`;
+      }
+    } else if (provider === "kamino" && owner && mint && amount > 0) {
+      // Native Kamino Lending Integration
+      const decimals = mint === "So11111111111111111111111111111111111111112" ? 9 : 6;
+      const rawAmount = Math.floor(amount * Math.pow(10, decimals));
+      const action = (body as any).action || "deposit";
+
+      transaction = await fetchKaminoYieldTx({
+        owner,
+        inputMint: mint,
+        amount: rawAmount,
+        action,
+      });
+
+      if (transaction) {
+        executionAvailable = true;
+        note = `Executing native ${action} on Kamino Finance Main Market.`;
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       quote: {
@@ -42,9 +87,9 @@ export async function POST(req: NextRequest) {
         protocolFeePercent: 0.1,
         provider,
       },
-      transaction: null,
-      executionAvailable: false,
-      note: "Yield execution is not wired yet. Quote is informational only.",
+      transaction,
+      executionAvailable,
+      note,
       err: null,
     });
   } catch (error: unknown) {

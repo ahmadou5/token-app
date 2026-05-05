@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",
+    "@kamino-finance/klend-sdk": "^7.3.22",
     "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
     "@meteora-ag/dlmm": "^1.9.6",
     "@orca-so/common-sdk": "^0.7.0",
@@ -42,6 +43,7 @@
     "axios": "1.14.0",
     "bn.js": "^5.2.3",
     "bs58": "^6.0.0",
+    "decimal.js": "^10.6.0",
     "lucide-react": "^1.7.0",
     "metis": "link:@pipeit/actions/metis",
     "motion": "^12.38.0",
