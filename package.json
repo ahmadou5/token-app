@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",
-    "@kamino-finance/klend-sdk": "^7.3.22",
+    "@drift-labs/common": "^1.0.61",
+    "@drift-labs/sdk": "2.163.0-beta.10",
+    "@kamino-finance/klend-sdk": "^5.15.4",
     "@mercurial-finance/dynamic-amm-sdk": "^1.1.23",
     "@meteora-ag/dlmm": "^1.9.6",
     "@mrgnlabs/marginfi-client-v2": "^6.4.1",

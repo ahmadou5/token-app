@@ -1,5 +1,5 @@
 import { EarnProvider } from "@/context/SwapSettingsContext";
-import { KaminoAction, KaminoMarket } from "@kamino-finance/klend-sdk";
+import { KaminoAction, KaminoMarket, VanillaObligation } from "@kamino-finance/klend-sdk";
 import {
   MarginfiClient,
   getConfig,
@@ -7,6 +7,12 @@ import {
 } from "@mrgnlabs/marginfi-client-v2";
 import { NodeWallet } from "@mrgnlabs/mrgn-common";
 import { Connection, PublicKey, Keypair } from "@solana/web3.js";
+import {
+  DriftClient,
+  getUserAccountPublicKeySync,
+  BulkAccountLoader,
+  Wallet,
+} from "@drift-labs/sdk";
 import Decimal from "decimal.js";
 
 interface YieldPool {
@@ -244,6 +250,52 @@ export async function fetchMarginfiPositions(
   }
 }
 
+export async function fetchDriftPositions(
+  wallet: string,
+): Promise<RealYieldPosition[]> {
+  const DRIFT_PROGRAM_ID = new PublicKey(
+    "dR1tAmXyX31tMhkR8tjS152TykSgh96ZqXyN6kU1n7C",
+  );
+  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  if (!rpcUrl) return [];
+
+  try {
+    const userKey = getUserAccountPublicKeySync(
+      DRIFT_PROGRAM_ID,
+      new PublicKey(wallet),
+      0,
+    );
+
+    const res = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "drift-fetch",
+        method: "getAccountInfo",
+        params: [userKey.toString(), { encoding: "base64" }],
+      }),
+    });
+
+    const data = await res.json();
+    if (data.result?.value) {
+      return [
+        {
+          provider: "drift",
+          mint: "So11111111111111111111111111111111111111112",
+          symbol: "SOL (Spot)",
+          amount: 0,
+          yieldUsd: 0,
+        },
+      ];
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching Drift positions:", error);
+    return [];
+  }
+}
+
 export async function fetchOnChainYieldPositions(
   wallet: string,
 ): Promise<RealYieldPosition[]> {
@@ -251,7 +303,7 @@ export async function fetchOnChainYieldPositions(
   if (!rpcUrl) return [];
 
   try {
-    const [assetRes, kaminoRows, marginfiRows] = await Promise.all([
+    const [assetRes, kaminoRows, marginfiRows, driftRows] = await Promise.all([
       fetch(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -269,11 +321,16 @@ export async function fetchOnChainYieldPositions(
       }),
       fetchKaminoLendingPositions(wallet),
       fetchMarginfiPositions(wallet),
+      fetchDriftPositions(wallet),
     ]);
 
     const data = await assetRes.json();
     const items = (data?.result?.items || []) as any[];
-    const positions: RealYieldPosition[] = [...kaminoRows, ...marginfiRows];
+    const positions: RealYieldPosition[] = [
+      ...kaminoRows,
+      ...marginfiRows,
+      ...driftRows,
+    ];
 
     for (const item of items) {
       const mint = item.id;
@@ -367,7 +424,7 @@ export async function fetchKaminoYieldTx(params: {
     const owner = new PublicKey(params.owner);
     const mint = new PublicKey(params.inputMint);
 
-    const market = await KaminoMarket.load(connection, MAIN_MARKET);
+    const market = await KaminoMarket.load(connection, MAIN_MARKET, 400);
     if (!market) return null;
 
     const reserve = market.getReserveByMint(mint);
@@ -379,13 +436,17 @@ export async function fetchKaminoYieldTx(params: {
 
     let kaminoAction: KaminoAction;
 
+    const obligation = new VanillaObligation(new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"));
+
     if (params.action === "withdraw") {
       kaminoAction = await KaminoAction.buildWithdrawTxns(
         market,
         amountDecimal.toString(),
         mint,
         owner,
-        new PublicKey(params.owner),
+        obligation,
+        true, // useV2Ixs
+        undefined, // scopeRefreshConfig
       );
     } else {
       kaminoAction = await KaminoAction.buildDepositReserveLiquidityTxns(
@@ -393,11 +454,13 @@ export async function fetchKaminoYieldTx(params: {
         amountDecimal.toString(),
         mint,
         owner,
+        obligation,
+        undefined, // scopeRefreshConfig
       );
     }
 
-    const tx = kaminoAction.transactions[0];
-    return tx ? tx.serialize({ requireAllSignatures: false }).toString("base64") : null;
+    const tx = await kaminoAction.getTransactions();
+    return tx.serialize({ requireAllSignatures: false }).toString("base64");
   } catch (error) {
     console.error("Error fetching Kamino yield tx:", error);
     return null;
@@ -447,6 +510,57 @@ export async function fetchMarginfiYieldTx(params: {
     return finalTx.serialize({ requireAllSignatures: false }).toString("base64");
   } catch (error) {
     console.error("Error fetching Marginfi yield tx:", error);
+    return null;
+  }
+}
+
+export async function fetchDriftYieldTx(params: {
+  owner: string;
+  inputMint: string;
+  amount: number;
+  action?: "deposit" | "withdraw";
+}): Promise<string | null> {
+  try {
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    if (!rpcUrl) return null;
+
+    const connection = new Connection(rpcUrl);
+    const driftClient = new DriftClient({
+      connection,
+      wallet: new Wallet(Keypair.generate()),
+      env: "mainnet-beta",
+      accountSubscription: {
+        type: "polling",
+        accountLoader: new BulkAccountLoader(connection, "confirmed", 1000),
+      },
+    });
+
+    await driftClient.subscribe();
+
+    const marketIndex =
+      params.inputMint === "So11111111111111111111111111111111111111112"
+        ? 0
+        : 1;
+
+    let txBase64;
+    if (params.action === "withdraw") {
+      txBase64 = await driftClient.createWithdrawBase64Transaction(
+        params.amount,
+        marketIndex,
+        new PublicKey(params.owner),
+      );
+    } else {
+      txBase64 = await driftClient.createDepositBase64Transaction(
+        params.amount,
+        marketIndex,
+        new PublicKey(params.owner),
+      );
+    }
+
+    await driftClient.unsubscribe();
+    return txBase64;
+  } catch (error) {
+    console.error("Error fetching Drift yield tx:", error);
     return null;
   }
 }

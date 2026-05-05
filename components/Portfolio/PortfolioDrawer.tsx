@@ -357,6 +357,7 @@ export function PortfolioDrawer() {
     totalStablUsd,
     totalStakedSol,
     totalYieldUsd,
+    totalEstAnnualYield,
     loading,
     refetch,
   } = usePortfolioData(wallet ?? null);
@@ -458,6 +459,12 @@ export function PortfolioDrawer() {
               <span className="pf-stat-chip__label">Positions</span>
               <span className="pf-stat-chip__value">
                 {perpPositions.length}
+              </span>
+            </div>
+            <div className="pf-stat-chip">
+              <span className="pf-stat-chip__label">Annual Yield</span>
+              <span className="pf-stat-chip__value" style={{ color: "var(--tc-accent-up)" }}>
+                +{fmtUsd(totalEstAnnualYield)}
               </span>
             </div>
           </div>

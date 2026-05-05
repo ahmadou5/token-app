@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     "@kamino-finance/klend-sdk",
     "@mrgnlabs/marginfi-client-v2",
     "@mrgnlabs/mrgn-common",
+    "@drift-labs/sdk",
+    "@drift-labs/common",
     "decimal.js",
   ],
 };

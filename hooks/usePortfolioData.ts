@@ -43,6 +43,7 @@ export interface YieldPosition {
   symbol: string;
   amount: number;
   yieldUsd: number;
+  apy: number;
 }
 
 export interface PortfolioData {
@@ -55,6 +56,7 @@ export interface PortfolioData {
   totalStablUsd: number;
   totalStakedSol: number;
   totalYieldUsd: number;
+  totalEstAnnualYield: number;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -162,7 +164,7 @@ async function fetchHeliusAssets(wallet: string): Promise<PortfolioToken[]> {
     )
       continue;
 
-    const tokenInfo = item.token_info ?? {};
+    const tokenInfo = item.token_info || { balance: 0, decimals: 0, price_info: { price_per_token: 0 } };
     const balance =
       (tokenInfo.balance ?? 0) / Math.pow(10, tokenInfo.decimals ?? 0);
     const usdPrice = tokenInfo.price_info?.price_per_token ?? 0;
@@ -379,13 +381,14 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
   }, [fetchAll]);
 
   const stables = tokens.filter((t) => t.isStable);
-  const totalUsd = tokens.reduce((s, t) => s + t.usdValue, 0);
-  const totalStablUsd = stables.reduce((s, t) => s + t.usdValue, 0);
-  const totalStakedSol = stakePositions.reduce(
-    (s, p) => s + p.stakedSol,
+  const totalYieldUsd = yieldPositions.reduce((s, p) => s + p.yieldUsd, 0);
+  const totalEstAnnualYield = yieldPositions.reduce(
+    (s, p) => s + p.yieldUsd * (p.apy / 100),
     0,
   );
-  const totalYieldUsd = yieldPositions.reduce((s, p) => s + p.yieldUsd, 0);
+  const totalStakedSol = stakePositions.reduce((s, p) => s + p.stakedSol, 0);
+  const totalUsd = tokens.reduce((s, t) => s + t.usdValue, 0) + totalYieldUsd;
+  const totalStablUsd = stables.reduce((s, t) => s + t.usdValue, 0);
 
   return {
     tokens,
@@ -397,6 +400,7 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
     totalStablUsd,
     totalStakedSol,
     totalYieldUsd,
+    totalEstAnnualYield,
     loading,
     error,
     refetch: fetchAll,
