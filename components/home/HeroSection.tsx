@@ -48,7 +48,7 @@ export function HeroSection() {
 
       <div className="hp-hero__content">
         <div className="hp-label hp-anim-fade-up">
-          <img src={Logo} className=" h-[499px] w-[499px]"/>
+          <img src={typeof Logo === 'string' ? Logo : (Logo as any).src} className=" h-[499px] w-[499px]"/>
         </div>
         <span className="hp-label hp-anim-fade-up">
           The Everything DeFi App on Solana

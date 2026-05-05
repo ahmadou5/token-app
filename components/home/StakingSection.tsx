@@ -38,16 +38,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
         const res = await fetch("/api/validators");
         const data = await res.json();
         const validatorsData = data.validators || data; // handle both shapes
-        const top10 = validatorsData.slice(0, 10).map((v: ValidatorInfo, i: number) => ({
-          rank: i + 1,
-          name: v.name || "Unknown",
-          imageUrl: v.avatar,
-          voteAccount: v.votingPubkey || v.address || "",
-          apyEstimate: v.apy || v.jitoApy || 0,
-          commission: v.commission || 0,
-          activatedStake: v.activatedStake || 0,
-
-        }));
+        const top10 = validatorsData.slice(0, 10);
         setValidators(top10);
 
         const avg = top10.reduce((acc: number, v: any) => acc + (v.apyEstimate || 0), 0) / top10.length;
@@ -107,7 +98,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
                   className="hp-validator-rank hp-anim-scale-in" 
                   style={{ animationDelay: `${i * 60 + 200}ms` }}
                 >
-                  <img src={v.avatar} className="h-auto w-auto rounded-full" />
+                  <img src={v.avatar} className="h-auto w-auto rounded-full " />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div 
