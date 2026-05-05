@@ -3,6 +3,8 @@ import { NextRequest } from "next/server";
 import { POST as intentQuotePost } from "@/app/api/intent/quote/route";
 import { POST as strategyExecutePost } from "@/app/api/strategy/execute/route";
 import { POST as portfolioRebalancePost } from "@/app/api/portfolio/rebalance/route";
+import { GET as yieldPositionsGet } from "@/app/api/yield/positions/route";
+import { POST as yieldQuotePost } from "@/app/api/yield/quote/route";
 
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
@@ -163,6 +165,58 @@ describe("API routes", () => {
       expect(res.status).toBe(400);
       expect(data.ok).toBe(false);
       expect(data.err).toMatch(/Missing required fields/i);
+    });
+  });
+
+  describe("GET /api/yield/positions", () => {
+    it("returns 400 when wallet is missing", async () => {
+      const req = new NextRequest("http://localhost/api/yield/positions");
+      const res = await yieldPositionsGet(req);
+      const data = await res.json();
+      expect(res.status).toBe(400);
+      expect(data.ok).toBe(false);
+    });
+
+    it("returns positions for a valid wallet", async () => {
+      const req = new NextRequest(
+        "http://localhost/api/yield/positions?wallet=6ecebb7c0cb169311024e46df0e07d35874ef185550760293573785be8879f56"
+      );
+      const res = await yieldPositionsGet(req);
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(data.ok).toBe(true);
+      expect(Array.isArray(data.positions)).toBe(true);
+    });
+  });
+
+  describe("POST /api/yield/quote", () => {
+    it("returns a quote for Jupiter", async () => {
+      const req = buildJsonRequest("http://localhost/api/yield/quote", {
+        provider: "jupiter",
+        mint: SOL_MINT,
+        symbol: "SOL",
+        amountUi: "1.0",
+        action: "deposit",
+      });
+
+      const res = await yieldQuotePost(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.ok).toBe(true);
+      expect(data.quote.apy).toBeGreaterThan(0);
+    });
+
+    it("returns 400 for invalid provider", async () => {
+      const req = buildJsonRequest("http://localhost/api/yield/quote", {
+        provider: "unknown",
+        mint: SOL_MINT,
+        symbol: "SOL",
+        amountUi: "1.0",
+      });
+
+      const res = await yieldQuotePost(req);
+      expect(res.status).toBe(400);
     });
   });
 });

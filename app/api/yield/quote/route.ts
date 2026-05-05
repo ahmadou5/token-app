@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchYieldAPY, fetchJupiterYieldTx, fetchKaminoYieldTx } from "@/lib/services/yield.service";
+import { fetchYieldAPY, fetchJupiterYieldTx, fetchKaminoYieldTx, fetchMarginfiYieldTx } from "@/lib/services/yield.service";
 import type { EarnProvider } from "@/context/SwapSettingsContext";
 
 interface YieldQuoteBody {
@@ -76,6 +76,25 @@ export async function POST(req: NextRequest) {
       if (transaction) {
         executionAvailable = true;
         note = `Executing native ${action} on Kamino Finance Main Market.`;
+      }
+    } else if (provider === "marginfi" && owner && mint && amount > 0) {
+      // Native Marginfi Lending Integration
+      const decimals = mint === "So11111111111111111111111111111111111111112" ? 9 : 6;
+      const rawAmount = Math.floor(amount * Math.pow(10, decimals));
+      const action = (body as any).action || "deposit";
+
+      transaction = await fetchMarginfiYieldTx({
+        owner,
+        inputMint: mint,
+        amount: rawAmount,
+        action,
+      });
+
+      if (transaction) {
+        executionAvailable = true;
+        note = `Executing native ${action} on Marginfi v2.`;
+      } else {
+        note = `Could not find an active Marginfi account for this wallet. Please create one on marginfi.com first.`;
       }
     }
 
