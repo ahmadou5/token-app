@@ -10,8 +10,8 @@ import { ValidatorInfo } from "@/types/validator";
 export default function StakingSection({ initialValidators = [] }: { initialValidators?: ValidatorInfo[] }) {
   const [validators, setValidators] = useState<ValidatorInfo[]>([]);
   const [avgApy, setAvgApy] = useState(() => {
-    if (initialValidators.length === 0) return 7.42;
-    const top10 = initialValidators.slice(0, 10);
+    if (initialValidators?.length === 0) return 7.42;
+    const top10 = initialValidators?.slice(0, 10);
     const avg = top10.reduce((acc, v) => acc + (v.apy || 0), 0) / top10.length;
     return avg || 7.42;
   });
@@ -31,16 +31,15 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
   }, []);
 
   useEffect(() => {
-    if (initialValidators.length > 0) return;
 
     async function fetchValidators() {
       try {
         const res = await fetch("/api/validators");
         const data = await res.json();
-        const validatorsData = data.validators || data; // handle both shapes
+        const validatorsData = data.validators as ValidatorInfo[]; // handle both shapes
         const top10 = validatorsData.slice(0, 10);
         setValidators(top10);
-
+        console.log(top10,'Top10');
         const avg = top10.reduce((acc: number, v: any) => acc + (v.apy || 0), 0) / top10.length;
         setAvgApy(avg || 7.42);
       } catch (err) {
@@ -51,7 +50,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
       }
     }
     fetchValidators();
-  }, [initialValidators]);
+  }, []);
 
   const formatStake = (num: number) => {
     if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M SOL`;

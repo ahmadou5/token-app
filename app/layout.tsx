@@ -17,8 +17,8 @@ const geistMono = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Check-the-ICM",
-  description: "A Solana Token Explorer - Buy anything on the ICM",
+  title: "Vela",
+  description: "Vela is a high-fidelity Capital Market Explorer and Yield Hub designed to be the Bloomberg Terminal for the Solana ecosystem.",
 };
 
 export default function RootLayout({
