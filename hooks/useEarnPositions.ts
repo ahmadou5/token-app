@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useWallet } from "@solana/connector";
+import { useState, useCallback } from "react";
 import { EarnProvider } from "@/context/SwapSettingsContext";
 
 export interface EarnPosition {
@@ -13,19 +12,9 @@ export interface EarnPosition {
 }
 
 export function useEarnPositions() {
-  const { isConnected } = useWallet();
   const [positions, setPositions] = useState<EarnPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchPositions = useCallback(async () => {
-    // Only fetch if wallet is connected. The connector might not expose the pubkey directly in some cases,
-    // so we check isConnected and use the address if available.
-    // In this app, we can get the address from useConnector().account or similar.
-    // Based on SpotSwap.tsx, connector.account is the pubkey.
-    // We'll use a window event or just poll for now as simplified.
-    // For this implementation, we'll just fetch once on mount if connected.
-  }, []);
 
   // Simplified version that just fetches from API
   const load = useCallback(async (wallet: string) => {
@@ -35,12 +24,14 @@ export function useEarnPositions() {
       const res = await fetch(`/api/yield/positions?wallet=${wallet}`);
       const data = await res.json();
       if (data.ok) {
-        setPositions(data.positions);
+        setPositions(Array.isArray(data.positions) ? data.positions : []);
       } else {
         setError(data.err);
+        setPositions([]);
       }
     } catch (err: unknown) {
       setError((err as { message: string }).message);
+      setPositions([]);
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,14 +37,24 @@ export interface StakePosition {
   status: "active" | "activating" | "deactivating" | "inactive";
 }
 
+export interface YieldPosition {
+  provider: "kamino" | "marginfi" | "drift" | "jupiter";
+  mint: string;
+  symbol: string;
+  amount: number;
+  yieldUsd: number;
+}
+
 export interface PortfolioData {
   tokens: PortfolioToken[];
   stables: PortfolioToken[];
   perpPositions: PerpPosition[];
   stakePositions: StakePosition[];
+  yieldPositions: YieldPosition[];
   totalUsd: number;
   totalStablUsd: number;
   totalStakedSol: number;
+  totalYieldUsd: number;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -120,7 +130,9 @@ async function fetchHeliusAssets(wallet: string): Promise<PortfolioToken[]> {
   }
 
   // SPL fungible tokens
-  const items: any[] = result.items ?? [];
+  const items: Array<Record<string, unknown>> = Array.isArray(result.items)
+    ? result.items
+    : [];
   for (const item of items) {
     if (item.interface !== "FungibleToken" && item.interface !== "FungibleAsset")
       continue;
@@ -174,6 +186,19 @@ async function fetchPerpPositions(wallet: string): Promise<PerpPosition[]> {
   }
 }
 
+async function fetchYieldPositions(wallet: string): Promise<YieldPosition[]> {
+  try {
+    const res = await fetch(`/api/yield/positions?wallet=${wallet}`, {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (!data?.ok || !Array.isArray(data.positions)) return [];
+    return data.positions as YieldPosition[];
+  } catch {
+    return [];
+  }
+}
+
 // ─── Stake positions fetch ────────────────────────────────────────────────────
 
 async function fetchStakePositions(
@@ -211,10 +236,17 @@ async function fetchStakePositions(
       fetch("/api/validators").then((r) => (r.ok ? r.json() : { validators: [] })),
     ]);
 
-    const accounts: any[] = stakeData?.result ?? [];
+    const accounts: Array<Record<string, unknown>> = Array.isArray(stakeData?.result)
+      ? stakeData.result
+      : [];
     const validatorMap = new Map<string, string>();
-    (validatorRes.validators || []).forEach((v: any) => {
-      validatorMap.set(v.votingPubkey, v.name);
+    const validators = Array.isArray(validatorRes?.validators)
+      ? validatorRes.validators
+      : [];
+    validators.forEach((v) => {
+      const vote = typeof v?.votingPubkey === "string" ? v.votingPubkey : "";
+      const name = typeof v?.name === "string" ? v.name : "";
+      if (vote) validatorMap.set(vote, name);
     });
 
     return accounts
@@ -259,26 +291,27 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
   const [tokens, setTokens] = useState<PortfolioToken[]>([]);
   const [perpPositions, setPerpPositions] = useState<PerpPosition[]>([]);
   const [stakePositions, setStakePositions] = useState<StakePosition[]>([]);
+  const [yieldPositions, setYieldPositions] = useState<YieldPosition[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
   const fetchAll = useCallback(async () => {
     if (!wallet) {
       setTokens([]);
       setPerpPositions([]);
       setStakePositions([]);
+      setYieldPositions([]);
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    const [tokensResult, perpResult, stakeResult] =
+    const [tokensResult, perpResult, stakeResult, yieldResult] =
       await Promise.allSettled([
         fetchHeliusAssets(wallet),
         fetchPerpPositions(wallet),
         fetchStakePositions(wallet),
+        fetchYieldPositions(wallet),
       ]);
 
     if (tokensResult.status === "fulfilled") setTokens(tokensResult.value);
@@ -290,12 +323,16 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
     if (stakeResult.status === "fulfilled")
       setStakePositions(stakeResult.value);
 
+    if (yieldResult.status === "fulfilled")
+      setYieldPositions(yieldResult.value);
+
     setLoading(false);
   }, [wallet]);
 
   // Fetch when wallet changes
   useEffect(() => {
-    fetchAll();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchAll();
   }, [fetchAll]);
 
   const stables = tokens.filter((t) => t.isStable);
@@ -305,15 +342,18 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
     (s, p) => s + p.stakedSol,
     0,
   );
+  const totalYieldUsd = yieldPositions.reduce((s, p) => s + p.yieldUsd, 0);
 
   return {
     tokens,
     stables,
     perpPositions,
     stakePositions,
+    yieldPositions,
     totalUsd,
     totalStablUsd,
     totalStakedSol,
+    totalYieldUsd,
     loading,
     error,
     refetch: fetchAll,

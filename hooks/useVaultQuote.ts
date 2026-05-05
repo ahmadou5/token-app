@@ -17,6 +17,15 @@ interface UseVaultQuoteProps {
   action: "deposit" | "withdraw";
 }
 
+interface VaultQuoteResponse {
+  ok: boolean;
+  quote?: VaultQuote;
+  transaction?: string | null;
+  executionAvailable?: boolean;
+  note?: string;
+  err?: string | null;
+}
+
 export function useVaultQuote({
   provider,
   mint,
@@ -27,6 +36,8 @@ export function useVaultQuote({
 }: UseVaultQuoteProps) {
   const [quote, setQuote] = useState<VaultQuote | null>(null);
   const [transaction, setTransaction] = useState<string | null>(null);
+  const [executionAvailable, setExecutionAvailable] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,20 +65,28 @@ export function useVaultQuote({
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as VaultQuoteResponse;
 
       if (data.ok) {
         setQuote(data.quote);
-        setTransaction(data.transaction);
+        setTransaction(data.transaction ?? null);
+        setExecutionAvailable(Boolean(data.executionAvailable && data.transaction));
+        setNote(data.note ?? null);
       } else {
         setError(data.err || "Failed to fetch quote");
         setQuote(null);
         setTransaction(null);
+        setExecutionAvailable(false);
+        setNote(null);
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
       setQuote(null);
       setTransaction(null);
+      setExecutionAvailable(false);
+      setNote(null);
     } finally {
       setIsLoading(false);
     }
@@ -81,5 +100,13 @@ export function useVaultQuote({
     return () => clearTimeout(timer);
   }, [fetchQuote]);
 
-  return { quote, transaction, isLoading, error, refetch: fetchQuote };
+  return {
+    quote,
+    transaction,
+    executionAvailable,
+    note,
+    isLoading,
+    error,
+    refetch: fetchQuote,
+  };
 }

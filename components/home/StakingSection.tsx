@@ -3,27 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Shield, ArrowRight, Coins } from "@phosphor-icons/react";
+import { ValidatorInfo } from "@/types/validator";
 
-interface Validator {
-  rank: number;
-  name: string;
-  voteAccount: string;
-  apyEstimate: number;
-  commission: number;
-  activatedStake: number;
-}
 
-export default function StakingSection({ initialValidators = [] }: { initialValidators?: any[] }) {
-  const [validators, setValidators] = useState<Validator[]>(() => {
-    return initialValidators.slice(0, 10).map((v, i) => ({
-      rank: i + 1,
-      name: v.name || "Unknown",
-      voteAccount: v.votingPubkey || v.address || "",
-      apyEstimate: v.apy || 0,
-      commission: v.commission || 0,
-      activatedStake: v.activatedStake || 0,
-    }));
-  });
+
+export default function StakingSection({ initialValidators = [] }: { initialValidators?: ValidatorInfo[] }) {
+  const [validators, setValidators] = useState<ValidatorInfo[]>([]);
   const [avgApy, setAvgApy] = useState(() => {
     if (initialValidators.length === 0) return 7.42;
     const top10 = initialValidators.slice(0, 10);
@@ -53,13 +38,15 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
         const res = await fetch("/api/validators");
         const data = await res.json();
         const validatorsData = data.validators || data; // handle both shapes
-        const top10 = validatorsData.slice(0, 10).map((v: any, i: number) => ({
+        const top10 = validatorsData.slice(0, 10).map((v: ValidatorInfo, i: number) => ({
           rank: i + 1,
           name: v.name || "Unknown",
-          voteAccount: v.votingPubkey || v.address || v.voteAccount || "",
-          apyEstimate: v.apy || v.apyEstimate || 0,
+          imageUrl: v.avatar,
+          voteAccount: v.votingPubkey || v.address || "",
+          apyEstimate: v.apy || v.jitoApy || 0,
           commission: v.commission || 0,
           activatedStake: v.activatedStake || 0,
+
         }));
         setValidators(top10);
 
@@ -111,8 +98,8 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
           <>
             {validators.map((v, i) => (
               <Link 
-                key={v.voteAccount} 
-                href={`/validators/${v.voteAccount}`}
+                key={v.votingPubkey} 
+                href={`/validators/${v.votingPubkey}`}
                 className="hp-validator-card hp-anim-fade-up"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
@@ -120,7 +107,7 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
                   className="hp-validator-rank hp-anim-scale-in" 
                   style={{ animationDelay: `${i * 60 + 200}ms` }}
                 >
-                  {v.rank}
+                  <img src={v.avatar} className="h-auto w-auto rounded-full" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div 
@@ -130,12 +117,12 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
                     {v.name.length > 24 ? v.name.slice(0, 24) + '...' : v.name}
                   </div>
                   <div style={{ fontSize: '10px', fontFamily: 'var(--tc-font-mono)', color: 'var(--tc-text-muted)' }}>
-                    {v.voteAccount ? `${v.voteAccount.slice(0, 4)}...${v.voteAccount.slice(-4)}` : 'Unknown'}
+                    {v.votingPubkey ? `${v.votingPubkey.slice(0, 4)}...${v.votingPubkey.slice(-4)}` : 'Unknown'}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--tc-accent-up)', fontFamily: 'var(--tc-font-mono)' }}>
-                    {v.apyEstimate.toFixed(2)}%
+                    {v.apy.toFixed(2)}%
                   </div>
                   <div style={{ fontSize: '10px', color: 'var(--tc-text-muted)' }}>
                     {v.commission}% fee • {formatStake(v.activatedStake)}

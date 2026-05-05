@@ -116,7 +116,7 @@ export default function TradingSection() {
                   className={`hp-exec-chip ${isActive ? 'hp-exec-chip--active' : ''}`}
                   onClick={() => setExecutionStrategy(key)}
                 >
-                  <span>{opt.icon}</span>
+                  <opt.icon/>
                   <span style={{ textTransform: 'capitalize' }}>{key}</span>
                 </button>
               );

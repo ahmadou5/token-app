@@ -9,7 +9,7 @@ const PROVIDER_ICONS: Record<EarnProvider, string> = {
 
 const SWAP_PROVIDER_ICONS: Record<SwapProvider, string> = {
   metis: "https://jup.ag/favicon.ico",
-  titan: "https://jup.ag/favicon.ico",
+  titan: "https://titan.exchange/favicon.ico",
 };
 
 const PERP_PROVIDER_ICONS: Record<PerpProvider, string> = {

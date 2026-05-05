@@ -2,7 +2,7 @@
 
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import Link from "next/link";
-
+import Logo from '@/assets/logo.svg'
 const Spline = lazy(() => import("@splinetool/react-spline"));
 
 interface Stats {
@@ -47,6 +47,9 @@ export function HeroSection() {
      
 
       <div className="hp-hero__content">
+        <div className="hp-label hp-anim-fade-up">
+          <img src={Logo} className=" h-[499px] w-[499px]"/>
+        </div>
         <span className="hp-label hp-anim-fade-up">
           The Everything DeFi App on Solana
         </span>
@@ -85,10 +88,10 @@ export function HeroSection() {
         </div>
 
         <div className="hp-hero__ctas hp-anim-fade-up hp-anim-delay-6" style={{ marginTop: '12px' }}>
-          <Link href="/markets" className="tg-btn-primary tg-btn-lg">
+          <Link href="/markets" className="tg-btn-primary tg-btn-lg text-center">
             Enter App
           </Link>
-          <a href="#trading" className="tg-btn-secondary tg-btn-lg" onClick={(e) => {
+          <a href="#trading" className="tg-btn-secondary tg-btn-lg text-center" onClick={(e) => {
             e.preventDefault();
             document.querySelector('#trading')?.scrollIntoView({ behavior: 'smooth' });
           }}>

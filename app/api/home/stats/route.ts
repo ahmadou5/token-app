@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
+import { getHomeStatsData } from "@/lib/services/homeData.service";
 
 export async function GET() {
-  // TODO: wire real sources (Adrena pool stats + Flash pool data)
-  const mockData = {
-    tvl: "847M",
-    volume24h: "124M",
-    activeUsers: "12.4K"
-  };
-
-  return NextResponse.json(mockData);
+  try {
+    const stats = await getHomeStatsData();
+    return NextResponse.json(stats);
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to load home stats";
+    console.error("[api/home/stats] Error:", message);
+    return NextResponse.json(
+      { tvl: "0", volume24h: "0", activeUsers: "0" },
+      { status: 200 },
+    );
+  }
 }

@@ -204,7 +204,7 @@ export function SettingsModal({
                           onClick={() => setExecutionStrategy(s)}
                         >
                           <span className="sw-modal-exec__icon">
-                            {meta.icon}
+                            <meta.icon/>
                           </span>
                           <div className="sw-modal-exec__text">
                             <span className="sw-modal-exec__label">
@@ -425,7 +425,7 @@ export function SettingsModal({
                         key={s}
                         className={`sw-modal-exec sw-modal-exec--readonly ${active ? "sw-modal-exec--active" : ""}`}
                       >
-                        <span className="sw-modal-exec__icon">{meta.icon}</span>
+                        <span className="sw-modal-exec__icon"><meta.icon/></span>
                         <div className="sw-modal-exec__text">
                           <span className="sw-modal-exec__label">
                             {meta.label}

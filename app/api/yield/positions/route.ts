@@ -1,4 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  applyYieldPositionDelta,
+  listYieldPositions,
+} from "@/lib/services/yieldPositionsStore.service";
+
+function isValidBody(body: unknown): body is {
+  wallet: string;
+  provider: "kamino" | "marginfi" | "drift" | "jupiter";
+  mint: string;
+  symbol: string;
+  action: "deposit" | "withdraw";
+  amount: number;
+} {
+  if (!body || typeof body !== "object") return false;
+  const v = body as Record<string, unknown>;
+  const providerOk =
+    v.provider === "kamino" ||
+    v.provider === "marginfi" ||
+    v.provider === "drift" ||
+    v.provider === "jupiter";
+  const actionOk = v.action === "deposit" || v.action === "withdraw";
+  return (
+    typeof v.wallet === "string" &&
+    v.wallet.length >= 32 &&
+    providerOk &&
+    typeof v.mint === "string" &&
+    v.mint.length >= 32 &&
+    typeof v.symbol === "string" &&
+    v.symbol.length > 0 &&
+    actionOk &&
+    typeof v.amount === "number" &&
+    Number.isFinite(v.amount) &&
+    v.amount > 0
+  );
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,30 +44,59 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, err: "Missing wallet address" }, { status: 400 });
     }
 
-    // TODO: Integrate real vault APIs to fetch active positions
-    // For now, return mock data or empty array
+    const rows = await listYieldPositions(wallet);
 
     return NextResponse.json({
       ok: true,
-      positions: [
-        // Mock position if needed for testing UI
-        /*
-        {
-          provider: "kamino",
-          mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-          symbol: "USDC",
-          amount: 1000.5,
-          yieldUsd: 12.45,
-        }
-        */
-      ],
+      positions: rows.map((p) => ({
+        provider: p.provider,
+        mint: p.mint,
+        symbol: p.symbol,
+        amount: p.amount,
+        yieldUsd: p.yieldUsd,
+      })),
       err: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch positions";
     console.error("[api/yield/positions] Error:", error);
     return NextResponse.json(
-      { ok: false, err: error.message || "Failed to fetch positions" },
+      { ok: false, err: message },
       { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    if (!isValidBody(body)) {
+      return NextResponse.json(
+        { ok: false, err: "Invalid payload" },
+        { status: 400 },
+      );
+    }
+
+    const positions = await applyYieldPositionDelta(body);
+    return NextResponse.json({
+      ok: true,
+      positions: positions.map((p) => ({
+        provider: p.provider,
+        mint: p.mint,
+        symbol: p.symbol,
+        amount: p.amount,
+        yieldUsd: p.yieldUsd,
+      })),
+      err: null,
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to update positions";
+    console.error("[api/yield/positions][POST] Error:", error);
+    return NextResponse.json(
+      { ok: false, err: message },
+      { status: 500 },
     );
   }
 }

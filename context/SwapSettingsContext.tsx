@@ -7,7 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
-
+import { Icon, LightningAIcon, ClockIcon, CoinVerticalIcon, CoinIcon } from "@phosphor-icons/react";
 // ─── Spot provider types (unchanged) ─────────────────────────────────────────
 
 export type SwapProvider = "metis" | "titan";
@@ -38,22 +38,22 @@ export const PROVIDER_META: Record<
 
 export const EXECUTION_META: Record<
   ExecutionStrategy,
-  { label: string; description: string; icon: string }
+  { label: string; description: string; icon: Icon }
 > = {
   standard: {
     label: "Standard",
     description: "Balanced speed and cost for most trades.",
-    icon: "⚖️",
+    icon: ClockIcon,
   },
   economical: {
     label: "Economical",
     description: "Lower fees, slightly slower confirmation.",
-    icon: "🪙",
+    icon: CoinVerticalIcon,
   },
   fast: {
     label: "Fast",
     description: "Higher priority fee for quicker inclusion.",
-    icon: "⚡",
+    icon: LightningAIcon,
   },
 };
 

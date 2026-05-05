@@ -101,6 +101,8 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
   const {
     quote,
     transaction,
+    executionAvailable,
+    note,
     isLoading: isQuoteLoading,
     error: quoteError,
   } = useVaultQuote({
@@ -136,6 +138,22 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
       amount,
     );
     if (sig) {
+      try {
+        await fetch("/api/yield/positions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet,
+            provider: earnProvider,
+            mint: mint ?? "",
+            symbol: symbol ?? "",
+            action: activeAction,
+            amount: parseFloat(amount),
+          }),
+        });
+      } catch {
+        // Position persistence is best-effort and should not mask a successful tx.
+      }
       setAmount("");
       if (wallet) loadPositions(wallet);
     }
@@ -143,7 +161,11 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
 
   const isExecuting = ["signing", "sending", "confirming"].includes(execStatus);
   const canSubmit =
-    isConnected && !!transaction && !isExecuting && parseFloat(amount) > 0;
+    isConnected &&
+    !!transaction &&
+    executionAvailable &&
+    !isExecuting &&
+    parseFloat(amount) > 0;
 
   if (!isConnected) {
     return (
@@ -360,6 +382,12 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-500 flex gap-2">
                 <Info size={14} className="shrink-0 mt-0.5" />
                 {quoteError ?? execError}
+              </div>
+            )}
+            {!quoteError && !execError && note && parseFloat(amount) > 0 && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-500 flex gap-2">
+                <Info size={14} className="shrink-0 mt-0.5" />
+                {note}
               </div>
             )}
 

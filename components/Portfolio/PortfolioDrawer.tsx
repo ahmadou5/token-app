@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/connector";
 import { usePortfolioDrawer } from "@/context/PortfolioDrawerContext";
@@ -9,6 +9,7 @@ import {
   type PortfolioToken,
   type PerpPosition,
   type StakePosition,
+  type YieldPosition,
 } from "@/hooks/usePortfolioData";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -241,6 +242,30 @@ function StakeRow({ pos }: { pos: StakePosition }) {
   );
 }
 
+function YieldRow({ pos }: { pos: YieldPosition }) {
+  return (
+    <div className="pf-token-row">
+      <div
+        className="pf-token-avatar pf-token-avatar--fallback"
+        style={{ width: 32, height: 32 }}
+      >
+        {pos.symbol.slice(0, 2)}
+      </div>
+      <div className="pf-token-row__info">
+        <span className="pf-token-row__symbol">{pos.symbol}</span>
+        <span className="pf-token-row__balance">
+          {pos.amount.toLocaleString("en-US", { maximumFractionDigits: 4 })} ·{" "}
+          {pos.provider}
+        </span>
+      </div>
+      <div className="pf-token-row__value">
+        <span className="pf-token-row__usd">{fmtUsd(pos.yieldUsd)}</span>
+        <span className="pf-token-row__price">earned</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({
@@ -327,9 +352,11 @@ export function PortfolioDrawer() {
     stables,
     perpPositions,
     stakePositions,
+    yieldPositions,
     totalUsd,
     totalStablUsd,
     totalStakedSol,
+    totalYieldUsd,
     loading,
     refetch,
   } = usePortfolioData(wallet ?? null);
@@ -502,7 +529,7 @@ export function PortfolioDrawer() {
                           token={t}
                           onEarn={() => {
                             close();
-                            router.push(`/tokens/${t.mint}`);
+                            router.push(`/token/${t.mint}`);
                           }}
                         />
                       ))}
@@ -526,33 +553,37 @@ export function PortfolioDrawer() {
                 )}
               </section>
 
-              {/* ── 4. Yield Positions (placeholder) ── */}
+              {/* ── 4. Yield Positions ── */}
               <section className="pf-section">
-                <SectionHeader title="Yield" />
-                <div className="pf-yield-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
-                    <path
-                      d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-                      stroke="var(--tc-text-muted)"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <p className="pf-yield-placeholder__msg">
-                    Connect a yield vault to see earnings
-                  </p>
-                  <button
-                    className="pf-yield-placeholder__btn"
-                    onClick={() => {
+                <SectionHeader
+                  title="Yield"
+                  count={loading ? undefined : yieldPositions.length}
+                  right={
+                    !loading && totalYieldUsd > 0 ? (
+                      <span className="pf-section-header__total">
+                        {fmtUsd(totalYieldUsd)}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                {loading ? (
+                  <SkeletonRow />
+                ) : yieldPositions.length === 0 ? (
+                  <EmptyState
+                    message="No active yield positions"
+                    cta="Explore vaults →"
+                    onCta={() => {
                       close();
                       router.push(
-                        "/tokens/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                        "/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                       );
                     }}
-                  >
-                    Explore vaults →
-                  </button>
-                </div>
+                  />
+                ) : (
+                  yieldPositions.map((p) => (
+                    <YieldRow key={`${p.provider}:${p.mint}`} pos={p} />
+                  ))
+                )}
               </section>
 
               {/* ── 5. Native Stake Positions ── */}
