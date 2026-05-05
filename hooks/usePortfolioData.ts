@@ -130,11 +130,36 @@ async function fetchHeliusAssets(wallet: string): Promise<PortfolioToken[]> {
   }
 
   // SPL fungible tokens
-  const items: Array<Record<string, unknown>> = Array.isArray(result.items)
-    ? result.items
-    : [];
+  interface HeliusAsset {
+    interface: string;
+    id: string;
+    content?: {
+      metadata?: {
+        name?: string;
+        symbol?: string;
+      };
+      links?: {
+        image?: string;
+      };
+    };
+    token_info?: {
+      balance?: number;
+      decimals?: number;
+      symbol?: string;
+      name?: string;
+      price_info?: {
+        price_per_token?: number;
+      };
+    };
+  }
+
+  const items = (Array.isArray(result.items) ? result.items : []) as HeliusAsset[];
+
   for (const item of items) {
-    if (item.interface !== "FungibleToken" && item.interface !== "FungibleAsset")
+    if (
+      item.interface !== "FungibleToken" &&
+      item.interface !== "FungibleAsset"
+    )
       continue;
 
     const tokenInfo = item.token_info ?? {};
@@ -152,8 +177,7 @@ async function fetchHeliusAssets(wallet: string): Promise<PortfolioToken[]> {
     tokens.push({
       mint,
       symbol,
-      name:
-        item.content?.metadata?.name ?? tokenInfo.name ?? symbol,
+      name: item.content?.metadata?.name ?? tokenInfo.name ?? symbol,
       logoUri: item.content?.links?.image ?? undefined,
       balance,
       decimals: tokenInfo.decimals ?? 0,
@@ -236,32 +260,51 @@ async function fetchStakePositions(
       fetch("/api/validators").then((r) => (r.ok ? r.json() : { validators: [] })),
     ]);
 
-    const accounts: Array<Record<string, unknown>> = Array.isArray(stakeData?.result)
-      ? stakeData.result
-      : [];
+    interface HeliusStakeAccount {
+      pubkey: string;
+      account: {
+        lamports: number;
+        data: {
+          parsed?: {
+            info?: {
+              stake?: {
+                delegation?: {
+                  voter?: string;
+                  activationEpoch?: string;
+                  deactivationEpoch?: string;
+                };
+              };
+            };
+          };
+        };
+      };
+    }
+
+    const accounts = (
+      Array.isArray(stakeData?.result) ? stakeData.result : []
+    ) as HeliusStakeAccount[];
+
     const validatorMap = new Map<string, string>();
-    const validators = Array.isArray(validatorRes?.validators)
-      ? validatorRes.validators
-      : [];
+    const validators = (
+      Array.isArray(validatorRes?.validators) ? validatorRes.validators : []
+    ) as Array<{ votingPubkey?: string; name?: string }>;
+
     validators.forEach((v) => {
-      const vote = typeof v?.votingPubkey === "string" ? v.votingPubkey : "";
-      const name = typeof v?.name === "string" ? v.name : "";
+      const vote = v.votingPubkey ?? "";
+      const name = v.name ?? "";
       if (vote) validatorMap.set(vote, name);
     });
 
     return accounts
       .map((acc): StakePosition | null => {
-        const parsed = acc?.account?.data?.parsed?.info;
+        const parsed = acc.account.data.parsed?.info;
         if (!parsed) return null;
 
-        const lamports = acc?.account?.lamports ?? 0;
+        const lamports = acc.account.lamports;
         const stakedSol = lamports / 1e9;
-        const voteAccount =
-          parsed?.stake?.delegation?.voter ?? "";
-        const activationEpoch =
-          parsed?.stake?.delegation?.activationEpoch;
-        const deactivationEpoch =
-          parsed?.stake?.delegation?.deactivationEpoch;
+        const voteAccount = parsed.stake?.delegation?.voter ?? "";
+        const activationEpoch = parsed.stake?.delegation?.activationEpoch;
+        const deactivationEpoch = parsed.stake?.delegation?.deactivationEpoch;
 
         let status: StakePosition["status"] = "active";
         if (deactivationEpoch !== "18446744073709551615") {

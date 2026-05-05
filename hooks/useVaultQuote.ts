@@ -68,7 +68,7 @@ export function useVaultQuote({
       const data = (await res.json()) as VaultQuoteResponse;
 
       if (data.ok) {
-        setQuote(data.quote);
+        setQuote(data.quote ?? null);
         setTransaction(data.transaction ?? null);
         setExecutionAvailable(Boolean(data.executionAvailable && data.transaction));
         setNote(data.note ?? null);
