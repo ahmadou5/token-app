@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         symbol: p.symbol,
         amount: p.amount,
         yieldUsd: p.yieldUsd,
+        apy: 0,
       })),
       err: null,
     });

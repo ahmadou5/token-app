@@ -12,8 +12,10 @@ export function SolanaProviders({ children }: { children: ReactNode }) {
   const connectorConfig = useMemo(() => {
     // Get custom RPC URL from environment variable (for mainnet)
     const customRpcUrl =
+      process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
       process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL ||
-      "https://api.mainnet.solana.com";
+      process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
+      "https://api.mainnet-beta.solana.com";
 
     // Always provide cluster configuration with mainnet as default
     const clusters = [

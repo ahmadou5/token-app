@@ -11,6 +11,7 @@ import {
   type StakePosition,
   type YieldPosition,
 } from "@/hooks/usePortfolioData";
+import { TokenIcon } from "@/components/ui/TokenIcon";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,27 +66,7 @@ function TokenAvatar({
   symbol: string;
   size?: number;
 }) {
-  const [err, setErr] = useState(false);
-  if (logo && !err) {
-    return (
-      <img
-        src={logo}
-        alt={symbol}
-        width={size}
-        height={size}
-        className="pf-token-avatar pf-token-avatar--img"
-        onError={() => setErr(true)}
-      />
-    );
-  }
-  return (
-    <div
-      className="pf-token-avatar pf-token-avatar--fallback"
-      style={{ width: size, height: size }}
-    >
-      {symbol.slice(0, 2)}
-    </div>
-  );
+  return <TokenIcon src={logo} symbol={symbol} size={size} />;
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -245,12 +226,7 @@ function StakeRow({ pos }: { pos: StakePosition }) {
 function YieldRow({ pos }: { pos: YieldPosition }) {
   return (
     <div className="pf-token-row">
-      <div
-        className="pf-token-avatar pf-token-avatar--fallback"
-        style={{ width: 32, height: 32 }}
-      >
-        {pos.symbol.slice(0, 2)}
-      </div>
+      <TokenIcon src={pos.mint} symbol={pos.symbol} size={32} />
       <div className="pf-token-row__info">
         <span className="pf-token-row__symbol">{pos.symbol}</span>
         <span className="pf-token-row__balance">

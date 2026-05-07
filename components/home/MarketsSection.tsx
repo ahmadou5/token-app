@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useLayoutEffect, useMemo } from "react";
 import Link from "next/link";
 import { fmtCompact } from "@/components/TokenCard";
 import { useTokens } from "@/hooks/useToken";
+import { TokenIcon } from "@/components/ui/TokenIcon";
 
 export default function MarketsSection({ initialTokens = [] }: { initialTokens?: any[] }) {
   const {
@@ -115,11 +116,12 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
                 onClick={() => window.location.href = `/token/${token.symbol}`}
               >
                 <div className="hp-market-row__logo">
-                  {token.logoUri ? (
-                    <img src={token.logoUri} alt={token.name} />
-                  ) : (
-                    token.symbol[0]
-                  )}
+                  <TokenIcon 
+                    src={token.logoUri} 
+                    symbol={token.symbol} 
+                    name={token.name} 
+                    size={32}
+                  />
                 </div>
                 <div className="hp-market-row__identity">
                   <span className="hp-market-row__name">{token.name}</span>

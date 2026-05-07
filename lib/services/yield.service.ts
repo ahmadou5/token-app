@@ -125,6 +125,7 @@ export interface RealYieldPosition {
   symbol: string;
   amount: number;
   yieldUsd: number;
+  apy: number;
 }
 
 const KNOWN_YIELD_MINTS: Record<string, { provider: EarnProvider; symbol: string }> = {
@@ -151,12 +152,10 @@ export async function fetchKaminoLendingPositions(
 ): Promise<RealYieldPosition[]> {
   const KAMINO_PROGRAM_ID = "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD";
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-  if (!rpcUrl) return [];
+  if (!rpcUrl || !wallet) return [];
 
   try {
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-    if (!rpcUrl) return [];
-
+    const walletPubkey = new PublicKey(wallet);
     const connection = new Connection(rpcUrl);
     const MAIN_MARKET = new PublicKey("7uS4q2Hvw7Kz84RSR2X9bZpypC7Vd8i1W5RjR6Fk9");
     
@@ -164,7 +163,7 @@ export async function fetchKaminoLendingPositions(
     if (!market) return [];
 
     // Fetch obligations for this wallet
-    const obligations = await market.getAllUserObligations(new PublicKey(wallet));
+    const obligations = await market.getAllUserObligations(walletPubkey);
     
     const positions: RealYieldPosition[] = [];
 
@@ -184,6 +183,7 @@ export async function fetchKaminoLendingPositions(
             symbol: reserve.symbol || "Unknown",
             amount: amount,
             yieldUsd: 0,
+            apy: 0,
           });
         }
       }
@@ -200,16 +200,14 @@ export async function fetchMarginfiPositions(
   wallet: string,
 ): Promise<RealYieldPosition[]> {
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-  if (!rpcUrl) return [];
+  if (!rpcUrl || !wallet) return [];
 
   try {
+    const walletPubkey = new PublicKey(wallet);
     const [{ MarginfiClient, getConfig }, { NodeWallet }] = await Promise.all([
       import("@mrgnlabs/marginfi-client-v2"),
       import("@mrgnlabs/mrgn-common"),
     ]);
-
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-    if (!rpcUrl) return [];
 
     const connection = new Connection(rpcUrl);
     const config = getConfig("production");
@@ -220,7 +218,7 @@ export async function fetchMarginfiPositions(
     );
 
     const accounts = await client.getMarginfiAccountsForAuthority(
-      new PublicKey(wallet),
+      walletPubkey,
     );
     
     const positions: RealYieldPosition[] = [];
@@ -241,6 +239,7 @@ export async function fetchMarginfiPositions(
             symbol: bank.tokenSymbol || "Unknown",
             amount: amount,
             yieldUsd: 0,
+            apy: 0,
           });
         }
       }
@@ -315,6 +314,7 @@ export async function fetchOnChainYieldPositions(
           symbol: item.token_info?.symbol || KNOWN_YIELD_MINTS[mint].symbol,
           amount: balance,
           yieldUsd: 0,
+          apy: 0,
         });
       }
     }

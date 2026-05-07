@@ -130,10 +130,23 @@ async function apiGet<T>(
   }
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    const contentType = res.headers.get("content-type") || "";
+    let errorDetail = "";
+
+    if (contentType.includes("application/json")) {
+      const json = await res.json().catch(() => ({}));
+      errorDetail = json.message || json.error || JSON.stringify(json);
+    } else {
+      const text = await res.text().catch(() => "");
+      errorDetail = text.length > 200 ? text.slice(0, 200) + "..." : text;
+      if (text.includes("<!DOCTYPE html>")) {
+        errorDetail = "Received HTML error page (possibly 502 Bad Gateway)";
+      }
+    }
+
     throw new AdrenaAPIError(
       res.status,
-      `Adrena API error ${res.status} on ${path}: ${body}`,
+      `Adrena API error ${res.status} on ${path}: ${errorDetail}`,
     );
   }
 
