@@ -107,10 +107,6 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
     [positions, earnProvider, mint],
   );
 
-  const currentApy = asFiniteNumber(quote?.apy);
-  const fallbackApy = asFiniteNumber(allAPYs[earnProvider]);
-  const displayApy = currentApy ?? fallbackApy ?? 0;
-
   const {
     quote,
     transaction,
@@ -126,6 +122,10 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
     owner: wallet ?? undefined,
     action: activeAction,
   });
+
+  const currentApy = asFiniteNumber(quote?.apy);
+  const fallbackApy = asFiniteNumber(allAPYs[earnProvider]);
+  const displayApy = currentApy ?? fallbackApy ?? 0;
 
   const {
     execute,
