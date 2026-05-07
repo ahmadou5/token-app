@@ -14,6 +14,12 @@ interface PriceData {
   change24h: number;
 }
 
+interface PricesResponse {
+  ok: boolean;
+  data: PriceData[];
+  err: string | null;
+}
+
 export default function TradingSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const { settings, setExecutionStrategy } = useSwapSettings();
@@ -42,8 +48,8 @@ export default function TradingSection() {
     async function fetchPrices() {
       try {
         const res = await fetch("/api/home/prices");
-        const data = await res.json();
-        setPrices(data);
+        const data = (await res.json()) as PricesResponse;
+        setPrices(Array.isArray(data.data) ? data.data : []);
       } catch (err) {
         console.error("Failed to fetch prices:", err);
       }

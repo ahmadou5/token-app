@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchYieldAPY, fetchJupiterYieldTx, fetchKaminoYieldTx, fetchMarginfiYieldTx, fetchDriftYieldTx } from "@/lib/services/yield.service";
+import { fetchYieldAPY, fetchJupiterYieldTx, fetchKaminoYieldTx, fetchMarginfiYieldTx } from "@/lib/services/yield.service";
 import type { EarnProvider } from "@/context/SwapSettingsContext";
 
 interface YieldQuoteBody {
@@ -96,25 +96,8 @@ export async function POST(req: NextRequest) {
       } else {
         note = `Could not find an active Marginfi account for this wallet. Please create one on marginfi.com first.`;
       }
-    } else if (provider === "drift" && owner && mint && amount > 0) {
-      // Native Drift Protocol Integration
-      const decimals = mint === "So11111111111111111111111111111111111111112" ? 9 : 6;
-      const rawAmount = Math.floor(amount * Math.pow(10, decimals));
-      const action = (body as any).action || "deposit";
-
-      transaction = await fetchDriftYieldTx({
-        owner,
-        inputMint: mint,
-        amount: rawAmount,
-        action,
-      });
-
-      if (transaction) {
-        executionAvailable = true;
-        note = `Executing native ${action} on Drift Protocol Spot Market.`;
-      } else {
-        note = `Could not build Drift transaction. Ensure you have a Drift User Account initialized.`;
-      }
+    } else if (provider === "drift") {
+      note = "Drift Earn is temporarily paused and will return soon.";
     }
 
     return NextResponse.json({

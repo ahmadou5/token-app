@@ -118,9 +118,9 @@ export async function getHomeStatsData(): Promise<HomeStatsData> {
   }
 
   return {
-    tvl: poolStats ? compact(safeNum(poolStats.total_value_locked)) : "$1.2B",
-    volume24h: poolStats ? compact(safeNum(poolStats.volume_24h)) : "$420M",
-    activeUsers: uniqueWallets.size > 0 ? compact(uniqueWallets.size) : "12.4K",
+    tvl: compact(poolStats ? safeNum(poolStats.total_value_locked) : 0),
+    volume24h: compact(poolStats ? safeNum(poolStats.volume_24h) : 0),
+    activeUsers: compact(uniqueWallets.size),
   };
 }
 

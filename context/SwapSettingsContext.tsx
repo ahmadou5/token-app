@@ -110,8 +110,8 @@ export const EARN_PROVIDER_META: Record<
   },
   drift: {
     label: "Drift Protocol",
-    badge: null,
-    description: "Spot + perp DEX. Earn yield on idle stable collateral.",
+    badge: "Paused",
+    description: "Temporarily paused. Coming soon after integration refresh.",
     apiBase: "https://drift-public-api.drift.trade",
   },
   jupiter: {
@@ -129,6 +129,7 @@ export interface SwapSettings {
   provider: SwapProvider;
   executionStrategy: ExecutionStrategy;
   slippage: number;
+  goalModeEnabled: boolean;
   // Perp
   perpProvider: PerpProvider;
   // Earn
@@ -139,6 +140,7 @@ const DEFAULT_SETTINGS: SwapSettings = {
   provider: "metis",
   executionStrategy: "standard",
   slippage: 0.5,
+  goalModeEnabled: true,
   perpProvider: "adrena",
   earnProvider: "kamino",
 };
@@ -150,6 +152,7 @@ interface SwapSettingsContextValue {
   setProvider: (p: SwapProvider) => void;
   setExecutionStrategy: (s: ExecutionStrategy) => void;
   setSlippage: (v: number) => void;
+  setGoalModeEnabled: (enabled: boolean) => void;
   setPerpProvider: (p: PerpProvider) => void;
   setEarnProvider: (p: EarnProvider) => void;
   resetSettings: () => void;
@@ -169,7 +172,11 @@ export function SwapSettingsProvider({
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return DEFAULT_SETTINGS;
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+      const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as SwapSettings;
+      if (parsed.earnProvider === "drift") {
+        parsed.earnProvider = DEFAULT_SETTINGS.earnProvider;
+      }
+      return parsed;
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -194,6 +201,10 @@ export function SwapSettingsProvider({
     (v: number) => setSettings((s) => ({ ...s, slippage: v })),
     [],
   );
+  const setGoalModeEnabled = useCallback(
+    (enabled: boolean) => setSettings((s) => ({ ...s, goalModeEnabled: enabled })),
+    [],
+  );
   const setPerpProvider = useCallback(
     (p: PerpProvider) => setSettings((s) => ({ ...s, perpProvider: p })),
     [],
@@ -211,6 +222,7 @@ export function SwapSettingsProvider({
         setProvider,
         setExecutionStrategy,
         setSlippage,
+        setGoalModeEnabled,
         setPerpProvider,
         setEarnProvider,
         resetSettings,

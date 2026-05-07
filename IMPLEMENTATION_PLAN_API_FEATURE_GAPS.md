@@ -1,134 +1,105 @@
 # API + Feature Gap Plan (Solana Kit/Connector/Pipeit)
 
+Date: 2026-05-07
+
 ## Scope
-Audit and close gaps where frontend shows placeholders, non-fetched data, or routes that are missing/unimplemented.
+Close remaining API/feature gaps where frontend can show stale placeholders, non-verifiable values, or inconsistent contracts.
 
-## Confirmed Gaps (Current State)
-1. `app/api/home/stats/route.ts`
-- Returns hardcoded mock stats (`tvl`, `volume24h`, `activeUsers`).
+## Current Status (Verified)
 
-2. `app/api/home/prices/route.ts`
-- Returns hardcoded mock perp prices.
+### Completed
+1. Home API routes are service-backed (no route-level hardcoded mocks):
+- `app/api/home/stats/route.ts`
+- `app/api/home/prices/route.ts`
+- `app/api/home/markets/route.ts`
 
-3. `app/api/home/markets/route.ts`
-- Returns hardcoded token/category market arrays.
+2. Portfolio yield UI is implemented with real list rendering and empty states:
+- `components/Portfolio/PortfolioDrawer.tsx`
+- `hooks/usePortfolioData.ts`
 
-4. `app/api/yield/positions/route.ts`
-- Returns empty/mock positions with TODO for real vault integration.
-
-5. `components/Portfolio/PortfolioDrawer.tsx`
-- Yield section is an explicit placeholder UI, not real position data.
-
-6. `hooks/usePortfolioData.ts`
-- Depends on `/api/trade?wallet=...` for perp positions.
-- Route was missing before this pass; now implemented as `app/api/trade/route.ts`.
-
-7. `app/api/yield/quote/route.ts`
-- Previously returned placeholder base64 transaction.
-- Now changed to informational quote only (`transaction: null`), execution disabled until real integration.
-
-8. `hooks/useEarnPositions.ts`
-- Contained unimplemented dead code path; now cleaned up and state reset behavior improved.
-
-## Fixes Applied In This Pass
-1. Added missing perp positions route:
+3. Missing perp positions route exists and is consumed by portfolio:
 - `app/api/trade/route.ts`
-- Uses `lib/adrena.ts:getPositions()` and returns normalized `openPositions`.
 
-2. Hardened earn positions hook:
-- `hooks/useEarnPositions.ts`
-- Removed dead unimplemented callback, added safe array guards, clears stale positions on disconnect.
-
-3. Removed fake executable yield tx response:
+4. Yield quote route supports real provider-specific transaction paths for active providers:
 - `app/api/yield/quote/route.ts`
-- Returns `transaction: null`, `executionAvailable: false`, and note for UI/flow correctness.
 
-## Multi-Agent Implementation Plan
+### Remaining Gaps
+1. Home stats fallback currently returns synthetic values when upstream data is unavailable.
+2. Yield position attribution and estimated yield still rely on heuristic logic for some tokens.
+3. API contract keys are inconsistent across routes (`error` vs `err`, envelope differences).
+4. Tests do not yet cover all home/trade/yield failure scenarios.
 
-## Branch/PR Strategy
-1. Create one integration branch: `feat/close-api-feature-gaps`.
-2. Each agent works in a dedicated sub-branch and opens PR to integration branch.
-3. Keep file ownership disjoint to avoid merge conflicts.
+## Ordered Execution Plan
 
-## Agent Workstreams
-1. Agent A: Home Data APIs (read-only market data)
-- Ownership:
-  - `app/api/home/stats/route.ts`
-  - `app/api/home/prices/route.ts`
-  - `app/api/home/markets/route.ts`
-  - `components/home/HeroSection.tsx`
-  - `components/home/TradingSection.tsx`
-- Tasks:
-  - Replace mock data with live upstream fetches.
-  - Add timeout + fallback + stale-safe shape validation.
-  - Keep response contracts stable for existing FE.
-- Acceptance:
-  - No hardcoded market metrics.
-  - FE displays real data with graceful fallback state.
+### 1. Plan/Status Accuracy
+- Keep this file updated as implementation changes land.
+- Ensure every listed gap maps to a concrete file and acceptance criteria.
 
-2. Agent B: Yield Positions + Portfolio Yield UI
-- Ownership:
-  - `app/api/yield/positions/route.ts`
-  - `hooks/useEarnPositions.ts` (follow-up only if needed)
-  - `hooks/usePortfolioData.ts`
-  - `components/Portfolio/PortfolioDrawer.tsx`
-- Tasks:
-  - Integrate provider adapters for real wallet positions.
-  - Add yield positions into portfolio aggregate hook.
-  - Replace Yield placeholder card with real rows + empty/error states.
-- Acceptance:
-  - Connected wallet with active vault position shows real amount/yield.
-  - No placeholder-only Yield block.
+Acceptance:
+- No stale claims in this document.
 
-3. Agent C: Yield Execution Wiring (solana/kit + pipeit)
-- Ownership:
-  - `app/api/yield/quote/route.ts`
-  - `hooks/useVaultQuote.ts`
-  - `hooks/useEarnExecute.ts`
-  - `components/Earn/EarnVault.tsx`
-- Tasks:
-  - Implement real tx construction path (provider-aware).
-  - Keep transaction signing/execution via `@solana/connector` + `@pipeit/core`.
-  - Add capability flag per provider (`executionAvailable`), disable submit when unavailable.
-- Acceptance:
-  - At least one provider supports live deposit/withdraw tx end-to-end.
-  - No fake transaction payloads.
+### 2. Home Route Fallback Hardening
+Ownership:
+- `lib/services/homeData.service.ts`
+- `app/api/home/stats/route.ts`
+- `app/api/home/prices/route.ts`
+- `app/api/home/markets/route.ts`
 
-4. Agent D: Reliability + Tests
-- Ownership:
-  - `tests/api-routes.test.ts`
-  - New tests under `tests/` for home/yield/trade routes
-- Tasks:
-  - Add route contract tests for success/failure/invalid params.
-  - Add regression tests for missing route and null-transaction safety.
-- Acceptance:
-  - `pnpm test` passes with new coverage for all touched endpoints.
+Tasks:
+- Replace synthetic stats fallback with deterministic empty-safe values and stale metadata.
+- Return consistent envelope shape for home routes.
+- Preserve graceful rendering behavior for frontend.
 
-## Engineering Standards (Must Follow)
-1. Wallet/connectivity:
-- Use `@solana/connector` hooks for account/signer/client only.
+Acceptance:
+- No fake numeric market stats in failure path.
+- Responses include explicit stale/error indicator.
 
-2. Transaction execution:
-- Use `@pipeit/core` `TransactionBuilder` pattern.
-- Keep signing through connector signer, no ad-hoc wallet adapters.
+### 3. Yield Position Accuracy Hardening
+Ownership:
+- `lib/services/yield.service.ts`
+- `app/api/yield/positions/route.ts`
 
-3. Solana primitives:
-- Use `@solana/kit` types/helpers where possible for address/instruction handling.
+Tasks:
+- Remove symbol-prefix provider detection heuristics.
+- Keep only provider-attribution paths with deterministic evidence (protocol adapters and allowlists).
+- Keep paused providers excluded from active attribution.
 
-4. API hardening:
-- Validate required params.
-- Return stable JSON contracts: `{ ok, data|quote|positions, err|error }`.
-- Add timeout and failure-safe fallbacks for external providers.
+Acceptance:
+- No heuristic provider classification based on token ticker prefix.
+- Yield positions are sourced from protocol/account evidence only.
 
-## Sequencing
-1. Merge Agent A first (home data quality, low coupling).
-2. Merge Agent B second (portfolio/yield visibility).
-3. Merge Agent C third (yield execution path).
-4. Merge Agent D last (tests after contracts settle).
+### 4. API Contract Normalization
+Ownership:
+- API routes under `app/api/*` touched by this plan.
+
+Tasks:
+- Normalize response shape to:
+  - success: `{ ok: true, data: ..., err: null }` (or domain key like `quote`/`positions` while keeping `ok` + `err`)
+  - failure: `{ ok: false, err: string, ...safe-defaults }`
+- Avoid mixing `error` and `err` keys.
+
+Acceptance:
+- All touched routes use consistent `ok` + `err` semantics.
+
+### 5. Reliability + Regression Tests
+Ownership:
+- `tests/api-routes.test.ts`
+- Additional tests under `tests/` as needed.
+
+Tasks:
+- Add contract tests for:
+  - `/api/home/stats`, `/api/home/prices`, `/api/home/markets`
+  - `/api/trade`
+  - `/api/yield/quote` paused/unsupported/failure paths
+- Add failure/timeout-safe behavior tests.
+
+Acceptance:
+- `pnpm test` passes.
+- Coverage includes success + validation + failure paths for the above routes.
 
 ## Definition of Done
-1. No mock-only API responses in home and yield routes.
-2. No placeholder-only portfolio yield UI.
-3. No missing FE-called routes.
-4. At least one live earn execution path works via connector + pipeit.
-5. Tests cover route contracts and failure paths.
+1. No stale or misleading plan/status documentation.
+2. No synthetic market metrics used as fallback values.
+3. No heuristic-only provider attribution for yield positions.
+4. Touched routes follow consistent `ok`/`err` contract semantics.
+5. Route-level tests cover both happy and failure paths.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@solana/connector";
 import { useSwapSettings } from "@/context/SwapSettingsContext";
 import { useIntentPlanner } from "@/hooks/useIntentPlanner";
@@ -8,6 +8,7 @@ import { useStakeTransaction } from "@/hooks/useStakeTransaction";
 import { useEarnExecute } from "@/hooks/useEarnExecute";
 import { trackEvent } from "@/lib/analytics";
 import { useAlertCenter } from "@/context/AlertCenterContext";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import type { IntentGoal, RiskProfile } from "@/types/intent";
 import type { SwapQuote } from "@/hooks/useSwapQuote";
 
@@ -58,6 +59,7 @@ export function GoalModeCard({
 
   const [goal, setGoal] = useState<IntentGoal>("grow_sol_low_risk");
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("balanced");
+  const [openDropdown, setOpenDropdown] = useState<"goal" | "risk" | null>(null);
   const [executionState, setExecutionState] = useState<"idle" | "running">("idle");
   const [executeMsg, setExecuteMsg] = useState<string | null>(null);
   const [intentSessionId, setIntentSessionId] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function GoalModeCard({
     step2Tx: string | null;
     step2Label: string | null;
   } | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
 
   const canPreview = useMemo(() => {
     const n = parseFloat(inputAmount);
@@ -73,6 +76,17 @@ export function GoalModeCard({
   }, [inputAmount, inputMint, outputMint]);
 
   const canExecute = Boolean(plan && !plan.blocked && quote && account && executionState === "idle");
+
+  useEffect(() => {
+    function handleOutside(event: MouseEvent) {
+      if (!controlsRef.current) return;
+      if (!controlsRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
 
   async function handlePreview() {
     if (!canPreview) return;
@@ -335,34 +349,122 @@ export function GoalModeCard({
   return (
     <div className="sw-goal">
       <div className="sw-goal__head">
-        <span className="sw-input-lbl">Goal Mode</span>
+        <span className="sw-input-lbl" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          Goal Mode
+          <InfoTooltip label="Automatically chains your swap with a follow-up action like staking or depositing into a yield vault, based on your chosen goal." />
+        </span>
         <span className="sw-goal__hint">Outcome-first strategy planner</span>
       </div>
 
-      <div className="sw-goal__controls">
-        <select
-          className="sw-goal__select"
-          value={goal}
-          onChange={(e) => setGoal(e.target.value as IntentGoal)}
-        >
-          {GOALS.map((g) => (
-            <option key={g.key} value={g.key}>
-              {g.label}
-            </option>
-          ))}
-        </select>
+      <div
+        className="sw-goal__controls"
+        ref={controlsRef}
+      >
+        <div className="sw-goal__pill-wrap">
+          <div className="sw-input-lbl" style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginBottom: "5px" }}>
+            Goal
+            <InfoTooltip label="Select your desired outcome. Each goal maps to a different execution path after the swap." />
+          </div>
+          <button
+            type="button"
+            className="sw-goal__pill-trigger"
+            onClick={() => setOpenDropdown((v) => (v === "goal" ? null : "goal"))}
+            aria-expanded={openDropdown === "goal"}
+          >
+            <span>{GOALS.find((g) => g.key === goal)?.label ?? "Select goal"}</span>
+            <span
+              style={{
+                display: "inline-flex",
+                transform: openDropdown === "goal" ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 120ms ease",
+              }}
+            >
+              <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                <path d="M3 4.5 6 7.5l3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+          {openDropdown === "goal" && (
+            <div className="sw-goal__pill-menu">
+              {GOALS.map((g) => {
+                const active = goal === g.key;
+                return (
+                  <button
+                    key={g.key}
+                    type="button"
+                    className={`sw-goal__pill-option ${active ? "sw-goal__pill-option--active" : ""}`}
+                    onClick={() => {
+                      setGoal(g.key);
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <span>{g.label}</span>
+                    {active && (
+                      <span style={{ color: "var(--tc-accent)" }}>
+                        <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                          <path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-        <select
-          className="sw-goal__select"
-          value={riskProfile}
-          onChange={(e) => setRiskProfile(e.target.value as RiskProfile)}
-        >
-          {RISK_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
+        <div className="sw-goal__pill-wrap">
+          <div className="sw-input-lbl" style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginBottom: "5px" }}>
+            Risk
+            <InfoTooltip label="Controls how aggressively the planner routes and selects strategies. Conservative avoids high-slippage paths." />
+          </div>
+          <button
+            type="button"
+            className="sw-goal__pill-trigger"
+            onClick={() => setOpenDropdown((v) => (v === "risk" ? null : "risk"))}
+            aria-expanded={openDropdown === "risk"}
+          >
+            <span>{riskProfile.charAt(0).toUpperCase() + riskProfile.slice(1)}</span>
+            <span
+              style={{
+                display: "inline-flex",
+                transform: openDropdown === "risk" ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 120ms ease",
+              }}
+            >
+              <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                <path d="M3 4.5 6 7.5l3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+          {openDropdown === "risk" && (
+            <div className="sw-goal__pill-menu">
+              {RISK_LEVELS.map((level) => {
+                const active = riskProfile === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    className={`sw-goal__pill-option ${active ? "sw-goal__pill-option--active" : ""}`}
+                    onClick={() => {
+                      setRiskProfile(level);
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <span>{level.charAt(0).toUpperCase() + level.slice(1)}</span>
+                    {active && (
+                      <span style={{ color: "var(--tc-accent)" }}>
+                        <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                          <path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="sw-goal__actions">

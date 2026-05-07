@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   if (!wallet) {
     return NextResponse.json(
-      { ok: false, error: "wallet required", openPositions: [] },
+      { ok: false, err: "wallet required", openPositions: [] },
       { status: 400 },
     );
   }
@@ -28,13 +28,13 @@ export async function GET(req: NextRequest) {
         collateralAmount: p.collateral_amount,
       }));
 
-    return NextResponse.json({ ok: true, openPositions });
+    return NextResponse.json({ ok: true, openPositions, err: null });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch positions";
     console.error("[api/trade] Error:", message);
     return NextResponse.json(
-      { ok: false, error: message, openPositions: [] },
+      { ok: false, err: message, openPositions: [] },
       { status: 500 },
     );
   }

@@ -1,19 +1,8 @@
 import { EarnProvider } from "@/context/SwapSettingsContext";
 import { KaminoAction, KaminoMarket, VanillaObligation } from "@kamino-finance/klend-sdk";
-import {
-  MarginfiClient,
-  getConfig,
-  MarginfiAccount,
-} from "@mrgnlabs/marginfi-client-v2";
-import { NodeWallet } from "@mrgnlabs/mrgn-common";
 import { Connection, PublicKey, Keypair } from "@solana/web3.js";
-import {
-  DriftClient,
-  getUserAccountPublicKeySync,
-  BulkAccountLoader,
-  Wallet,
-} from "@drift-labs/sdk";
 import Decimal from "decimal.js";
+import { BN } from "@coral-xyz/anchor";
 
 interface YieldPool {
   pool: string;
@@ -30,7 +19,7 @@ const LLAMA_YIELD_URL = "https://yields.llama.fi/pools";
 const PROVIDER_MAP: Record<EarnProvider, string[]> = {
   kamino: ["kamino-lend", "kamino-liquidity"],
   marginfi: ["marginfi-lst", "marginfi"],
-  drift: ["drift-protocol", "drift-staked-sol"],
+  drift: [],
   jupiter: ["jupiter-lend", "jupiter-staked-sol"],
 };
 
@@ -38,6 +27,7 @@ export async function fetchYieldAPY(
   provider: EarnProvider,
   symbol: string
 ): Promise<number> {
+  if (provider === "drift") return 0;
   try {
     const projects = PROVIDER_MAP[provider];
     const res = await fetch(LLAMA_YIELD_URL);
@@ -86,6 +76,10 @@ export async function getAllProviderYields(
     const results: Partial<Record<EarnProvider, ProviderYieldData>> = {};
 
     for (const p of providers) {
+      if (p === "drift") {
+        results[p] = { apy: 0, tvlUsd: 0 };
+        continue;
+      }
       const projects = PROVIDER_MAP[p];
       const pools = data.filter(
         (pool) =>
@@ -160,41 +154,42 @@ export async function fetchKaminoLendingPositions(
   if (!rpcUrl) return [];
 
   try {
-    const res = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "kamino-lend",
-        method: "getProgramAccounts",
-        params: [
-          KAMINO_PROGRAM_ID,
-          {
-            encoding: "base64",
-            filters: [
-              { dataSize: 4032 },
-              { memcmp: { offset: 32, bytes: wallet } },
-            ],
-          },
-        ],
-      }),
-    });
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    if (!rpcUrl) return [];
 
-    const data = await res.json();
-    const accounts = (data.result || []) as any[];
+    const connection = new Connection(rpcUrl);
+    const MAIN_MARKET = new PublicKey("7uS4q2Hvw7Kz84RSR2X9bZpypC7Vd8i1W5RjR6Fk9");
+    
+    const market = await KaminoMarket.load(connection, MAIN_MARKET, 400);
+    if (!market) return [];
 
-    if (accounts.length > 0) {
-      return [
-        {
-          provider: "kamino",
-          mint: "So11111111111111111111111111111111111111112",
-          symbol: "SOL (Lend)",
-          amount: 0,
-          yieldUsd: 0,
-        },
-      ];
+    // Fetch obligations for this wallet
+    const obligations = await market.getAllUserObligations(new PublicKey(wallet));
+    
+    const positions: RealYieldPosition[] = [];
+
+    for (const obligation of obligations) {
+      for (const [reserveAddress, depositPosition] of obligation.deposits) {
+        const reserve = market.getReserveByAddress(reserveAddress);
+        if (!reserve) continue;
+
+        const amount = depositPosition.amount
+          .div(10 ** reserve.stats.decimals)
+          .toNumber();
+        
+        if (amount > 0) {
+          positions.push({
+            provider: "kamino",
+            mint: reserve.getLiquidityMint().toString(),
+            symbol: reserve.symbol || "Unknown",
+            amount: amount,
+            yieldUsd: 0,
+          });
+        }
+      }
     }
-    return [];
+
+    return positions;
   } catch (error) {
     console.error("Error fetching Kamino lending positions:", error);
     return [];
@@ -204,46 +199,54 @@ export async function fetchKaminoLendingPositions(
 export async function fetchMarginfiPositions(
   wallet: string,
 ): Promise<RealYieldPosition[]> {
-  const MARGINFI_PROGRAM_ID = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA";
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
   if (!rpcUrl) return [];
 
   try {
-    const res = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "marginfi-fetch",
-        method: "getProgramAccounts",
-        params: [
-          MARGINFI_PROGRAM_ID,
-          {
-            encoding: "base64",
-            filters: [
-              { dataSize: 2312 },
-              { memcmp: { offset: 8, bytes: wallet } },
-            ],
-          },
-        ],
-      }),
-    });
+    const [{ MarginfiClient, getConfig }, { NodeWallet }] = await Promise.all([
+      import("@mrgnlabs/marginfi-client-v2"),
+      import("@mrgnlabs/mrgn-common"),
+    ]);
 
-    const data = await res.json();
-    const accounts = (data.result || []) as any[];
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    if (!rpcUrl) return [];
 
-    if (accounts.length > 0) {
-      return [
-        {
-          provider: "marginfi",
-          mint: "So11111111111111111111111111111111111111112",
-          symbol: "SOL (Lend)",
-          amount: 0,
-          yieldUsd: 0,
-        },
-      ];
+    const connection = new Connection(rpcUrl);
+    const config = getConfig("production");
+    const client = await MarginfiClient.fetch(
+      config,
+      new NodeWallet(Keypair.generate() as any),
+      connection,
+    );
+
+    const accounts = await client.getMarginfiAccountsForAuthority(
+      new PublicKey(wallet),
+    );
+    
+    const positions: RealYieldPosition[] = [];
+
+    for (const marginfiAccount of accounts) {
+      for (const balance of marginfiAccount.balances) {
+        if (!balance.active) continue;
+        
+        const bank = client.getBankByPk(balance.bankPk);
+        if (!bank) continue;
+
+        const amount = balance.computeQuantityUi(bank).assets.toNumber();
+        
+        if (amount > 0) {
+          positions.push({
+            provider: "marginfi",
+            mint: bank.mint.toString(),
+            symbol: bank.tokenSymbol || "Unknown",
+            amount: amount,
+            yieldUsd: 0,
+          });
+        }
+      }
     }
-    return [];
+
+    return positions;
   } catch (error) {
     console.error("Error fetching Marginfi positions:", error);
     return [];
@@ -253,47 +256,8 @@ export async function fetchMarginfiPositions(
 export async function fetchDriftPositions(
   wallet: string,
 ): Promise<RealYieldPosition[]> {
-  const DRIFT_PROGRAM_ID = new PublicKey(
-    "dR1tAmXyX31tMhkR8tjS152TykSgh96ZqXyN6kU1n7C",
-  );
-  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-  if (!rpcUrl) return [];
-
-  try {
-    const userKey = getUserAccountPublicKeySync(
-      DRIFT_PROGRAM_ID,
-      new PublicKey(wallet),
-      0,
-    );
-
-    const res = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "drift-fetch",
-        method: "getAccountInfo",
-        params: [userKey.toString(), { encoding: "base64" }],
-      }),
-    });
-
-    const data = await res.json();
-    if (data.result?.value) {
-      return [
-        {
-          provider: "drift",
-          mint: "So11111111111111111111111111111111111111112",
-          symbol: "SOL (Spot)",
-          amount: 0,
-          yieldUsd: 0,
-        },
-      ];
-    }
-    return [];
-  } catch (error) {
-    console.error("Error fetching Drift positions:", error);
-    return [];
-  }
+  console.info("Drift yield positions are temporarily paused.");
+  return [];
 }
 
 export async function fetchOnChainYieldPositions(
@@ -303,7 +267,7 @@ export async function fetchOnChainYieldPositions(
   if (!rpcUrl) return [];
 
   try {
-    const [assetRes, kaminoRows, marginfiRows, driftRows] = await Promise.all([
+    const [assetRes, kaminoRows, marginfiRows] = await Promise.all([
       fetch(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -321,7 +285,6 @@ export async function fetchOnChainYieldPositions(
       }),
       fetchKaminoLendingPositions(wallet),
       fetchMarginfiPositions(wallet),
-      fetchDriftPositions(wallet),
     ]);
 
     const data = await assetRes.json();
@@ -329,16 +292,13 @@ export async function fetchOnChainYieldPositions(
     const positions: RealYieldPosition[] = [
       ...kaminoRows,
       ...marginfiRows,
-      ...driftRows,
     ];
 
     for (const item of items) {
       const mint = item.id;
-      const symbol = (item.token_info?.symbol || "").toUpperCase();
       const balance =
         (item.token_info?.balance || 0) /
         Math.pow(10, item.token_info?.decimals || 0);
-      const usdPrice = item.token_info?.price_info?.price_per_token || 0;
 
       if (balance === 0) continue;
 
@@ -346,19 +306,15 @@ export async function fetchOnChainYieldPositions(
 
       if (KNOWN_YIELD_MINTS[mint]) {
         provider = KNOWN_YIELD_MINTS[mint].provider;
-      } else if (symbol.startsWith("K") && symbol.length > 2) {
-        provider = "kamino";
-      } else if (symbol.startsWith("M") && symbol.length > 2) {
-        provider = "marginfi";
       }
 
       if (provider) {
         positions.push({
           provider,
           mint,
-          symbol: item.token_info?.symbol || symbol,
+          symbol: item.token_info?.symbol || KNOWN_YIELD_MINTS[mint].symbol,
           amount: balance,
-          yieldUsd: balance * usdPrice * 0.02,
+          yieldUsd: 0,
         });
       }
     }
@@ -436,7 +392,7 @@ export async function fetchKaminoYieldTx(params: {
 
     let kaminoAction: KaminoAction;
 
-    const obligation = new VanillaObligation(new PublicKey("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"));
+    const obligation = new VanillaObligation(MAIN_MARKET);
 
     if (params.action === "withdraw") {
       kaminoAction = await KaminoAction.buildWithdrawTxns(
@@ -459,8 +415,9 @@ export async function fetchKaminoYieldTx(params: {
       );
     }
 
-    const tx = await kaminoAction.getTransactions();
-    return tx.serialize({ requireAllSignatures: false }).toString("base64");
+    const txData = await kaminoAction.getTransactions();
+    const tx = Array.isArray(txData) ? txData[0] : (txData as any);
+    return Buffer.from(tx.serialize({ requireAllSignatures: false })).toString("base64");
   } catch (error) {
     console.error("Error fetching Kamino yield tx:", error);
     return null;
@@ -474,6 +431,11 @@ export async function fetchMarginfiYieldTx(params: {
   action?: "deposit" | "withdraw";
 }): Promise<string | null> {
   try {
+    const [{ MarginfiClient, getConfig }, { NodeWallet }] = await Promise.all([
+      import("@mrgnlabs/marginfi-client-v2"),
+      import("@mrgnlabs/mrgn-common"),
+    ]);
+
     const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
     if (!rpcUrl) return null;
 
@@ -481,7 +443,7 @@ export async function fetchMarginfiYieldTx(params: {
     const config = getConfig("production");
     const client = await MarginfiClient.fetch(
       config,
-      new NodeWallet(Keypair.generate()),
+      new NodeWallet(Keypair.generate() as any),
       connection,
     );
 
@@ -520,47 +482,6 @@ export async function fetchDriftYieldTx(params: {
   amount: number;
   action?: "deposit" | "withdraw";
 }): Promise<string | null> {
-  try {
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
-    if (!rpcUrl) return null;
-
-    const connection = new Connection(rpcUrl);
-    const driftClient = new DriftClient({
-      connection,
-      wallet: new Wallet(Keypair.generate()),
-      env: "mainnet-beta",
-      accountSubscription: {
-        type: "polling",
-        accountLoader: new BulkAccountLoader(connection, "confirmed", 1000),
-      },
-    });
-
-    await driftClient.subscribe();
-
-    const marketIndex =
-      params.inputMint === "So11111111111111111111111111111111111111112"
-        ? 0
-        : 1;
-
-    let txBase64;
-    if (params.action === "withdraw") {
-      txBase64 = await driftClient.createWithdrawBase64Transaction(
-        params.amount,
-        marketIndex,
-        new PublicKey(params.owner),
-      );
-    } else {
-      txBase64 = await driftClient.createDepositBase64Transaction(
-        params.amount,
-        marketIndex,
-        new PublicKey(params.owner),
-      );
-    }
-
-    await driftClient.unsubscribe();
-    return txBase64;
-  } catch (error) {
-    console.error("Error fetching Drift yield tx:", error);
-    return null;
-  }
+  console.info("Drift yield execution is temporarily paused.", params.owner);
+  return null;
 }

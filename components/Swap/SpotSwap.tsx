@@ -333,17 +333,19 @@ export function SpotSwap({
               />
             )}
 
-            <GoalModeCard
-              inputMint={safeInputToken.mint}
-              outputMint={outputMint}
-              outputSymbol={outputToken.symbol}
-              inputAmount={inputAmount}
-              quote={quote}
-              onExecutePrimarySwap={async () => {
-                if (!quote) return null;
-                return swap(quote);
-              }}
-            />
+            {settings.goalModeEnabled && (
+              <GoalModeCard
+                inputMint={safeInputToken.mint}
+                outputMint={outputMint}
+                outputSymbol={outputToken.symbol}
+                inputAmount={inputAmount}
+                quote={quote}
+                onExecutePrimarySwap={async () => {
+                  if (!quote) return null;
+                  return swap(quote);
+                }}
+              />
+            )}
 
             {(quoteError || swapError) && (
               <div className="sw-error">

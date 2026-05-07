@@ -32,6 +32,7 @@ export function SettingsModal({
     setProvider,
     setExecutionStrategy,
     setSlippage,
+    setGoalModeEnabled,
     setPerpProvider,
     setEarnProvider,
     resetSettings,
@@ -296,6 +297,36 @@ export function SettingsModal({
               )}
             </div>
 
+            <div className="sw-modal-section">
+              <div className="sw-modal-section__label">
+                <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
+                  <path
+                    d="M8.1 1.6L3.9 7.2h2.5l-.5 5.2 4.2-5.6H7.6l.5-5.2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Goal Mode
+              </div>
+              <div className="sw-goal-toggle-row">
+                <span className="sw-modal-provider__desc">Enable Goal Mode</span>
+                <label className="sw-toggle" aria-label="Toggle Goal Mode">
+                  <input
+                    type="checkbox"
+                    checked={settings.goalModeEnabled}
+                    onChange={(e) => setGoalModeEnabled(e.target.checked)}
+                  />
+                  <span className="sw-toggle__track" />
+                  <span className="sw-toggle__thumb" />
+                </label>
+              </div>
+              <span className="sw-modal-provider__desc">
+                Outcome-first strategy planner. Chain swaps with staking or earn.
+              </span>
+            </div>
+
             {/* Summary */}
             <div className="sw-modal-summary">
               <div className="sw-modal-summary__chip">
@@ -535,11 +566,18 @@ export function SettingsModal({
                   (p) => {
                     const meta = EARN_PROVIDER_META[p];
                     const active = settings.earnProvider === p;
+                    const isPaused = p === "drift";
                     return (
                       <button
                         key={p}
                         className={`sw-modal-provider ${active ? "sw-modal-provider--active" : ""}`}
-                        onClick={() => setEarnProvider(p)}
+                        onClick={() => {
+                          if (isPaused) return;
+                          setEarnProvider(p);
+                        }}
+                        disabled={isPaused}
+                        title={isPaused ? "Temporarily paused" : undefined}
+                        style={isPaused ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
                       >
                         <div className="sw-modal-provider__top">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -551,6 +589,9 @@ export function SettingsModal({
                             <span className="sw-modal-provider__name">
                               {meta.label}
                             </span>
+                            {isPaused && (
+                              <span className="sw-modal-summary__badge">Paused</span>
+                            )}
                           </div>
                           
                           {active && (

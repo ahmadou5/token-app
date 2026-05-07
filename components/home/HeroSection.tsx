@@ -11,6 +11,12 @@ interface Stats {
   activeUsers: string;
 }
 
+interface StatsResponse {
+  ok: boolean;
+  data: Stats;
+  err: string | null;
+}
+
 export function HeroSection() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +26,8 @@ export function HeroSection() {
     async function fetchStats() {
       try {
         const res = await fetch("/api/home/stats");
-        const data = await res.json();
-        setStats(data);
+        const data = (await res.json()) as StatsResponse;
+        setStats(data.data);
       } catch (err) {
         console.error("Failed to fetch stats:", err);
       } finally {

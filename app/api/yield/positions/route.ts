@@ -7,7 +7,7 @@ import { fetchOnChainYieldPositions } from "@/lib/services/yield.service";
 
 function isValidBody(body: unknown): body is {
   wallet: string;
-  provider: "kamino" | "marginfi" | "drift" | "jupiter";
+  provider: "kamino" | "marginfi" | "jupiter";
   mint: string;
   symbol: string;
   action: "deposit" | "withdraw";
@@ -18,7 +18,6 @@ function isValidBody(body: unknown): body is {
   const providerOk =
     v.provider === "kamino" ||
     v.provider === "marginfi" ||
-    v.provider === "drift" ||
     v.provider === "jupiter";
   const actionOk = v.action === "deposit" || v.action === "withdraw";
   return (
