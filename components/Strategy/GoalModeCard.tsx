@@ -13,9 +13,9 @@ import type { IntentGoal, RiskProfile } from "@/types/intent";
 import type { SwapQuote } from "@/hooks/useSwapQuote";
 
 const GOALS: Array<{ key: IntentGoal; label: string }> = [
-  { key: "grow_sol_low_risk", label: "Grow SOL (Low Risk)" },
-  { key: "stable_yield_cap_drawdown", label: "Stable Yield (Capped Risk)" },
-  { key: "momentum_trade_risk_cap", label: "Momentum Trade (Risk Cap)" },
+  { key: "grow_sol_low_risk", label: "Grow SOL" },
+  { key: "stable_yield_cap_drawdown", label: "Stable Yield" },
+  { key: "momentum_trade_risk_cap", label: "Momentum Trade" },
 ];
 
 const RISK_LEVELS: RiskProfile[] = ["conservative", "balanced", "aggressive"];
