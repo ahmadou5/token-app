@@ -205,6 +205,7 @@ async function fetchPerpPositions(wallet: string): Promise<PerpPosition[]> {
     const res = await fetch(`/api/trade?wallet=${wallet}`, {
       cache: "no-store",
     });
+    if (!res.ok) return [];
     const data = await res.json();
     return data?.openPositions ?? [];
   } catch {
@@ -230,9 +231,8 @@ async function fetchYieldPositions(wallet: string): Promise<YieldPosition[]> {
 async function fetchStakePositions(
   wallet: string,
 ): Promise<StakePosition[]> {
-  const rpcUrl =
-    process.env.NEXT_PUBLIC_HELIUS_RPC_URL ??
-    "https://api.mainnet-beta.solana.com";
+  const rpcUrl = process.env.NEXT_PUBLIC_HELIUS_RPC_URL;
+  if (!rpcUrl) return [];
 
   try {
     const [stakeData, validatorRes] = await Promise.all([
@@ -381,9 +381,16 @@ export function usePortfolioData(wallet: string | null): PortfolioData {
   }, [fetchAll]);
 
   const stables = tokens.filter((t) => t.isStable);
-  const totalYieldUsd = yieldPositions.reduce((s, p) => s + p.yieldUsd, 0);
+  const totalYieldUsd = yieldPositions.reduce(
+    (s, p) => s + (Number.isFinite(p.yieldUsd) ? p.yieldUsd : 0),
+    0,
+  );
   const totalEstAnnualYield = yieldPositions.reduce(
-    (s, p) => s + p.yieldUsd * (p.apy / 100),
+    (s, p) => {
+      const safeYieldUsd = Number.isFinite(p.yieldUsd) ? p.yieldUsd : 0;
+      const safeApy = Number.isFinite(p.apy) ? p.apy : 0;
+      return s + safeYieldUsd * (safeApy / 100);
+    },
     0,
   );
   const totalStakedSol = stakePositions.reduce((s, p) => s + p.stakedSol, 0);

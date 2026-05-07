@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     console.error("[api/trade] Error:", message);
     return NextResponse.json(
       { ok: false, err: message, openPositions: [] },
-      { status: 500 },
+      { status: 200 },
     );
   }
 }

@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
           symbol: s.symbol,
           amount: s.amount,
           yieldUsd: s.yieldUsd,
+          apy: 0,
         });
       }
     }

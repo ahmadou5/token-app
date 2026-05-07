@@ -27,6 +27,15 @@ const PROVIDER_ICONS: Record<EarnProvider, string> = {
   jupiter: "https://jup.ag/favicon.ico",
 };
 
+function asFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
 export function EarnVault({ mint, symbol }: EarnVaultProps) {
   const { isConnected } = useWallet();
   const connector = useConnector();
@@ -97,6 +106,10 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
     () => positions.find((p) => p.provider === earnProvider && p.mint === mint),
     [positions, earnProvider, mint],
   );
+
+  const currentApy = asFiniteNumber(quote?.apy);
+  const fallbackApy = asFiniteNumber(allAPYs[earnProvider]);
+  const displayApy = currentApy ?? fallbackApy ?? 0;
 
   const {
     quote,
@@ -246,7 +259,7 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
               {isQuoteLoading && !quote ? (
                 <span className="animate-pulse opacity-50">...</span>
               ) : (
-                `${quote?.apy.toFixed(2) ?? allAPYs[earnProvider]?.toFixed(2) ?? "0.00"}%`
+                `${displayApy.toFixed(2)}%`
               )}
             </div>
             <div className="sw-earn-card__provider-tag">
@@ -349,7 +362,7 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
                       <div className="flex items-center gap-2">
                         {allAPYs[p] !== null && (
                           <span className="text-[11px] font-mono font-bold text-[var(--tc-accent-up)]">
-                            {allAPYs[p]?.toFixed(2)}%
+                            {(asFiniteNumber(allAPYs[p]) ?? 0).toFixed(2)}%
                           </span>
                         )}
                         {earnProvider === p && <Check size={14} className="text-[var(--tc-accent)]" />}
@@ -369,7 +382,9 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
                   <span className="text-[var(--tc-text-muted)] flex items-center gap-1">
                     Daily Estimate <Info size={12} />
                   </span>
-                  <span className="font-bold text-[var(--tc-accent-up)] font-mono">+${quote.dailyEarningsUsd.toFixed(4)}</span>
+                  <span className="font-bold text-[var(--tc-accent-up)] font-mono">
+                    +${(asFiniteNumber(quote.dailyEarningsUsd) ?? 0).toFixed(4)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-[11px]">
                   <span className="text-[var(--tc-text-muted)]">Platform Fee</span>
