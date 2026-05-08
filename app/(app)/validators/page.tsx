@@ -17,7 +17,7 @@ export default async function ValidatorsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ padding: "0 24px 80px" }}>
+      <div className="max-w-[1400px] w-full mx-auto px-6 py-12" style={{ padding: "0 24px 80px" }}>
         <ValidatorsTable initialValidators={validators} />
       </div>
     </div>

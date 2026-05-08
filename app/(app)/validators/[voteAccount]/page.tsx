@@ -17,7 +17,7 @@ export default async function ValidatorDetailPage({ params }: PageProps) {
 
   return (
     <div className="td-page">
-      <div className="td-topbar">
+      <div className="td-topbar mt-[20px]">
         <div className="td-topbar__left">
           <Link href="/validators" className="td-back">
             <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
