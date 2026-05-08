@@ -7,9 +7,7 @@ export default function MarketsPage() {
   const handleNavigate = (assetId: string) => {
     router.push(`/token/${assetId}`);
   };
-  return (
-    <div className="lg:max-w-7xl w-[98%] tg ml-auto mr-auto">
+    <div className="max-w-[1400px] w-full mx-auto px-6 py-12">
       <TokenGrid onTokenClick={(id) => handleNavigate(id.assetId)} />
     </div>
-  );
 }

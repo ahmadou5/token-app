@@ -143,12 +143,12 @@ export function TokenGrid({ onTokenClick }: TokenGridProps) {
   } = useTokens();
 
   return (
-    <div className="tg ">
+    <div className="">
       {/* Search modal */}
 
       <div className="py-10 lg:px-8 px-2">
         {/* Hero */}
-        <div className="tg-hero px-80">
+        <div className="tg-hero !px-0">
           <h1 className="tg-hero__title">Tokens on Solana</h1>
           <p className="tg-hero__sub">
             Real-time prices, liquidity &amp; market data
