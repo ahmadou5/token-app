@@ -368,15 +368,4 @@ function TechStat({ icon, label, value }: { icon: React.ReactNode, label: string
     </div>
   );
 }
-
-function TechStat({ icon, label, value }: { icon: React.ReactNode, label: string; value: string | number }) {
-  return (
-    <div className="flex justify-between items-center py-2 border-b border-[var(--tc-divider)] last:border-0">
-      <div className="flex items-center gap-2">
-        <span className="text-[var(--tc-text-muted)]">{icon}</span>
-        <span className="text-[12px] text-[var(--tc-text-muted)] font-medium">{label}</span>
-      </div>
-      <span className="text-[13px] text-[var(--tc-text-primary)] font-semibold font-mono">{value}</span>
-    </div>
-  );
 }
