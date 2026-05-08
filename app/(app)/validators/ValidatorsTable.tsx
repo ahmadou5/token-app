@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Validator } from "@/hooks/useValidators";
 import Link from "next/link";
+import { MagnifyingGlass, ChartLineUp, Lightning } from "@phosphor-icons/react";
 
 interface ValidatorsTableProps {
   initialValidators: Validator[];
@@ -42,76 +43,100 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
   };
 
   return (
-    <div className="vl-content flex flex-col gap-6">
-      <div className="vl-search-box relative max-w-md">
-        <input
-          type="text"
-          placeholder="Search validator name or address…"
-          className="vl-search-input w-full p-3 pl-10 rounded-xl bg-[var(--tc-bg)] border border-[var(--tc-border)] text-[var(--tc-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--tc-accent)] focus:ring-opacity-20"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--tc-text-muted)]"
-          viewBox="0 0 16 16"
-          fill="none"
-          width="16"
-          height="16"
-        >
-          <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+    <div className="vl-content flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative group max-w-md w-full">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[var(--tc-text-muted)] group-focus-within:text-[var(--tc-accent)] transition-colors">
+            <MagnifyingGlass size={20} weight="bold" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search network nodes..."
+            className="w-full h-14 pl-12 pr-6 rounded-2xl bg-[var(--tc-bg)]/50 backdrop-blur-md border-2 border-[var(--tc-border)] focus:border-[var(--tc-accent)] text-[var(--tc-text-primary)] font-bold focus:outline-none transition-all shadow-lg"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        
+        <div className="flex items-center gap-3 bg-[var(--tc-surface)]/50 p-2 rounded-2xl border border-[var(--tc-border)]">
+           <div className="px-3 py-1.5 rounded-xl bg-[var(--tc-accent-bg)] text-[var(--tc-accent)] text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+             <ChartLineUp size={14} weight="bold" />
+             {filteredValidators.length} Active Nodes
+           </div>
+        </div>
       </div>
 
-      <div className="vl-table-wrap overflow-x-auto rounded-xl border border-[var(--tc-border)] bg-[var(--tc-bg)] shadow-sm">
-        <table className="vl-table w-full border-collapse text-left">
-          <thead className="vl-thead bg-[var(--tc-surface)] border-bottom border-[var(--tc-border)] text-[var(--tc-text-muted)] text-[10px] font-semibold uppercase letter-spacing-[0.05em]">
+      <div className="overflow-hidden rounded-[28px] border-2 border-[var(--tc-border)] bg-[var(--tc-bg)]/80 backdrop-blur-xl shadow-2xl">
+        <table className="w-full border-collapse text-left">
+          <thead className="bg-[var(--tc-surface)]/40 border-b border-[var(--tc-divider)]">
             <tr>
-              <th className="p-4 w-[60px]">Rank</th>
-              <th className="p-4 min-w-[200px]">Validator</th>
-              <th className="p-4 cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => toggleSort("commission")}>
-                Commission {sortKey === "commission" && (sortDir === "asc" ? "↑" : "↓")}
+              <th className="p-5 text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-[0.15em] w-[80px]">Rank</th>
+              <th className="p-5 text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-[0.15em]">Validator</th>
+              <th className="p-5 text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-[0.15em] cursor-pointer hover:text-[var(--tc-accent)] transition-colors" onClick={() => toggleSort("commission")}>
+                <div className="flex items-center gap-2">
+                  Comm. {sortKey === "commission" && (sortDir === "asc" ? "↑" : "↓")}
+                </div>
               </th>
-              <th className="p-4 cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => toggleSort("apy")}>
-                APY {sortKey === "apy" && (sortDir === "asc" ? "↑" : "↓")}
+              <th className="p-5 text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-[0.15em] cursor-pointer hover:text-[var(--tc-accent)] transition-colors" onClick={() => toggleSort("apy")}>
+                <div className="flex items-center gap-2">
+                  APY {sortKey === "apy" && (sortDir === "asc" ? "↑" : "↓")}
+                </div>
               </th>
-              <th className="p-4 hidden md:table-cell cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => toggleSort("activatedStake")}>
-                Active Stake {sortKey === "activatedStake" && (sortDir === "asc" ? "↑" : "↓")}
+              <th className="p-5 text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-[0.15em] hidden md:table-cell cursor-pointer hover:text-[var(--tc-accent)] transition-colors" onClick={() => toggleSort("activatedStake")}>
+                <div className="flex items-center gap-2">
+                  Stake {sortKey === "activatedStake" && (sortDir === "asc" ? "↑" : "↓")}
+                </div>
               </th>
-              <th className="p-4 hidden md:table-cell">Skip Rate</th>
-              <th className="p-4 w-[120px]"></th>
+              <th className="p-5 text-right w-[140px]"></th>
             </tr>
           </thead>
-          <tbody className="vl-tbody">
+          <tbody className="divide-y divide-[var(--tc-divider)]">
             {filteredValidators.map((v) => (
-              <tr key={v.votingPubkey} className="vl-row border-bottom border-[var(--tc-divider)] hover:bg-[var(--tc-bg-hover)] transition-colors">
-                <td className="p-4 text-[var(--tc-text-muted)] font-mono text-[12px]">{v.rank}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    {v.avatar ? (
-                      <img src={v.avatar} alt={v.name} className="w-8 h-8 rounded-full border border-[var(--tc-border)]" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-[var(--tc-bg-muted)] border border-[var(--tc-border)] flex items-center justify-center text-[10px] font-bold">
-                        {v.name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
+              <tr key={v.votingPubkey} className="group hover:bg-[var(--tc-accent)]/5 transition-all duration-300">
+                <td className="p-5 text-[var(--tc-text-muted)] font-black font-mono text-[13px]">
+                   #{v.rank}
+                </td>
+                <td className="p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      {v.avatar ? (
+                        <img src={v.avatar} alt={v.name} className="w-10 h-10 rounded-xl border border-[var(--tc-border)] group-hover:scale-110 transition-transform shadow-sm" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--tc-bg-muted)] to-[var(--tc-surface)] border border-[var(--tc-border)] flex items-center justify-center text-[12px] font-black shadow-sm">
+                          {v.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      {v.status === 'active' && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--tc-accent-up)] rounded-full border-2 border-[var(--tc-bg)] shadow-sm" />
+                      )}
+                    </div>
                     <div className="flex flex-col min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[14px] font-semibold text-[var(--tc-text-primary)] truncate">{v.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-black text-[var(--tc-text-primary)] truncate">{v.name}</span>
                         {v.isJito && (
-                          <span className="px-1 py-0.5 rounded bg-[#313131] text-[#00FFBD] text-[8px] font-bold uppercase tracking-wider">Jito</span>
+                          <span className="px-1.5 py-0.5 rounded bg-[#00FFBD]/10 text-[#00FFBD] text-[9px] font-black uppercase tracking-widest border border-[#00FFBD]/20">Jito</span>
                         )}
                       </div>
-                      <span className="text-[11px] text-[var(--tc-text-muted)] font-mono truncate">{v.votingPubkey.slice(0, 4)}…{v.votingPubkey.slice(-4)}</span>
+                      <span className="text-[11px] text-[var(--tc-text-muted)] font-mono font-bold truncate opacity-60 group-hover:opacity-100 transition-opacity">{v.votingPubkey.slice(0, 8)}…{v.votingPubkey.slice(-8)}</span>
                     </div>
                   </div>
                 </td>
-                <td className="p-4 text-[14px] font-medium text-[var(--tc-text-primary)]">{v.commission}%</td>
-                <td className="p-4 text-[14px] font-bold text-[var(--tc-accent-up)]">{v.apy.toFixed(2)}%</td>
-                <td className="p-4 hidden md:table-cell text-[14px] font-medium text-[var(--tc-text-primary)]">{v.activatedStake.toLocaleString(undefined, { maximumFractionDigits: 0 })} SOL</td>
-                <td className="p-4 hidden md:table-cell text-[14px] text-[var(--tc-text-muted)]">{(v.skipRate * 100).toFixed(1)}%</td>
-                <td className="p-4 text-right">
-                  <Link href={`/validators/${v.votingPubkey}`} className="vl-stake-btn inline-flex items-center justify-center p-2 px-4 rounded-lg bg-[var(--tc-accent)] text-white text-[12px] font-bold no-underline hover:opacity-90 transition-opacity">
+                <td className="p-5 text-[15px] font-black text-[var(--tc-text-primary)]">{v.commission}%</td>
+                <td className="p-5 text-[16px] font-black text-[var(--tc-accent-up)]">
+                  <div className="flex items-center gap-1.5">
+                    {v.apy.toFixed(2)}%
+                  </div>
+                </td>
+                <td className="p-5 hidden md:table-cell">
+                   <div className="flex flex-col">
+                      <span className="text-[14px] font-black text-[var(--tc-text-primary)]">{v.activatedStake.toLocaleString(undefined, { maximumFractionDigits: 0 })} SOL</span>
+                      <div className="w-24 h-1.5 bg-[var(--tc-surface)] rounded-full mt-2 overflow-hidden">
+                         <div className="h-full bg-[var(--tc-accent)] opacity-40 group-hover:opacity-100 transition-all duration-700" style={{width: `${Math.min(100, (v.activatedStake / filteredValidators[0].activatedStake) * 100)}%`}} />
+                      </div>
+                   </div>
+                </td>
+                <td className="p-5 text-right">
+                  <Link href={`/validators/${v.votingPubkey}`} className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-[var(--tc-accent)] text-white text-[13px] font-black no-underline hover:scale-[1.05] active:scale-[0.95] transition-all shadow-lg shadow-[var(--tc-accent)]/20">
                     Stake
                   </Link>
                 </td>
