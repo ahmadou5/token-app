@@ -23,7 +23,7 @@ export default async function ValidatorDetailPage({ params }: PageProps) {
             <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>
-        <h1 className="vs-title text-2xl font-bold text-[var(--tc-text-primary)]">Validator Details</h1>
+        <h1 className="vs-title text-2xl font-bold text-[var(--tc-text-primary)]">Network Detail</h1>
       </header>
 
       <ValidatorDetailContent validator={validator} />

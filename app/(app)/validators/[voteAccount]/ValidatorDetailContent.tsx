@@ -75,7 +75,12 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           )}
         </div>
         <div className="vs-info flex flex-col flex-1 gap-2">
-          <h2 className="text-xl font-bold text-[var(--tc-text-primary)]">{validator.name}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-[var(--tc-text-primary)]">{validator.name}</h2>
+            {validator.isJito && (
+              <span className="px-1.5 py-0.5 rounded bg-[#313131] text-[#00FFBD] text-[10px] font-bold uppercase tracking-wider">Jito</span>
+            )}
+          </div>
           <div className="flex items-center gap-2 text-[var(--tc-text-muted)] font-mono text-[13px]">
             <span>{validator.votingPubkey}</span>
             <button className="hover:text-[var(--tc-text-primary)] transition-colors" onClick={() => navigator.clipboard.writeText(validator.votingPubkey)}>
@@ -102,6 +107,38 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           <div className="flex flex-col">
             <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-semibold">APY</span>
             <span className="text-[16px] font-bold text-[var(--tc-accent-up)]">{validator.apy.toFixed(2)}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* About & Technical Details */}
+      <div className="vs-details-grid grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 flex flex-col gap-6">
+          <div className="vs-about-card bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-2xl p-6">
+            <h3 className="text-lg font-bold text-[var(--tc-text-primary)] mb-4">About Validator</h3>
+            <p className="text-[14px] text-[var(--tc-text-secondary)] leading-relaxed">
+              {validator.description || "This validator contributes to the security and decentralization of the Solana network by processing transactions and participating in consensus."}
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+               <h4 className="text-[11px] font-bold text-[var(--tc-text-muted)] uppercase tracking-wider">What is a Validator?</h4>
+               <p className="text-[12px] text-[var(--tc-text-muted)] leading-relaxed italic">
+                 Validators are the backbone of the Solana network. They run specialized software to process transactions and add new blocks to the blockchain. By staking your SOL with a validator, you help secure the network and earn a portion of the rewards generated from transaction fees and inflation.
+               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div className="vs-tech-card bg-[var(--tc-bg)] border border-[var(--tc-border)] rounded-2xl p-6">
+            <h3 className="text-lg font-bold text-[var(--tc-text-primary)] mb-4">Technical Stats</h3>
+            <div className="flex flex-col gap-4">
+              <TechStat label="Network Rank" value={`#${validator.rank}`} />
+              <TechStat label="Software Version" value={validator.version || "Unknown"} />
+              <TechStat label="Uptime" value={validator.uptime ? `${(validator.uptime * 100).toFixed(2)}%` : "N/A"} />
+              <TechStat label="Skip Rate" value={`${(validator.skipRate * 100).toFixed(1)}%`} />
+              <TechStat label="Data Center" value={validator.dataCenter} />
+              <TechStat label="Location" value={`${validator.city || "Unknown"}, ${validator.country || "Unknown"}`} />
+            </div>
           </div>
         </div>
       </div>
@@ -210,6 +247,15 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TechStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex justify-between items-center py-2 border-b border-[var(--tc-divider)] last:border-0">
+      <span className="text-[12px] text-[var(--tc-text-muted)] font-medium">{label}</span>
+      <span className="text-[13px] text-[var(--tc-text-primary)] font-semibold">{value}</span>
     </div>
   );
 }

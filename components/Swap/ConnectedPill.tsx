@@ -119,7 +119,7 @@ export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
                         Network
                     </DropdownMenuLabel>
                     <div className="px-1 pb-1">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
                             {clusters.map((c: SolanaCluster) => {
                                 const isSelected = c.id === cluster?.id;
                                 const label = clusterLabels[c.id] || c.label || c.id;
