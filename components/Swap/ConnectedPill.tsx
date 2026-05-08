@@ -5,6 +5,7 @@ import { useConnector } from "@solana/connector/react";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { usePortfolioDrawer } from "@/context/PortfolioDrawerContext";
 import { TagChevronIcon } from "@phosphor-icons/react";
+import { ClusterSelector } from "../connector/cluster-selector";
 
 interface ConnectedPillProps {
   onDisconnect: () => void;
@@ -101,6 +102,8 @@ export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
             <TagChevronIcon />
             View Portfolio
           </button>
+           <div className="sw-connected-menu__divider" />
+           <ClusterSelector />
 
           <div className="sw-connected-menu__divider" />
           <button

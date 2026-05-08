@@ -48,6 +48,7 @@
     "axios": "1.14.0",
     "bn.js": "^5.2.3",
     "bs58": "^6.0.0",
+    "clsx": "^2.1.1",
     "decimal.js": "^10.6.0",
     "lucide-react": "^1.7.0",
     "metis": "link:@pipeit/actions/metis",
@@ -56,6 +57,7 @@
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tailwind-merge": "^3.5.0",
     "titan": "link:@pipeit/actions/titan",
     "vitest": "^4.1.5",
     "zustand": "^5.0.12"
