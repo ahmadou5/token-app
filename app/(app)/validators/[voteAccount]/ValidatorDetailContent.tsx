@@ -1,32 +1,205 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Validator } from "@/hooks/useValidators";
 import { useWallet, useBalance } from "@solana/connector";
 import { useStakeTransaction, StakePosition } from "@/hooks/useStakeTransaction";
-import { Sparkline } from "@/components/Sparkline";
-import { 
-  ChartLineUp, 
-  TrendDown, 
-  Info, 
-  Globe, 
-  MapPin, 
-  Cpu, 
+import {
+  Globe,
   CheckCircle,
   ClockCounterClockwise,
   ShieldCheck,
   Lightning,
-  CaretDown
 } from "@phosphor-icons/react";
+import { HistoryPoint } from "@/types/validator";
 
 interface ValidatorDetailContentProps {
   validator: Validator;
 }
 
+// ─── Stake History Chart ───────────────────────────────────────────────────────
+
+function StakeChart({
+  data,
+  isLoading,
+}: {
+  data: HistoryPoint[];
+  isLoading: boolean;
+}) {
+  const W = 800;
+  const H = 220;
+  const PAD = { top: 16, right: 16, bottom: 32, left: 64 };
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && data.length > 1) {
+      const raf = requestAnimationFrame(() =>
+        requestAnimationFrame(() => setAnimated(true)),
+      );
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [isLoading, data.length]);
+
+  const derived = useMemo(() => {
+    if (data.length < 2) return null;
+    const values = data.map((d) => d.value);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const range = maxVal - minVal || 1;
+    const iW = W - PAD.left - PAD.right;
+    const iH = H - PAD.top - PAD.bottom;
+
+    const pts = data.map(
+      (d, i) =>
+        [
+          PAD.left + (i / (data.length - 1)) * iW,
+          PAD.top + (1 - (d.value - minVal) / range) * iH,
+        ] as [number, number],
+    );
+
+    const path = pts
+      .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`)
+      .join(" ");
+
+    const last = pts[pts.length - 1];
+    const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
+
+    const steps = 4;
+    const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
+      y: PAD.top + (1 - i / steps) * iH,
+      label: ((minVal + ((maxVal - minVal) * i) / steps) / 1e3).toFixed(1) + "k",
+    }));
+
+    const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
+  const idx = Math.round((i / 4) * (data.length - 1));
+  const pt = data[idx];
+  const date = pt.timestamp
+    ? new Date(pt.timestamp)          // string → Date directly, no arithmetic
+    : new Date(pt.epoch * 1000);      // epoch (number) fallback
+  return {
+    x: PAD.left + (idx / (data.length - 1)) * iW,
+    label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  };
+});
+
+    return { path, areaPath, yLabels, xLabels, pulsePt: last };
+  }, [data]);
+
+  if (isLoading || !derived) {
+    return (
+      <div className="td-chart td-chart--loading" style={{ height: 220 }}>
+        <div className="td-chart__shimmer" />
+      </div>
+    );
+  }
+
+  const { path, areaPath, yLabels, xLabels, pulsePt } = derived;
+  const lineColor = "var(--tc-accent)";
+
+  return (
+    <div className="td-chart" style={{ height: 220, position: "relative" }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="td-chart__svg"
+      >
+        <defs>
+          <linearGradient id="stakeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+          <clipPath id="stakeClip">
+            <rect
+              x={PAD.left}
+              y={0}
+              width={animated ? W : 0}
+              height={H}
+              style={{ transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)" }}
+            />
+          </clipPath>
+        </defs>
+
+        {yLabels.map(({ y }) => (
+          <line
+            key={y}
+            x1={PAD.left}
+            y1={y}
+            x2={W - PAD.right}
+            y2={y}
+            stroke="var(--tc-divider)"
+            strokeWidth="1"
+            strokeDasharray="4,4"
+          />
+        ))}
+
+        <g clipPath="url(#stakeClip)">
+          <path d={areaPath} fill="url(#stakeGrad)" />
+          <path
+            d={path}
+            fill="none"
+            stroke={lineColor}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+
+        {yLabels.map(({ y, label }) => (
+          <text
+            key={y}
+            x={PAD.left - 12}
+            y={y + 4}
+            textAnchor="end"
+            fontSize="10"
+            fill="var(--tc-text-muted)"
+            fontFamily="var(--tc-font-mono)"
+          >
+            {label}
+          </text>
+        ))}
+        {xLabels.map(({ x, label }) => (
+          <text
+            key={x}
+            x={x}
+            y={H - 8}
+            textAnchor="middle"
+            fontSize="10"
+            fill="var(--tc-text-muted)"
+          >
+            {label}
+          </text>
+        ))}
+
+        {animated && (
+          <g>
+            <circle
+              cx={pulsePt[0]}
+              cy={pulsePt[1]}
+              r="14"
+              fill={lineColor}
+              opacity="0"
+              className="td-chart__pulse-ring"
+            />
+            <circle
+              cx={pulsePt[0]}
+              cy={pulsePt[1]}
+              r="4"
+              fill={lineColor}
+              className="td-chart__pulse-dot"
+            />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export function ValidatorDetailContent({ validator }: ValidatorDetailContentProps) {
   const { isConnected, account } = useWallet();
   const { solBalance } = useBalance({ enabled: isConnected });
-  const { executeStakeAction, fetchActiveStakes, status, error: txError } = useStakeTransaction();
+  const { executeStakeAction, fetchActiveStakes, status } = useStakeTransaction();
 
   const [amount, setAmount] = useState("");
   const [stakes, setStakes] = useState<StakePosition[]>([]);
@@ -34,20 +207,27 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
 
   useEffect(() => {
     if (isConnected && account) {
-      fetchActiveStakes(account).then(setStakes).finally(() => setIsLoadingStakes(false));
+      fetchActiveStakes(account)
+        .then(setStakes)
+        .finally(() => setIsLoadingStakes(false));
     } else {
       setIsLoadingStakes(false);
     }
   }, [isConnected, account, fetchActiveStakes]);
 
-  const existingStake = useMemo(() => 
-    stakes.find(s => s.validator === validator.name || s.validator === validator.votingPubkey),
-  [stakes, validator]);
+  const existingStake = useMemo(
+    () =>
+      stakes.find(
+        (s) =>
+          s.validator === validator.name ||
+          s.validator === validator.votingPubkey,
+      ),
+    [stakes, validator],
+  );
 
   const handleMax = () => {
     if (solBalance) {
-      const max = Math.max(0, solBalance - 0.01).toFixed(4);
-      setAmount(max);
+      setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
     }
   };
 
@@ -64,8 +244,8 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
     await executeStakeAction("deactivate", { stakeAccount });
   };
 
-  const handleWithdraw = async (stakeAccount: string, amount: number) => {
-    await executeStakeAction("withdraw", { stakeAccount, amountSOL: amount });
+  const handleWithdraw = async (stakeAccount: string, amt: number) => {
+    await executeStakeAction("withdraw", { stakeAccount, amountSOL: amt });
   };
 
   const estimatedDaily = useMemo(() => {
@@ -74,283 +254,491 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
   }, [amount, validator.apy]);
 
   const isExecuting = ["loading", "signing", "sending", "confirming"].includes(status);
-
-  const stakeData = validator.stakeHistory?.map(h => h.value) || [];
-  const skipRateData = validator.skipRateHistory?.map(h => h.value) || [];
+  const stakeHistory = validator.stakeHistory || [];
 
   return (
-    <div className="td-layout !max-w-[1400px]">
-      {/* Left Column: Main Content */}
-      <div className="td-main">
-        {/* Header Section */}
-        <header className="td-header">
-          <div className="vs-logo-wrap relative group">
+    <div className="td-layout">
+      {/* ══════════════════════
+          LEFT — Main content
+         ══════════════════════ */}
+      <div>
+        {/* Header */}
+        <div className="td-header">
+          {/* Avatar */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
             {validator.avatar ? (
-              <img src={validator.avatar} alt={validator.name} className="w-20 h-20 md:w-24 md:h-24 rounded-2xl border border-[var(--tc-border)] shadow-sm" />
+              <img
+                src={validator.avatar}
+                alt={validator.name}
+                className="tc-avatar"
+                style={{ width: 72, height: 72, borderRadius: 16 }}
+              />
             ) : (
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[var(--tc-surface)] border border-[var(--tc-border)] flex items-center justify-center text-3xl font-bold text-[var(--tc-text-muted)]">
+              <div
+                className="tc-avatar tc-avatar--fallback"
+                style={{ width: 72, height: 72, borderRadius: 16, fontSize: 20 }}
+              >
                 {validator.name.slice(0, 2).toUpperCase()}
               </div>
             )}
-            {validator.status === 'active' && (
-              <div className="absolute -bottom-1 -right-1 bg-[var(--tc-accent-up)] text-white p-1 rounded-full shadow-lg border-2 border-[var(--tc-bg)]">
-                <CheckCircle size={14} weight="fill" />
+            {validator.status === "active" && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: -4,
+                  background: "var(--tc-accent-up)",
+                  borderRadius: "50%",
+                  padding: 3,
+                  border: "2px solid var(--tc-bg)",
+                  display: "flex",
+                }}
+              >
+                <CheckCircle size={12} weight="fill" color="#fff" />
               </div>
             )}
           </div>
 
+          {/* Info */}
           <div className="td-header__info">
             <div className="td-header__row">
               <h1 className="td-header__name">{validator.name}</h1>
               {validator.isJito && (
-                <div className="td-header__verified">
-                  <span className="td-pill td-pill--sym !text-[#00FFBD] !bg-[#00FFBD]/10 border-[#00FFBD]/20">
-                    <Lightning size={12} weight="fill" />
-                    Jito MEV
-                  </span>
-                </div>
+                <span className="tc-badge tc-badge--t1">Jito MEV</span>
               )}
             </div>
-            
             <div className="td-header__pills">
-              <button 
-                className="td-pill td-pill--mint group"
-                onClick={() => navigator.clipboard.writeText(validator.votingPubkey)}
+              <button
+                className="td-pill td-pill--mint"
+                onClick={() =>
+                  navigator.clipboard.writeText(validator.votingPubkey)
+                }
               >
-                <span className="opacity-50">Vote:</span>
-                {validator.votingPubkey.slice(0, 8)}...{validator.votingPubkey.slice(-8)}
-                <svg viewBox="0 0 16 16" fill="none" width="12" height="12" className="opacity-40 group-hover:opacity-100 transition-opacity">
+                <span style={{ opacity: 0.5 }}>Vote:</span>
+                {validator.votingPubkey.slice(0, 8)}…
+                {validator.votingPubkey.slice(-8)}
+                <svg viewBox="0 0 16 16" fill="none" width="11" height="11" style={{ opacity: 0.4 }}>
                   <path d="M4 4h8v8H4z" stroke="currentColor" strokeWidth="1.5" />
                   <path d="M2 2h8v2H4v8H2z" fill="currentColor" opacity="0.3" />
                 </svg>
               </button>
               {validator.website && (
-                <a href={validator.website} target="_blank" rel="noopener noreferrer" className="td-pill hover:bg-[var(--tc-bg-hover)] transition-colors">
-                  <Globe size={14} weight="bold" />
+                <a
+                  href={validator.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="td-pill"
+                >
+                  <Globe size={12} />
                   Website
                 </a>
               )}
             </div>
           </div>
 
-          <div className="td-header__actions hidden md:flex">
-             <div className="flex flex-col items-end">
-               <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-bold tracking-widest">Commission</span>
-               <span className="text-2xl font-black text-[var(--tc-text-primary)]">{validator.commission}%</span>
-             </div>
-             <div className="w-[1px] h-10 bg-[var(--tc-divider)] mx-4" />
-             <div className="flex flex-col items-end">
-               <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-bold tracking-widest">Yield APY</span>
-               <span className="text-2xl font-black text-[var(--tc-accent-up)]">{validator.apy.toFixed(2)}%</span>
-             </div>
-          </div>
-        </header>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="td-chart-section">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-[11px] text-[var(--tc-text-muted)] uppercase font-black tracking-widest">Stake History</span>
-              <span className="text-[14px] font-black text-[var(--tc-text-primary)]">{(validator.stake / 1e3).toFixed(1)}k SOL</span>
+          {/* Commission / APY — desktop only */}
+          <div className="td-header__actions">
+            <div className="tc-stat">
+              <span className="tc-stat__label">Commission</span>
+              <span className="tc-stat__value" style={{ fontSize: 18, fontWeight: 700 }}>
+                {validator.commission}%
+              </span>
             </div>
-            <div className="td-chart !h-[120px]">
-               {stakeData.length > 1 ? (
-                 <Sparkline data={stakeData} width={400} height={120} />
-               ) : (
-                 <div className="w-full h-full bg-[var(--tc-surface)]/50 border border-dashed border-[var(--tc-border)] rounded-xl flex items-center justify-center text-[11px] text-[var(--tc-text-muted)] italic">Awaiting stake data...</div>
-               )}
-            </div>
-          </div>
-
-          <div className="td-chart-section">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-[11px] text-[var(--tc-text-muted)] uppercase font-black tracking-widest">Performance</span>
-              <span className="text-[14px] font-black text-[var(--tc-text-primary)]">{(100 - (validator.skipRate * 100)).toFixed(2)}% Score</span>
-            </div>
-            <div className="td-chart !h-[120px]">
-               {skipRateData.length > 1 ? (
-                 <Sparkline data={skipRateData} width={400} height={120} positive={false} />
-               ) : (
-                 <div className="w-full h-full bg-[var(--tc-surface)]/50 border border-dashed border-[var(--tc-border)] rounded-xl flex items-center justify-center text-[11px] text-[var(--tc-text-muted)] italic">Awaiting skip rate data...</div>
-               )}
+            <div
+              style={{
+                width: 1,
+                height: 36,
+                background: "var(--tc-divider)",
+                margin: "0 12px",
+              }}
+            />
+            <div className="tc-stat">
+              <span className="tc-stat__label">Yield APY</span>
+              <span
+                className="tc-stat__value"
+                style={{ fontSize: 18, fontWeight: 700, color: "var(--tc-accent-up)" }}
+              >
+                {validator.apy.toFixed(2)}%
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Description Section */}
-        <div className="td-card mb-8">
-          <h3 className="text-lg font-black text-[var(--tc-text-primary)] mb-4 flex items-center gap-2">
-            <Info size={20} className="text-[var(--tc-accent)]" />
-            About Validator
-          </h3>
-          <p className="text-[15px] text-[var(--tc-text-secondary)] leading-relaxed font-medium">
-            {validator.description || "This validator contributes to the security and decentralization of the Solana network by processing transactions and participating in consensus. They maintain high uptime and competitive APY for their delegators."}
-          </p>
-          
-          <div className="mt-8 pt-8 border-t border-[var(--tc-divider)] grid grid-cols-1 sm:grid-cols-2 gap-8">
-             <div className="flex flex-col gap-3">
-               <h4 className="text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-widest flex items-center gap-2">
-                 <ClockCounterClockwise size={16} />
-                 Epoch Credits
-               </h4>
-               <div className="flex flex-wrap gap-2">
-                 {validator.epochCredits.length > 0 ? (
-                   validator.epochCredits.slice(-5).reverse().map((credits, idx) => (
-                     <div key={idx} className="bg-[var(--tc-surface)] border border-[var(--tc-border)] px-3 py-1.5 rounded-xl flex flex-col items-center">
-                       <span className="text-[9px] text-[var(--tc-text-muted)] font-bold">E-{idx === 0 ? 'NOW' : idx}</span>
-                       <span className="text-[12px] font-black font-mono text-[var(--tc-text-primary)]">{(credits / 1000).toFixed(0)}k</span>
-                     </div>
-                   ))
-                 ) : (
-                   <div className="text-[12px] text-[var(--tc-text-muted)] italic">Syncing...</div>
-                 )}
-               </div>
-             </div>
+        {/* Chart */}
+        <div className="td-chart-section">
+          <div className="td-chart-label">
+            <span className="td-chart-label__sym">Network Stake</span>
+            <span className="td-chart-label__price">
+              {(validator.stake / 1e3).toFixed(1)}k
+            </span>
+            <span className="td-chart-label__text">SOL</span>
+            <span className="td-chart-label__period">Live History</span>
+          </div>
+          <div className="td-chart-controls">
+            <div className="td-chart-controls__group">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "1px solid var(--tc-border)",
+                  background: "var(--tc-surface)",
+                  fontSize: 11,
+                  color: "var(--tc-text-muted)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "var(--tc-accent)",
+                    animation: "tgPulse 1.5s ease-in-out infinite",
+                  }}
+                />
+                Live
+              </div>
+            </div>
+          </div>
+          <StakeChart data={stakeHistory} isLoading={false} />
+        </div>
 
-             <div className="flex flex-col gap-3">
-               <h4 className="text-[11px] font-black text-[var(--tc-text-muted)] uppercase tracking-widest flex items-center gap-2">
-                 <ShieldCheck size={16} className="text-[var(--tc-accent-up)]" />
-                 Network Position
-               </h4>
-               <p className="text-[13px] text-[var(--tc-text-secondary)] font-medium italic">
-                 Ranked <span className="text-[var(--tc-text-primary)] font-black">#{validator.rank}</span> globally by stake weight. Contributing to network decentralization.
-               </p>
-             </div>
+        {/* About */}
+        <div className="td-section">
+          <h2 className="td-section__title">About Validator</h2>
+          <div className="td-card">
+            <p className="td-card__desc">
+              {validator.description ||
+                "This validator contributes to the security and decentralization of the Solana network by processing transactions and participating in consensus. They maintain high uptime and competitive APY for their delegators."}
+            </p>
+
+            <div
+              style={{
+                marginTop: 20,
+                paddingTop: 20,
+                borderTop: "1px solid var(--tc-divider)",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 24,
+              }}
+            >
+              {/* Epoch Credits */}
+              <div className="tc-stat">
+                <span
+                  className="tc-stat__label"
+                  style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}
+                >
+                  <ClockCounterClockwise size={13} />
+                  Epoch Credits
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {validator.epochCredits && validator.epochCredits.length > 0 ? (
+                    validator.epochCredits
+                      .slice(-5)
+                      .reverse()
+                      .map((credits, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            background: "var(--tc-surface)",
+                            border: "1px solid var(--tc-border)",
+                            borderRadius: 8,
+                            padding: "4px 8px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 9,
+                              color: "var(--tc-text-muted)",
+                              fontWeight: 600,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {idx === 0 ? "NOW" : `E-${idx}`}
+                          </span>
+                          <span className="tc-stat__value" style={{ fontSize: 12 }}>
+                            {(credits / 1000).toFixed(0)}k
+                          </span>
+                        </div>
+                      ))
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--tc-text-muted)", fontStyle: "italic" }}>
+                      Syncing…
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Network Position */}
+              <div className="tc-stat">
+                <span
+                  className="tc-stat__label"
+                  style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}
+                >
+                  <ShieldCheck size={13} />
+                  Network Position
+                </span>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--tc-text-secondary)", lineHeight: 1.6 }}>
+                  Ranked{" "}
+                  <strong style={{ color: "var(--tc-text-primary)" }}>
+                    #{validator.rank}
+                  </strong>{" "}
+                  globally by stake weight. Contributing to network
+                  decentralization.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Technical Stats Grid */}
+        {/* Stats grid */}
         <div className="td-stats-grid">
           <div className="td-stat-cell">
-            <span className="td-stat__label">Version</span>
-            <div className="td-stat__value">{validator.version || "1.18.x"}</div>
+            <span className="td-stat-cell__label">Version</span>
+            <span className="td-stat-cell__value">{validator.version || "1.18.x"}</span>
           </div>
           <div className="td-stat-cell">
-            <span className="td-stat__label">Uptime</span>
-            <div className="td-stat__value">{validator.uptime ? `${(validator.uptime * 100).toFixed(2)}%` : "99.99%"}</div>
+            <span className="td-stat-cell__label">Uptime</span>
+            <span className="td-stat-cell__value">
+              {validator.uptime
+                ? `${(validator.uptime * 100).toFixed(2)}%`
+                : "99.99%"}
+            </span>
           </div>
           <div className="td-stat-cell">
-            <span className="td-stat__label">City</span>
-            <div className="td-stat__value">{validator.city || "Unknown"}</div>
+            <span className="td-stat-cell__label">City</span>
+            <span className="td-stat-cell__value">{validator.city || "—"}</span>
           </div>
           <div className="td-stat-cell">
-            <span className="td-stat__label">Country</span>
-            <div className="td-stat__value">{validator.country || "International"}</div>
+            <span className="td-stat-cell__label">Country</span>
+            <span className="td-stat-cell__value">
+              {validator.country || "International"}
+            </span>
           </div>
-          <div className="td-stat-cell col-span-2">
-            <span className="td-stat__label">Data Center</span>
-            <div className="td-stat__value truncate">{validator.dataCenter || "Global Infrastructure"}</div>
+          <div className="td-stat-cell" style={{ gridColumn: "span 2" }}>
+            <span className="td-stat-cell__label">Data Center</span>
+            <span className="td-stat-cell__value">
+              {validator.dataCenter || "Global Infrastructure"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Right Column: Sidebar Action */}
-      <div className="td-side">
-        <div className="vs-stake-sidebar flex flex-col gap-6 sticky top-[80px]">
-          {/* Main Stake Action Card - Mirrors AddLiquidityCard style */}
-          <div className="sw-card !p-0">
-             <div className="sw-tabs">
-                <div className="sw-tab sw-tab--active">
-                  <Lightning size={14} weight="fill" />
-                  Native Staking
-                </div>
-             </div>
-             
-             <div className="p-5 flex flex-col gap-5">
-                {existingStake ? (
-                  <div className="flex flex-col gap-5">
-                    <div className="bg-[var(--tc-surface)] rounded-2xl p-4 border border-[var(--tc-border)]">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] text-[var(--tc-text-muted)] uppercase font-black tracking-widest">Active Stake</span>
-                        <span className="px-2 py-0.5 rounded-full bg-[var(--tc-accent-up-bg)] text-[var(--tc-accent-up)] text-[9px] font-black uppercase">{existingStake.status}</span>
-                      </div>
-                      <div className="text-[22px] font-black text-[var(--tc-text-primary)] font-mono">{existingStake.amount} SOL</div>
-                    </div>
+      {/* ══════════════════════
+          RIGHT — Sidebar
+         ══════════════════════ */}
+      <div className="td-sidebar">
+        {/* Stake action card */}
+        <div className="sw-card">
+          {/* Tab bar */}
+          <div className="sw-tabs">
+            <div className="sw-tab sw-tab--active">
+              <Lightning size={12} weight="fill" />
+              Native Staking
+            </div>
+          </div>
 
-                    {existingStake.status === "active" ? (
-                      <button
-                        className="w-full py-4 rounded-xl border border-[var(--tc-accent-down)] text-[var(--tc-accent-down)] font-black hover:bg-[var(--tc-accent-down-bg)] transition-all text-[13px] uppercase tracking-widest"
-                        onClick={() => handleUnstake(existingStake.address)}
-                        disabled={isExecuting}
-                      >
-                        {isExecuting ? "Processing..." : "Unstake SOL"}
-                      </button>
-                    ) : (
-                      <button
-                        className="sw-swap-btn w-full !h-12 !text-[13px] !uppercase !tracking-widest"
-                        onClick={() => handleWithdraw(existingStake.address, existingStake.amount)}
-                        disabled={isExecuting}
-                      >
-                        {isExecuting ? "Processing..." : "Withdraw Funds"}
+          <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 14 }}>
+            {existingStake ? (
+              <>
+                {/* Existing stake */}
+                <div
+                  style={{
+                    background: "var(--tc-surface)",
+                    border: "1px solid var(--tc-border)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span className="sw-input-lbl">Active Stake</span>
+                    <span
+                      className="tc-change tc-change--up tc-change--sm"
+                    >
+                      {existingStake.status}
+                    </span>
+                  </div>
+                  <span
+                    className="sw-amount sw-amount--out"
+                    style={{ display: "block" }}
+                  >
+                    {existingStake.amount}
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: "var(--tc-text-muted)",
+                        marginLeft: 4,
+                      }}
+                    >
+                      SOL
+                    </span>
+                  </span>
+                </div>
+
+                {existingStake.status === "active" ? (
+                  <button
+                    className="sw-swap-btn"
+                    style={{
+                      width: "100%",
+                      margin: 0,
+                      background: "transparent",
+                      border: "1.5px solid var(--tc-accent-down)",
+                      color: "var(--tc-accent-down)",
+                    }}
+                    onClick={() => handleUnstake(existingStake.address)}
+                    disabled={isExecuting}
+                  >
+                    {isExecuting ? "Processing…" : "Unstake SOL"}
+                  </button>
+                ) : (
+                  <button
+                    className={`sw-swap-btn ${isExecuting ? "sw-swap-btn--busy" : ""}`}
+                    style={{ width: "100%", margin: 0 }}
+                    onClick={() =>
+                      handleWithdraw(existingStake.address, existingStake.amount)
+                    }
+                    disabled={isExecuting}
+                  >
+                    {isExecuting && <span className="sw-spinner" />}
+                    {isExecuting ? "Processing…" : "Withdraw Funds"}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Amount input */}
+                <div className="sw-input-group" style={{ padding: 0 }}>
+                  <div className="sw-input-hdr">
+                    <span className="sw-input-lbl">Amount</span>
+                    {isConnected && solBalance != null && (
+                      <button className="sw-bal-btn" onClick={handleMax}>
+                        MAX: {solBalance.toFixed(3)} SOL
                       </button>
                     )}
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-5">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-[var(--tc-text-muted)] uppercase tracking-widest">Amount</span>
-                        <button className="text-[10px] font-black text-[var(--tc-accent)] uppercase" onClick={handleMax}>
-                          MAX: {solBalance?.toFixed(3) ?? "0.00"}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3 bg-[var(--tc-surface)] p-3 rounded-xl border border-[var(--tc-border)] focus-within:border-[var(--tc-accent)] transition-all">
-                        <input
-                          type="number"
-                          placeholder="0.00"
-                          className="bg-transparent outline-none flex-1 text-xl font-black text-[var(--tc-text-primary)] min-w-0"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                        />
-                        <span className="font-black text-[12px] text-[var(--tc-text-muted)]">SOL</span>
-                      </div>
+                  <div className="sw-input-row">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0.00"
+                      className="sw-amount"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                    <div className="sw-token-fixed">
+                      <span className="sw-token-fixed__sym">SOL</span>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="bg-[var(--tc-accent-up-bg)]/50 rounded-xl p-3 border border-[var(--tc-accent-up)]/10 flex flex-col gap-2">
-                       <div className="flex justify-between items-center text-[11px]">
-                         <span className="text-[var(--tc-text-secondary)] font-bold">Estimated Earnings</span>
-                         <span className="font-black text-[var(--tc-accent-up)]">+{estimatedDaily.toFixed(4)} SOL/day</span>
-                       </div>
+                {/* Earnings estimate */}
+                {parseFloat(amount) > 0 && (
+                  <div className="sw-quote" style={{ margin: 0 }}>
+                    <div className="sw-quote__row">
+                      <span className="sw-quote__label">Est. daily earnings</span>
+                      <span
+                        className="sw-quote__val"
+                        style={{ color: "var(--tc-accent-up)" }}
+                      >
+                        +{estimatedDaily.toFixed(4)} SOL
+                      </span>
                     </div>
-
-                    <button
-                      className={`sw-swap-btn w-full !h-12 !text-[14px] !font-black !uppercase !tracking-widest ${isExecuting ? "sw-swap-btn--busy" : ""}`}
-                      disabled={!isConnected || isExecuting || !amount}
-                      onClick={handleStake}
-                    >
-                      {isExecuting && <span className="sw-spinner mr-2" />}
-                      {isConnected ? (isExecuting ? "Signing..." : "Stake SOL") : "Connect Wallet"}
-                    </button>
+                    <div className="sw-quote__row">
+                      <span className="sw-quote__label">APY</span>
+                      <span
+                        className="sw-quote__val"
+                        style={{ color: "var(--tc-accent-up)" }}
+                      >
+                        {validator.apy.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="sw-quote__row sw-quote__row--provider">
+                      <span className="sw-quote__label">Validator</span>
+                      <span className="sw-quote__provider">{validator.name}</span>
+                    </div>
                   </div>
                 )}
 
-                <div className="sw-powered !mt-0 !pt-0">
-                  <span>Secured by Solana Native Staking</span>
-                </div>
-             </div>
-          </div>
+                {/* Stake button */}
+                <button
+                  className={`sw-swap-btn ${isExecuting ? "sw-swap-btn--busy" : ""}`}
+                  style={{ width: "100%", margin: 0 }}
+                  disabled={!isConnected || isExecuting || !amount}
+                  onClick={handleStake}
+                >
+                  {isExecuting && <span className="sw-spinner" />}
+                  {!isConnected
+                    ? "Connect Wallet"
+                    : isExecuting
+                      ? "Signing…"
+                      : "Stake SOL"}
+                </button>
+              </>
+            )}
 
-          {/* Quick Stats Panel */}
-          <div className="td-card !p-4">
-            <h4 className="text-[11px] font-black text-[var(--tc-text-primary)] uppercase tracking-widest mb-4">Node Metrics</h4>
-            <div className="flex flex-col gap-3">
-              <SidebarStat label="APY" value={`${validator.apy.toFixed(2)}%`} color="var(--tc-accent-up)" />
-              <SidebarStat label="Commission" value={`${validator.commission}%`} />
-              <SidebarStat label="Rank" value={`#${validator.rank}`} />
-              <SidebarStat label="Uptime" value={validator.uptime ? `${(validator.uptime * 100).toFixed(1)}%` : "99.9%"} />
-            </div>
+            <p className="sw-powered" style={{ padding: 0, margin: 0 }}>
+              Secured by Solana Native Staking
+            </p>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="td-card">
+          <h3 className="td-card__title">Node Metrics</h3>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {[
+              { label: "APY", value: `${validator.apy.toFixed(2)}%`, color: "var(--tc-accent-up)" },
+              { label: "Commission", value: `${validator.commission}%` },
+              { label: "Rank", value: `#${validator.rank}` },
+              {
+                label: "Uptime",
+                value: validator.uptime
+                  ? `${(validator.uptime * 100).toFixed(1)}%`
+                  : "99.9%",
+              },
+            ].map(({ label, value, color }) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingBottom: 10,
+                  borderBottom: "1px solid var(--tc-divider)",
+                }}
+              >
+                <span className="tc-stat__label" style={{ textTransform: "none", fontSize: 12 }}>
+                  {label}
+                </span>
+                <span
+                  className="tc-stat__value"
+                  style={{ color: color || "var(--tc-text-primary)", fontSize: 13 }}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SidebarStat({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-[12px] text-[var(--tc-text-muted)] font-medium">{label}</span>
-      <span className="text-[12px] font-black font-mono" style={{ color: color || "var(--tc-text-primary)" }}>{value}</span>
     </div>
   );
 }

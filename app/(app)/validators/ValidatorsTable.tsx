@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Validator } from "@/hooks/useValidators";
 import Link from "next/link";
-import { MagnifyingGlass, ChartLineUp, Lightning, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { MagnifyingGlass, CaretDown, CaretUp } from "@phosphor-icons/react";
 
 interface ValidatorsTableProps {
   initialValidators: Validator[];
@@ -18,9 +18,10 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const filteredValidators = useMemo(() => {
-    let list = initialValidators.filter((v) =>
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.votingPubkey.toLowerCase().includes(search.toLowerCase())
+    let list = initialValidators.filter(
+      (v) =>
+        v.name.toLowerCase().includes(search.toLowerCase()) ||
+        v.votingPubkey.toLowerCase().includes(search.toLowerCase()),
     );
 
     list.sort((a, b) => {
@@ -43,100 +44,260 @@ export function ValidatorsTable({ initialValidators }: ValidatorsTableProps) {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Search Bar - Matches tg-search style */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="tg-search !h-12 !max-w-md">
-          <MagnifyingGlass size={18} className="tg-search__icon" />
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* ── Controls bar ── */}
+      <div className="tg-controls" style={{ padding: 0 }}>
+        <div className="tg-controls__tabs">
+          {/* Sort pills */}
+          <div className="tg-tabs">
+            {(
+              [
+                { key: "apy", label: "Best APY" },
+                { key: "activatedStake", label: "Most Staked" },
+                { key: "commission", label: "Lowest Fee" },
+              ] as { key: SortKey; label: string }[]
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                className={`tg-tab ${sortKey === key ? "tg-tab--active" : ""}`}
+                onClick={() => {
+                  if (sortKey === key) {
+                    setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                  } else {
+                    setSortKey(key);
+                    setSortDir("desc");
+                  }
+                }}
+              >
+                {label}
+                {sortKey === key &&
+                  (sortDir === "asc" ? (
+                    <CaretUp size={9} weight="bold" />
+                  ) : (
+                    <CaretDown size={9} weight="bold" />
+                  ))}
+                <span className="tg-tab__count">{filteredValidators.length}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="tg-search" style={{ maxWidth: 280 }}>
+          <MagnifyingGlass size={14} className="tg-search__icon" />
           <input
             type="text"
-            placeholder="Search network nodes..."
+            placeholder="Search validators…"
             className="tg-search__input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-        
-        <div className="flex items-center gap-3">
-           <div className="tc-pill tc-pill--sym">
-             <ChartLineUp size={14} weight="bold" />
-             {filteredValidators.length} Active Nodes
-           </div>
+          {search && (
+            <button
+              className="tg-search__clear"
+              onClick={() => setSearch("")}
+              aria-label="Clear"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
-      {/* List - Matches tc-list-row style */}
-      <div className="flex flex-col">
-        <div className="tc-list-header !grid-cols-[60px_1fr_100px_100px_140px_100px] !hidden md:grid">
-          <div>Rank</div>
-          <div>Validator</div>
-          <div className="cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors flex items-center gap-1" onClick={() => toggleSort("commission")}>
-            Comm. {sortKey === "commission" && (sortDir === "asc" ? <CaretUp size={10} /> : <CaretDown size={10} />)}
-          </div>
-          <div className="cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors flex items-center gap-1" onClick={() => toggleSort("apy")}>
-            APY {sortKey === "apy" && (sortDir === "asc" ? <CaretUp size={10} /> : <CaretDown size={10} />)}
-          </div>
-          <div className="cursor-pointer hover:text-[var(--tc-text-primary)] transition-colors flex items-center gap-1" onClick={() => toggleSort("activatedStake")}>
-            Stake {sortKey === "activatedStake" && (sortDir === "asc" ? <CaretUp size={10} /> : <CaretDown size={10} />)}
-          </div>
-          <div></div>
-        </div>
+      {/* ── List header ── */}
+      <div
+        className="tc-list-header"
+        style={{
+          gridTemplateColumns: "48px 1fr 90px 90px 150px 100px",
+          padding: "0 16px 8px",
+        }}
+      >
+        <div>#</div>
+        <div>Validator</div>
+        <button
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+          onClick={() => toggleSort("commission")}
+        >
+          Comm.
+          {sortKey === "commission" &&
+            (sortDir === "asc" ? (
+              <CaretUp size={9} />
+            ) : (
+              <CaretDown size={9} />
+            ))}
+        </button>
+        <button
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+          onClick={() => toggleSort("apy")}
+        >
+          APY
+          {sortKey === "apy" &&
+            (sortDir === "asc" ? (
+              <CaretUp size={9} />
+            ) : (
+              <CaretDown size={9} />
+            ))}
+        </button>
+        <button
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+          onClick={() => toggleSort("activatedStake")}
+        >
+          Stake
+          {sortKey === "activatedStake" &&
+            (sortDir === "asc" ? (
+              <CaretUp size={9} />
+            ) : (
+              <CaretDown size={9} />
+            ))}
+        </button>
+        <div />
+      </div>
 
-        <div className="flex flex-col gap-2">
-          {filteredValidators.map((v) => (
-            <Link 
-              key={v.votingPubkey} 
-              href={`/validators/${v.votingPubkey}`}
-              className="tc-list-row !grid-cols-1 md:!grid-cols-[60px_1fr_100px_100px_140px_100px] !gap-4 md:!gap-3 !p-4 hover:shadow-lg transition-all no-underline group"
+      {/* ── Rows ── */}
+      <div className="tg-list" style={{ padding: 0 }}>
+        {filteredValidators.length === 0 && (
+          <div className="tg-empty">
+            <svg
+              className="tg-empty__icon"
+              viewBox="0 0 44 44"
+              fill="none"
             >
-              <div className="hidden md:flex text-[11px] font-black text-[var(--tc-text-muted)] font-mono">
-                 #{v.rank}
+              <circle cx="22" cy="22" r="20" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M14 22h16M22 14v16"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <p className="tg-empty__text">No validators match your search.</p>
+          </div>
+        )}
+
+        {filteredValidators.map((v) => (
+          <Link
+            key={v.votingPubkey}
+            href={`/validators/${v.votingPubkey}`}
+            style={{ textDecoration: "none" }}
+          >
+            <div
+              className="tc-list-row"
+              style={{
+                gridTemplateColumns: "48px 1fr 90px 90px 150px 100px",
+              }}
+            >
+              {/* Rank */}
+              <div className="tc-list-row__symbol" style={{ fontFamily: "var(--tc-font-mono)" }}>
+                #{v.rank}
               </div>
-              
+
+              {/* Identity */}
               <div className="tc-list-row__identity">
                 {v.avatar ? (
-                  <img src={v.avatar} alt={v.name} className="w-10 h-10 rounded-xl border border-[var(--tc-border)] group-hover:scale-105 transition-transform" />
+                  <img
+                    src={v.avatar}
+                    alt={v.name}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      border: "1px solid var(--tc-border)",
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-[var(--tc-surface)] border border-[var(--tc-border)] flex items-center justify-center text-[12px] font-black">
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: "var(--tc-avatar-bg)",
+                      border: "1px solid var(--tc-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "var(--tc-font-mono)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--tc-avatar-c)",
+                      flexShrink: 0,
+                    }}
+                  >
                     {v.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2">
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="tc-list-row__name">{v.name}</span>
                     {v.isJito && (
-                      <span className="tc-badge tc-badge--t1 !text-[8px] !px-1.5">Jito</span>
+                      <span className="tc-badge tc-badge--t1">Jito</span>
                     )}
                   </div>
-                  <span className="tc-list-row__symbol truncate opacity-60">
-                    {v.votingPubkey.slice(0, 6)}...{v.votingPubkey.slice(-6)}
+                  <span className="tc-list-row__symbol">
+                    {v.votingPubkey.slice(0, 6)}…{v.votingPubkey.slice(-6)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col md:block">
-                <span className="text-[10px] text-[var(--tc-text-muted)] md:hidden uppercase font-black mb-1">Commission</span>
-                <span className="text-[14px] font-black text-[var(--tc-text-primary)]">{v.commission}%</span>
+              {/* Commission */}
+              <div className="tc-list-row__vol">{v.commission}%</div>
+
+              {/* APY */}
+              <div
+                className="tc-change tc-change--up"
+                style={{ width: "fit-content" }}
+              >
+                {v.apy.toFixed(2)}%
               </div>
 
-              <div className="flex flex-col md:block">
-                <span className="text-[10px] text-[var(--tc-text-muted)] md:hidden uppercase font-black mb-1">Yield APY</span>
-                <span className="text-[15px] font-black text-[var(--tc-accent-up)]">{v.apy.toFixed(2)}%</span>
+              {/* Stake */}
+              <div className="tc-list-row__vol">
+                {(v.activatedStake / 1e6).toFixed(1)}M{" "}
+                <span style={{ color: "var(--tc-text-muted)", fontSize: 10 }}>SOL</span>
               </div>
 
-              <div className="flex flex-col md:block">
-                <span className="text-[10px] text-[var(--tc-text-muted)] md:hidden uppercase font-black mb-1">Active Stake</span>
-                <span className="text-[14px] font-bold text-[var(--tc-text-primary)]">{(v.activatedStake / 1e6).toFixed(1)}M <span className="text-[10px] text-[var(--tc-text-muted)]">SOL</span></span>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="tg-btn-primary !h-9 !px-6 !text-[11px] !rounded-xl !uppercase !tracking-widest group-hover:scale-105 transition-transform">
+              {/* CTA */}
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 14px",
+                    borderRadius: 20,
+                    background: "var(--tc-accent)",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
+                    flexShrink: 0,
+                  }}
+                >
                   Stake
-                </div>
+                </span>
               </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );
