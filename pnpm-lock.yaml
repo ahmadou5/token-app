@@ -105,6 +105,9 @@ dependencies:
   bs58:
     specifier: ^6.0.0
     version: 6.0.0
+  class-variance-authority:
+    specifier: ^0.7.1
+    version: 0.7.1
   clsx:
     specifier: ^2.1.1
     version: 2.1.1
@@ -9638,6 +9641,12 @@ packages:
   /ci-info@3.9.0:
     resolution: {integrity: sha512-NIxF55hv4nSqQswkAeiOi1r83xy8JldOFDTWiug55KBu9Jnblncd2U6ViHmYgHf01TPZS77NJBhBMKdWj9HQMQ==}
     engines: {node: '>=8'}
+    dev: false
+
+  /class-variance-authority@0.7.1:
+    resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
+    dependencies:
+      clsx: 2.1.1
     dev: false
 
   /classcat@5.0.5:
