@@ -59,6 +59,9 @@ function mapStakeWizToValidatorInfo(v: StakeWizValidator): ValidatorInfo {
     uptime: typeof v.uptime === "number" ? v.uptime : undefined,
 
     performanceHistory: [],
+    stakeHistory: [],
+    skipRateHistory: [],
+    voteSuccessHistory: [],
 
     location:
       typeof latitude === "number" && typeof longitude === "number"
@@ -157,6 +160,29 @@ export async function fetchStakeWizValidators(): Promise<StakeWizValidator[]> {
   return data as StakeWizValidator[];
 }
 
+/**
+ * Fetch historical stats for a validator
+ */
+export async function fetchStakeWizValidatorStats(
+  voteAccount: string,
+  type: "stake" | "skip_rate" | "vote_success"
+): Promise<any[]> {
+  const endpoints = {
+    stake: `https://api.stakewiz.com/validator_stake_history/${voteAccount}`,
+    skip_rate: `https://api.stakewiz.com/validator_skip_rate/${voteAccount}`,
+    vote_success: `https://api.stakewiz.com/validator_vote_success/${voteAccount}`,
+  };
+
+  try {
+    const res = await fetchWithRetry(endpoints[type], 2, 10000);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error(`Error fetching ${type} stats for ${voteAccount}:`, error);
+    return [];
+  }
+}
+
 export async function fetchStakeWizValidatorInfos(): Promise<ValidatorInfo[]> {
   const raw = await fetchStakeWizValidators();
   return raw.map(mapStakeWizToValidatorInfo);
@@ -169,5 +195,41 @@ export async function getStakeWizValidatorByAddress(
   const found = raw.find(
     (v) => v.identity === address || v.vote_identity === address
   );
-  return found ? mapStakeWizToValidatorInfo(found) : null;
+
+  if (!found) return null;
+
+  const info = mapStakeWizToValidatorInfo(found);
+  const voteAccount = info.votingPubkey;
+
+  // Fetch history in parallel
+  try {
+    const [stakeHistoryRaw, skipRateHistoryRaw, voteSuccessHistoryRaw] = await Promise.all([
+      fetchStakeWizValidatorStats(voteAccount, "stake"),
+      fetchStakeWizValidatorStats(voteAccount, "skip_rate"),
+      fetchStakeWizValidatorStats(voteAccount, "vote_success"),
+    ]);
+
+    // Map history to our internal format
+    info.stakeHistory = stakeHistoryRaw.slice(-20).map((h: any) => ({
+      epoch: h.epoch,
+      value: Number(h.activated_stake) / 1e9,
+    }));
+
+    info.skipRateHistory = skipRateHistoryRaw.slice(-20).map((h: any) => ({
+      epoch: h.epoch || 0,
+      value: Number(h.skip_rate || h.wiz_skip_rate || 0),
+      timestamp: h.created_at,
+    }));
+
+    info.voteSuccessHistory = voteSuccessHistoryRaw.slice(-20).map((h: any) => ({
+      epoch: h.epoch || 0,
+      value: Number(h.vote_success || 0),
+      timestamp: h.created_at,
+    }));
+
+  } catch (err) {
+    console.error("Error fetching historical stats:", err);
+  }
+
+  return info;
 }

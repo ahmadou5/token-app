@@ -36,6 +36,12 @@ export interface StakeWizValidator {
   total_apy?: number;
 }
 
+export interface HistoryPoint {
+  epoch: number;
+  value: number;
+  timestamp?: string;
+}
+
 export interface ValidatorInfo {
   address: string;
   votingPubkey: string;
@@ -59,6 +65,9 @@ export interface ValidatorInfo {
   city?: string;
   uptime?: number;
   performanceHistory: any[];
+  stakeHistory: HistoryPoint[];
+  skipRateHistory: HistoryPoint[];
+  voteSuccessHistory: HistoryPoint[];
   location?: {
     coordinates: [number, number];
     city?: string;
