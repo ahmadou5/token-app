@@ -5,7 +5,7 @@ import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Layout/Navbar";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-
+import { Analytics } from "@vercel/analytics/next"
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const geistSans = DM_Mono({
@@ -36,6 +36,7 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
       <body className="min-h-full flex flex-col">
+        <Analytics />
         <Providers>
           <Navbar />
           {children}

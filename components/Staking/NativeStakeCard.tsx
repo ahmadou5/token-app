@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useWallet, useBalance } from "@solana/connector";
 import { useStakeTransaction, StakePosition } from "@/hooks/useStakeTransaction";
 import { Validator } from "@/hooks/useValidators";
-import { CaretDown, ArrowsLeftRight, ChartLineUp, Wallet, Lightning, Sparkle } from "@phosphor-icons/react";
+import { CaretDown, ArrowsLeftRight, ChartLineUp, Wallet, Lightning, Sparkle, ShieldCheck } from "@phosphor-icons/react";
 
 export function NativeStakeCard() {
   const { isConnected, account } = useWallet();
