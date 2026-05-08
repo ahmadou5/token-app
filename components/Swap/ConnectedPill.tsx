@@ -1,22 +1,46 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useConnector } from "@solana/connector/react";
+import { useCluster, useConnector } from "@solana/connector/react";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { usePortfolioDrawer } from "@/context/PortfolioDrawerContext";
-import { TagChevronIcon } from "@phosphor-icons/react";
+import { Check, TagChevronIcon } from "@phosphor-icons/react";
 import { ClusterSelector } from "../connector/cluster-selector";
+import { DropdownMenuLabel } from "../ui/dropdown-menu";
+import type { SolanaClusterId, SolanaCluster } from '@solana/connector';
+import { cn } from "@/lib/utils";
+
 
 interface ConnectedPillProps {
   onDisconnect: () => void;
 }
 
+
+const clusterLabels: Record<string, string> = {
+    'solana:mainnet': 'Mainnet',
+    'solana:devnet': 'Devnet',
+    'solana:testnet': 'Testnet',
+    'solana:localnet': 'Localnet',
+};
+
 export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
-  const { selectedAccount, selectedWallet, wallets } = useConnector();
+  //const { selectedAccount, selectedWallet, wallets } = useConnector();
   const [open, setOpen] = useState(false);
   const { open: openPortfolio } = usePortfolioDrawer();
   const ref = useRef<HTMLDivElement>(null);
+  const connector = useConnector();
+    const { connected, connecting, selectedWallet, selectedAccount, disconnect, wallets, cluster } = connector;
+    const { clusters, setCluster } = useCluster();
 
+    const isMainnet = cluster?.id === 'solana:mainnet';
+
+    const handleClusterChange = async (clusterId: SolanaClusterId) => {
+        try {
+            await setCluster(clusterId);
+        } catch (error) {
+            console.error('Cluster change failed:', error);
+        }
+    };
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node))
@@ -91,6 +115,41 @@ export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
             </span>
             <span className="sw-connected-menu__addr">{shortAddr}</span>
           </div>
+           <DropdownMenuLabel className="text-[11px] font-berkeley-mono text-sand-800 uppercase tracking-wide">
+                        Network
+                    </DropdownMenuLabel>
+                    <div className="px-1 pb-1">
+                        <div className="flex flex-wrap gap-1">
+                            {clusters.map((c: SolanaCluster) => {
+                                const isSelected = c.id === cluster?.id;
+                                const label = clusterLabels[c.id] || c.label || c.id;
+
+                                return (
+                                    <button
+                                        key={c.id}
+                                        onClick={() => handleClusterChange(c.id as SolanaClusterId)}
+                                        className={cn
+                                          (
+                                            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-berkeley-mono transition-colors',
+                                            isSelected
+                                                ? 'border-sand-1500 bg-sand-1500 text-sand-100'
+                                                : 'border-sand-200 bg-sand-100 text-sand-900 hover:border-sand-300 hover:bg-sand-200',
+                                        )}
+                                    >
+                                        {label}
+                                        {isSelected && <Check className="h-3 w-3" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {!isMainnet && (
+                        <div className="px-2 py-1.5">
+                            <p className="text-[11px] font-berkeley-mono text-sand-700 leading-relaxed">
+                                <span className="text-amber-600">Note:</span> Some examples only work on mainnet.
+                            </p>
+                        </div>
+                    )}
           <div className="sw-connected-menu__divider" />
           <button
             className="sw-connected-menu__portfolio"
@@ -102,8 +161,7 @@ export function ConnectedPill({ onDisconnect }: ConnectedPillProps) {
             <TagChevronIcon />
             View Portfolio
           </button>
-           <div className="sw-connected-menu__divider" />
-           <ClusterSelector />
+          
 
           <div className="sw-connected-menu__divider" />
           <button
