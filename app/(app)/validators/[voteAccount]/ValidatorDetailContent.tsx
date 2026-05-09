@@ -237,6 +237,8 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
     [stakes, validator],
   );
 
+  console.log('ALOT STAKE AMOUNT',existingStake?.amount)
+
   const handleMax = () => {
     if (solBalance) {
       setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
@@ -381,7 +383,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           <div className="td-chart-label">
             <span className="td-chart-label__sym">Network Stake</span>
             <span className="td-chart-label__price">
-              {(validator.stake / 1e3).toFixed(1)}k
+              {(validator.stake)}k
             </span>
             <span className="td-chart-label__text">SOL</span>
             <span className="td-chart-label__period">Live History</span>
@@ -545,7 +547,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           RIGHT — Sidebar
          ══════════════════════ */}
       <div className="td-sidebar">
-         <div className=" h-[36px] mb-[26px] bg-amber-0">
+         <div className=" h-[40px] mb-[26px] bg-amber-0">
                     {isConnected && (
                       <div className="td-sidebar-pill">
                         <ConnectedPill onDisconnect={() => connector.disconnect()} />
