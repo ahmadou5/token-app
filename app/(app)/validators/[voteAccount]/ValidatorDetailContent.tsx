@@ -541,7 +541,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
               >
                 <span style={{ opacity: 0.5 }}>Vote:</span>
                 {validator.votingPubkey.slice(0, 8)}…{validator.votingPubkey.slice(-8)}
-                <Copy size={10} />
+                <Copy size={12} />
               </button>
               {validator.website && (
                 <a
