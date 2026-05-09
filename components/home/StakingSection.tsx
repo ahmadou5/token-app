@@ -39,7 +39,6 @@ export default function StakingSection({ initialValidators = [] }: { initialVali
         const validatorsData = data.validators as ValidatorInfo[]; // handle both shapes
         const top10 = validatorsData.slice(0, 10);
         setValidators(top10);
-        console.log(top10,'Top10');
         const avg = top10.reduce((acc: number, v: any) => acc + (v.apy || 0), 0) / top10.length;
         setAvgApy(avg || 7.42);
       } catch (err) {
