@@ -833,7 +833,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                       onChange={(e) => setAmount(e.target.value)}
                     />
                     <div className="sw-token-fixed">
-                      <span className="sw-token-fixed__sym"><img className="w-full h-full rounded-full" src={solana?.imageUrl||''} alt={solana?.name} /></span>
+                      <span className="sw-token-fixed__sym"><img className="w-8 h-8 rounded-xl" src={solana?.imageUrl||''} alt={solana?.name} /></span>
                     </div>
                   </div>
                 </div>
