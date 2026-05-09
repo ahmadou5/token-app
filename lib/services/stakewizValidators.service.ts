@@ -226,7 +226,7 @@ export async function getStakeWizValidatorByAddress(
       value: Number(h.vote_success || 0),
       timestamp: h.created_at,
     }));
-
+    console.log("History", info.stakeHistory)
   } catch (err) {
     console.error("Error fetching historical stats:", err);
   }
