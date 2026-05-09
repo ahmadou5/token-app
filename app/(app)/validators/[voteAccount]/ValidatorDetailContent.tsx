@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { HistoryPoint } from "@/types/validator";
 import { ConnectedPill } from "@/components/Swap";
+import { useTokens } from "@/hooks/useToken";
 
 interface ValidatorDetailContentProps {
   validator: Validator;
@@ -429,6 +430,9 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
   const [amount, setAmount] = useState("");
   const [stakes, setStakes] = useState<StakePosition[]>([]);
   const [isLoadingStakes, setIsLoadingStakes] = useState(true);
+  const { tokens } = useTokens();
+
+  const solana = tokens.find((token) => token.assetId === 'solana');
 
   useEffect(() => {
     if (isConnected && account) {
@@ -829,7 +833,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                       onChange={(e) => setAmount(e.target.value)}
                     />
                     <div className="sw-token-fixed">
-                      <span className="sw-token-fixed__sym">SOL</span>
+                      <span className="sw-token-fixed__sym"><img className="w-full h-full rounded-full" src={solana?.imageUrl||''} alt={solana?.name} /></span>
                     </div>
                   </div>
                 </div>
