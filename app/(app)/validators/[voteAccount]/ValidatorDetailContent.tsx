@@ -860,7 +860,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                     </div>
                     <div className="sw-quote__row sw-quote__row--provider">
                       <span className="sw-quote__label">Validator</span>
-                      <span className="sw-quote__provider">{validator.name}</span>
+                      <div className="flex "><span className="sw-quote__provider ml-2 mr-2">{validator.name}</span><img className="w-5 h-5 rounded-full" src={validator.avatar} /></div>
                     </div>
                   </div>
                 )}
