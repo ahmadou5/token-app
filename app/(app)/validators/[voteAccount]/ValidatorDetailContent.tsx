@@ -602,7 +602,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           <h2 className="td-section__title">About Validator</h2>
           <div className="td-card">
             <div className="flex items-center ">
-              <img className=" ml-3 mr-2 rounded-xl h-8 w-8" src={validator.avatar} />
+              <img className=" ml-1 mr-3 rounded-xl h-8 w-8" src={validator.avatar} />
  <p className="td-card__desc">
               {validator.description ||
                 "This validator contributes to the security and decentralization of the Solana network by processing transactions and participating in consensus. They maintain high uptime and competitive APY for their delegators."}
