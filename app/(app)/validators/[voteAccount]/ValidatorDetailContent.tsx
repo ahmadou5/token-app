@@ -67,10 +67,8 @@ function StakeChart({
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
    const steps = 4;
-// values are activatedStake in lamports; convert to readable SOL
-const toSolLabel = (lamports: number) => {
-  const sol = lamports / 1e9;
-  if (sol >= 1_000_000) return (sol / 1_000_000).toFixed(1) + "M";
+const toSolLabel = (sol: number) => {
+  if (sol >= 1_000_000) return (sol / 1_000_000).toFixed(2) + "M";
   if (sol >= 1_000) return (sol / 1_000).toFixed(1) + "k";
   return sol.toFixed(0);
 };
@@ -237,8 +235,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
     [stakes, validator],
   );
 
-  console.log('ALOT STAKE AMOUNT',existingStake?.amount)
-
   const handleMax = () => {
     if (solBalance) {
       setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
@@ -383,7 +379,11 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           <div className="td-chart-label">
             <span className="td-chart-label__sym">Network Stake</span>
             <span className="td-chart-label__price">
-              {(validator.stake)}k
+              {validator.stake >= 1_000_000
+    ? (validator.stake / 1_000_000).toFixed(2) + "M"
+    : validator.stake >= 1_000
+      ? (validator.stake / 1_000).toFixed(1) + "k"
+      : validator.stake.toFixed(0)}
             </span>
             <span className="td-chart-label__text">SOL</span>
             <span className="td-chart-label__period">Live History</span>
@@ -547,7 +547,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           RIGHT — Sidebar
          ══════════════════════ */}
       <div className="td-sidebar">
-         <div className=" h-[40px] mb-[26px] bg-amber-0">
+         <div className=" h-[45px] mb-[26px] bg-amber-0">
                     {isConnected && (
                       <div className="td-sidebar-pill">
                         <ConnectedPill onDisconnect={() => connector.disconnect()} />
