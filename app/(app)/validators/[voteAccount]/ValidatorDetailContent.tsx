@@ -14,6 +14,7 @@ import {
 import { HistoryPoint } from "@/types/validator";
 import { ConnectedPill } from "@/components/Swap";
 import { useTokens } from "@/hooks/useToken";
+import { Copy } from "lucide-react";
 
 interface ValidatorDetailContentProps {
   validator: Validator;
@@ -540,10 +541,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
               >
                 <span style={{ opacity: 0.5 }}>Vote:</span>
                 {validator.votingPubkey.slice(0, 8)}…{validator.votingPubkey.slice(-8)}
-                <svg viewBox="0 0 16 16" fill="none" width="11" height="11" style={{ opacity: 0.4 }}>
-                  <path d="M4 4h8v8H4z" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M2 2h8v2H4v8H2z" fill="currentColor" opacity="0.3" />
-                </svg>
+                <Copy size={10} />
               </button>
               {validator.website && (
                 <a
