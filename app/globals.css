@@ -3500,9 +3500,8 @@ html.dark {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px 5px 6px;
+  padding: 2px;
   border-radius: 20px;
-  border: 1px solid var(--tc-border);
   background: var(--tc-surface);
   flex-shrink: 0;
 }
@@ -9944,7 +9943,7 @@ html.dark .pf-drawer {
   cursor: pointer;
 }
 
-.sw-toggle input:checked + .sw-toggle__track {
+.sw-toggle input:checked+.sw-toggle__track {
   background: var(--tc-accent);
 }
 
@@ -9960,7 +9959,7 @@ html.dark .pf-drawer {
   pointer-events: none;
 }
 
-.sw-toggle input:checked ~ .sw-toggle__thumb {
+.sw-toggle input:checked~.sw-toggle__thumb {
   transform: translateX(16px);
 }
 
@@ -10370,9 +10369,11 @@ html.dark .pf-drawer {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
