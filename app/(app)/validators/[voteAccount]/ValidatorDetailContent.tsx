@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Validator } from "@/hooks/useValidators";
 import { useWallet, useBalance, useConnector } from "@solana/connector";
 import { useStakeTransaction, StakePosition } from "@/hooks/useStakeTransaction";
@@ -13,34 +13,55 @@ import {
 } from "@phosphor-icons/react";
 import { HistoryPoint } from "@/types/validator";
 import { ConnectedPill } from "@/components/Swap";
-import { useTokens } from "@/hooks/useToken";
 
 interface ValidatorDetailContentProps {
   validator: Validator;
 }
 
-// ─── Stake History Chart ───────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function StakeChart({
+function formatSol(sol: number): string {
+  if (sol >= 1_000_000) return (sol / 1_000_000).toFixed(2) + "M";
+  if (sol >= 1_000) return (sol / 1_000).toFixed(1) + "k";
+  return sol.toFixed(0);
+}
+
+/**
+ * Convert raw stakeHistory (lamport deltas per epoch) into cumulative SOL,
+ * anchored so the LAST point equals currentStakeSol (the known true value).
+ *
+ * Strategy:
+ *  1. Sum all deltas in lamports → totalDeltaLamports
+ *  2. Starting point = currentStakeSol - totalDeltaLamports / 1e9
+ *  3. Walk forward adding each delta
+ *
+ * This means the line always ends exactly at the validator's real active stake.
+ */
+function buildCumulative(
+  history: HistoryPoint[],
+  currentStakeSol: number,
+): { epoch: number; value: number }[] {
+  if (history.length === 0) return [];
+  const totalDeltaSol = history.reduce((s, h) => s + h.value / 1e9, 0);
+  let running = currentStakeSol - totalDeltaSol;
+  return history.map((h) => {
+    running += h.value / 1e9;
+    return { epoch: h.epoch, value: Math.max(0, running) };
+  });
+}
+
+// ─── Line / Area chart (cumulative total stake) ───────────────────────────────
+
+function TotalStakeChart({
   data,
-  isLoading,
+  animated,
 }: {
-  data: HistoryPoint[];
-  isLoading: boolean;
+  data: { epoch: number; value: number }[];
+  animated: boolean;
 }) {
   const W = 800;
   const H = 220;
-  const PAD = { top: 16, right: 16, bottom: 32, left: 64 };
-  const [animated, setAnimated] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading && data.length > 1) {
-      const raf = requestAnimationFrame(() =>
-        requestAnimationFrame(() => setAnimated(true)),
-      );
-      return () => cancelAnimationFrame(raf);
-    }
-  }, [isLoading, data.length]);
+  const PAD = { top: 16, right: 16, bottom: 32, left: 72 };
 
   const derived = useMemo(() => {
     if (data.length < 2) return null;
@@ -66,35 +87,24 @@ function StakeChart({
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
-   const steps = 4;
-const toSolLabel = (sol: number) => {
-  if (sol >= 1_000_000) return (sol / 1_000_000).toFixed(2) + "M";
-  if (sol >= 1_000) return (sol / 1_000).toFixed(1) + "k";
-  return sol.toFixed(0);
-};
-const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
-  y: PAD.top + (1 - i / steps) * iH,
-  label: toSolLabel(minVal + ((maxVal - minVal) * i) / steps),
-}));
+    const steps = 4;
+    const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
+      y: PAD.top + (1 - i / steps) * iH,
+      label: formatSol(minVal + ((maxVal - minVal) * i) / steps),
+    }));
 
-// epoch is a Solana epoch number (~750, 751…), NOT a unix timestamp.
-// Use the ISO timestamp string if present, otherwise label as "Ep N".
-const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
-  const idx = Math.round((i / 4) * (data.length - 1));
-  const pt = data[idx];
-  const label = pt.timestamp
-    ? new Date(pt.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : `Ep ${pt.epoch}`;
-  return {
-    x: PAD.left + (idx / (data.length - 1)) * iW,
-    label,
-  };
-});
+    const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
+      const idx = Math.round((i / 4) * (data.length - 1));
+      return {
+        x: PAD.left + (idx / (data.length - 1)) * iW,
+        label: `Ep ${data[idx].epoch}`,
+      };
+    });
 
     return { path, areaPath, yLabels, xLabels, pulsePt: last };
   }, [data]);
 
-  if (isLoading || !derived) {
+  if (!derived) {
     return (
       <div className="td-chart td-chart--loading" style={{ height: 220 }}>
         <div className="td-chart__shimmer" />
@@ -107,14 +117,10 @@ const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
 
   return (
     <div className="td-chart" style={{ height: 220, position: "relative" }}>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="td-chart__svg"
-      >
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="td-chart__svg">
         <defs>
           <linearGradient id="stakeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.18" />
             <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
           </linearGradient>
           <clipPath id="stakeClip">
@@ -156,7 +162,7 @@ const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
         {yLabels.map(({ y, label }) => (
           <text
             key={y}
-            x={PAD.left - 12}
+            x={PAD.left - 8}
             y={y + 4}
             textAnchor="end"
             fontSize="10"
@@ -203,18 +209,227 @@ const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
   );
 }
 
+// ─── Bar chart (epoch-by-epoch delegation flow) ───────────────────────────────
+
+function FlowChart({ data }: { data: HistoryPoint[] }) {
+  const W = 800;
+  const H = 220;
+  const PAD = { top: 16, right: 16, bottom: 32, left: 72 };
+
+  const derived = useMemo(() => {
+    if (data.length === 0) return null;
+    const solValues = data.map((d) => d.value / 1e9);
+    const maxVal = Math.max(...solValues) || 1;
+    const iW = W - PAD.left - PAD.right;
+    const iH = H - PAD.top - PAD.bottom;
+    const slotW = iW / data.length;
+    const barW = Math.max(4, slotW * 0.65);
+
+    const bars = data.map((d, i) => {
+      const sol = d.value / 1e9;
+      const barH = Math.max(2, (sol / maxVal) * iH);
+      const x = PAD.left + i * slotW + slotW * 0.175;
+      return { x, barH, sol, epoch: d.epoch };
+    });
+
+    const steps = 4;
+    const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
+      y: PAD.top + (1 - i / steps) * iH,
+      label: formatSol((maxVal * i) / steps),
+    }));
+
+    const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
+      const idx = Math.round((i / 4) * (data.length - 1));
+      return {
+        x: PAD.left + idx * slotW + slotW / 2,
+        label: `Ep ${data[idx].epoch}`,
+      };
+    });
+
+    return { bars, barW, yLabels, xLabels, iH };
+  }, [data]);
+
+  if (!derived) {
+    return (
+      <div className="td-chart td-chart--loading" style={{ height: 220 }}>
+        <div className="td-chart__shimmer" />
+      </div>
+    );
+  }
+
+  const { bars, barW, yLabels, xLabels, iH } = derived;
+
+  return (
+    <div className="td-chart" style={{ height: 220, position: "relative" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="td-chart__svg">
+        {yLabels.map(({ y }) => (
+          <line
+            key={y}
+            x1={PAD.left}
+            y1={y}
+            x2={W - PAD.right}
+            y2={y}
+            stroke="var(--tc-divider)"
+            strokeWidth="1"
+            strokeDasharray="4,4"
+          />
+        ))}
+
+        {bars.map(({ x, barH, epoch }) => (
+          <rect
+            key={epoch}
+            x={x}
+            y={PAD.top + iH - barH}
+            width={barW}
+            height={barH}
+            rx="2"
+            fill="var(--tc-accent)"
+            opacity="0.72"
+          />
+        ))}
+
+        {yLabels.map(({ y, label }) => (
+          <text
+            key={y}
+            x={PAD.left - 8}
+            y={y + 4}
+            textAnchor="end"
+            fontSize="10"
+            fill="var(--tc-text-muted)"
+            fontFamily="var(--tc-font-mono)"
+          >
+            {label}
+          </text>
+        ))}
+        {xLabels.map(({ x, label }) => (
+          <text
+            key={x}
+            x={x}
+            y={H - 8}
+            textAnchor="middle"
+            fontSize="10"
+            fill="var(--tc-text-muted)"
+          >
+            {label}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+// ─── Combined chart wrapper with switcher ─────────────────────────────────────
+
+function StakeChart({
+  rawHistory,
+  currentStakeSol,
+}: {
+  rawHistory: HistoryPoint[];
+  currentStakeSol: number;
+}) {
+  const [view, setView] = useState<"total" | "flow">("total");
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    if (rawHistory.length > 1) {
+      const raf = requestAnimationFrame(() =>
+        requestAnimationFrame(() => setAnimated(true)),
+      );
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [rawHistory.length]);
+
+  const cumulativeData = useMemo(
+    () => buildCumulative(rawHistory, currentStakeSol),
+    [rawHistory, currentStakeSol],
+  );
+
+  return (
+    <>
+      {/* Switcher row */}
+      <div
+        className="td-chart-controls"
+        style={{ marginBottom: 10, flexWrap: "nowrap", alignItems: "center" }}
+      >
+        <div className="td-chart-controls__group">
+          <button
+            className={`td-ctrl-btn ${view === "total" ? "td-ctrl-btn--active" : ""}`}
+            onClick={() => setView("total")}
+          >
+            Total Stake
+          </button>
+          <button
+            className={`td-ctrl-btn ${view === "flow" ? "td-ctrl-btn--active" : ""}`}
+            onClick={() => setView("flow")}
+          >
+            Epoch Flow
+          </button>
+        </div>
+
+        {/* Live badge */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 10px",
+            borderRadius: 6,
+            border: "1px solid var(--tc-border)",
+            background: "var(--tc-surface)",
+            fontSize: 11,
+            color: "var(--tc-text-muted)",
+            marginLeft: "auto",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "var(--tc-accent)",
+              animation: "tgPulse 1.5s ease-in-out infinite",
+            }}
+          />
+          Live
+        </div>
+      </div>
+
+      {view === "total" ? (
+        <TotalStakeChart data={cumulativeData} animated={animated} />
+      ) : (
+        <FlowChart data={rawHistory} />
+      )}
+
+      {/* Context note */}
+      <p
+        style={{
+          margin: "6px 0 0",
+          fontSize: 10,
+          color: "var(--tc-text-muted)",
+          fontStyle: "italic",
+          lineHeight: 1.5,
+        }}
+      >
+        {view === "total"
+          ? "Cumulative stake anchored to current activated stake. Earlier epochs reconstructed from per-epoch delegation deltas."
+          : "Per-epoch delegation flow in SOL. Spikes indicate large delegations or undelegations that epoch."}
+      </p>
+    </>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ValidatorDetailContent({ validator }: ValidatorDetailContentProps) {
   const { isConnected, account } = useWallet();
   const { solBalance } = useBalance({ enabled: isConnected });
   const { executeStakeAction, fetchActiveStakes, status } = useStakeTransaction();
-  const { tokens } = useTokens();
+    const connector = useConnector();
   const [amount, setAmount] = useState("");
   const [stakes, setStakes] = useState<StakePosition[]>([]);
   const [isLoadingStakes, setIsLoadingStakes] = useState(true);
-  const connector = useConnector();
-  const sol = tokens.find((token) => token.assetId === 'solana');
+
   useEffect(() => {
     if (isConnected && account) {
       fetchActiveStakes(account)
@@ -234,11 +449,9 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
       ),
     [stakes, validator],
   );
-   console.log('History', validator.stakeHistory)
+
   const handleMax = () => {
-    if (solBalance) {
-      setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
-    }
+    if (solBalance) setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
   };
 
   const handleStake = async () => {
@@ -250,13 +463,11 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
     });
   };
 
-  const handleUnstake = async (stakeAccount: string) => {
-    await executeStakeAction("deactivate", { stakeAccount });
-  };
+  const handleUnstake = async (stakeAccount: string) =>
+    executeStakeAction("deactivate", { stakeAccount });
 
-  const handleWithdraw = async (stakeAccount: string, amt: number) => {
-    await executeStakeAction("withdraw", { stakeAccount, amountSOL: amt });
-  };
+  const handleWithdraw = async (stakeAccount: string, amt: number) =>
+    executeStakeAction("withdraw", { stakeAccount, amountSOL: amt });
 
   const estimatedDaily = useMemo(() => {
     const val = parseFloat(amount) || 0;
@@ -264,17 +475,19 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
   }, [amount, validator.apy]);
 
   const isExecuting = ["loading", "signing", "sending", "confirming"].includes(status);
-  const stakeHistory = validator.stakeHistory || [];
+  const stakeHistory: HistoryPoint[] = validator.stakeHistory || [];
+
+  // activatedStake is in SOL (from StakeWiz mapping which notes "appears to be in SOL already")
+  const currentStakeSol = validator.activatedStake ?? validator.stake ?? 0;
 
   return (
     <div className="td-layout">
-      {/* ══════════════════════
+      {/* ══════════════════════════════
           LEFT — Main content
-         ══════════════════════ */}
+         ══════════════════════════════ */}
       <div>
         {/* Header */}
         <div className="td-header">
-          {/* Avatar */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             {validator.avatar ? (
               <img
@@ -309,7 +522,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
             )}
           </div>
 
-          {/* Info */}
           <div className="td-header__info">
             <div className="td-header__row">
               <h1 className="td-header__name">{validator.name}</h1>
@@ -320,13 +532,10 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
             <div className="td-header__pills">
               <button
                 className="td-pill td-pill--mint"
-                onClick={() =>
-                  navigator.clipboard.writeText(validator.votingPubkey)
-                }
+                onClick={() => navigator.clipboard.writeText(validator.votingPubkey)}
               >
                 <span style={{ opacity: 0.5 }}>Vote:</span>
-                {validator.votingPubkey.slice(0, 8)}…
-                {validator.votingPubkey.slice(-8)}
+                {validator.votingPubkey.slice(0, 8)}…{validator.votingPubkey.slice(-8)}
                 <svg viewBox="0 0 16 16" fill="none" width="11" height="11" style={{ opacity: 0.4 }}>
                   <path d="M4 4h8v8H4z" stroke="currentColor" strokeWidth="1.5" />
                   <path d="M2 2h8v2H4v8H2z" fill="currentColor" opacity="0.3" />
@@ -346,7 +555,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
             </div>
           </div>
 
-          {/* Commission / APY — desktop only */}
           <div className="td-header__actions">
             <div className="tc-stat">
               <span className="tc-stat__label">Commission</span>
@@ -374,49 +582,15 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           </div>
         </div>
 
-        {/* Chart */}
+        {/* Chart section */}
         <div className="td-chart-section">
-          <div className="td-chart-label">
-            <span className="td-chart-label__sym">Network Stake</span>
-            <span className="td-chart-label__price">
-              {validator.stake >= 1_000_000
-    ? (validator.stake / 1_000_000).toFixed(2) + "M"
-    : validator.stake >= 1_000
-      ? (validator.stake / 1_000).toFixed(1) + "k"
-      : validator.stake.toFixed(0)}
-            </span>
+          <div className="td-chart-label" style={{ marginBottom: 4 }}>
+            <span className="td-chart-label__sym">Activated Stake</span>
+            <span className="td-chart-label__price">{formatSol(currentStakeSol)}</span>
             <span className="td-chart-label__text">SOL</span>
-            <span className="td-chart-label__period">Live History</span>
           </div>
-          <div className="td-chart-controls">
-            <div className="td-chart-controls__group">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "4px 10px",
-                  borderRadius: 6,
-                  border: "1px solid var(--tc-border)",
-                  background: "var(--tc-surface)",
-                  fontSize: 11,
-                  color: "var(--tc-text-muted)",
-                }}
-              >
-                <div
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "var(--tc-accent)",
-                    animation: "tgPulse 1.5s ease-in-out infinite",
-                  }}
-                />
-                Live
-              </div>
-            </div>
-          </div>
-          <StakeChart data={stakeHistory} isLoading={false} />
+
+          <StakeChart rawHistory={stakeHistory} currentStakeSol={currentStakeSol} />
         </div>
 
         {/* About */}
@@ -438,7 +612,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                 gap: 24,
               }}
             >
-              {/* Epoch Credits */}
               <div className="tc-stat">
                 <span
                   className="tc-stat__label"
@@ -488,7 +661,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                 </div>
               </div>
 
-              {/* Network Position */}
               <div className="tc-stat">
                 <span
                   className="tc-stat__label"
@@ -497,13 +669,19 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                   <ShieldCheck size={13} />
                   Network Position
                 </span>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--tc-text-secondary)", lineHeight: 1.6 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: "var(--tc-text-secondary)",
+                    lineHeight: 1.6,
+                  }}
+                >
                   Ranked{" "}
                   <strong style={{ color: "var(--tc-text-primary)" }}>
                     #{validator.rank}
                   </strong>{" "}
-                  globally by stake weight. Contributing to network
-                  decentralization.
+                  globally by stake weight. Contributing to network decentralization.
                 </p>
               </div>
             </div>
@@ -519,9 +697,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           <div className="td-stat-cell">
             <span className="td-stat-cell__label">Uptime</span>
             <span className="td-stat-cell__value">
-              {validator.uptime
-                ? `${(validator.uptime * 100).toFixed(2)}%`
-                : "99.99%"}
+              {validator.uptime ? `${(validator.uptime * 100).toFixed(2)}%` : "99.99%"}
             </span>
           </div>
           <div className="td-stat-cell">
@@ -530,9 +706,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           </div>
           <div className="td-stat-cell">
             <span className="td-stat-cell__label">Country</span>
-            <span className="td-stat-cell__value">
-              {validator.country || "International"}
-            </span>
+            <span className="td-stat-cell__value">{validator.country || "International"}</span>
           </div>
           <div className="td-stat-cell" style={{ gridColumn: "span 2" }}>
             <span className="td-stat-cell__label">Data Center</span>
@@ -543,11 +717,11 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
         </div>
       </div>
 
-      {/* ══════════════════════
+      {/* ══════════════════════════════
           RIGHT — Sidebar
-         ══════════════════════ */}
+         ══════════════════════════════ */}
       <div className="td-sidebar">
-         <div className=" h-[50px] mb-[26px] bg-amber-0">
+           <div className=" h-[50px] mb-[26px] bg-amber-0">
                     {isConnected && (
                       <div className="td-sidebar-pill">
                         <ConnectedPill onDisconnect={() => connector.disconnect()} />
@@ -555,7 +729,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                     )}
                   </div>
         <div className="sw-card">
-         
           <div className="sw-tabs">
             <div className="sw-tab sw-tab--active">
               <Lightning size={12} weight="fill" />
@@ -563,10 +736,16 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
             </div>
           </div>
 
-          <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div
+            style={{
+              padding: "14px 14px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
             {existingStake ? (
               <>
-                {/* Existing stake */}
                 <div
                   style={{
                     background: "var(--tc-surface)",
@@ -584,28 +763,14 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                     }}
                   >
                     <span className="sw-input-lbl">Active Stake</span>
-                    <span
-                      className="tc-change tc-change--up tc-change--sm"
-                    >
+                    <span className="tc-change tc-change--up tc-change--sm">
                       {existingStake.status}
                     </span>
                   </div>
-                  <span
-                    className="sw-amount sw-amount--out"
-                    style={{ display: "block" }}
-                  >
+                  <span className="sw-amount sw-amount--out" style={{ display: "block" }}>
                     {existingStake.amount}
-                    <span
-                      style={{
-                        fontSize: 13,
-                        color: "var(--tc-text-muted)",
-                        marginLeft: 4,
-                      }}
-                    >
-                      {
-                        sol?.imageUrl === '' ?  (<div className="w-full h-full rounded-full">SOL</div>) : (<img className="w-full h-full rounded-full" src={sol?.imageUrl ||''} />) 
-                      }
-                     <img />
+                    <span style={{ fontSize: 13, color: "var(--tc-text-muted)", marginLeft: 4 }}>
+                      SOL
                     </span>
                   </span>
                 </div>
@@ -641,7 +806,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
               </>
             ) : (
               <>
-                {/* Amount input */}
                 <div className="sw-input-group" style={{ padding: 0 }}>
                   <div className="sw-input-hdr">
                     <span className="sw-input-lbl">Amount</span>
@@ -661,12 +825,11 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                       onChange={(e) => setAmount(e.target.value)}
                     />
                     <div className="sw-token-fixed">
-                      <span className="sw-token-fixed__sym">{sol?.name}</span>
+                      <span className="sw-token-fixed__sym">SOL</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Earnings estimate */}
                 {parseFloat(amount) > 0 && (
                   <div className="sw-quote" style={{ margin: 0 }}>
                     <div className="sw-quote__row">
@@ -694,7 +857,6 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                   </div>
                 )}
 
-                {/* Stake button */}
                 <button
                   className={`sw-swap-btn ${isExecuting ? "sw-swap-btn--busy" : ""}`}
                   style={{ width: "100%", margin: 0 }}
@@ -720,15 +882,13 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
         {/* Quick stats */}
         <div className="td-card">
           <h3 className="td-card__title">Node Metrics</h3>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
-              { label: "APY", value: `${validator.apy.toFixed(2)}%`, color: "var(--tc-accent-up)" },
+              {
+                label: "APY",
+                value: `${validator.apy.toFixed(2)}%`,
+                color: "var(--tc-accent-up)",
+              },
               { label: "Commission", value: `${validator.commission}%` },
               { label: "Rank", value: `#${validator.rank}` },
               {
@@ -736,6 +896,10 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                 value: validator.uptime
                   ? `${(validator.uptime * 100).toFixed(1)}%`
                   : "99.9%",
+              },
+              {
+                label: "Active Stake",
+                value: formatSol(currentStakeSol) + " SOL",
               },
             ].map(({ label, value, color }) => (
               <div
@@ -748,7 +912,10 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                   borderBottom: "1px solid var(--tc-divider)",
                 }}
               >
-                <span className="tc-stat__label" style={{ textTransform: "none", fontSize: 12 }}>
+                <span
+                  className="tc-stat__label"
+                  style={{ textTransform: "none", fontSize: 12 }}
+                >
                   {label}
                 </span>
                 <span
