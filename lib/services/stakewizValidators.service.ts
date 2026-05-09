@@ -212,7 +212,7 @@ export async function getStakeWizValidatorByAddress(
     // Map history to our internal format
     info.stakeHistory = stakeHistoryRaw.slice(-20).map((h: any) => ({
       epoch: h.epoch,
-      value: Number(h.activated_stake) / 1e9,
+      value: Number(h.activated_stake),
     }));
 
     info.skipRateHistory = skipRateHistoryRaw.slice(-20).map((h: any) => ({
