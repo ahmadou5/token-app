@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Validator } from "@/hooks/useValidators";
-import { useWallet, useBalance } from "@solana/connector";
+import { useWallet, useBalance, useConnector } from "@solana/connector";
 import { useStakeTransaction, StakePosition } from "@/hooks/useStakeTransaction";
 import {
   Globe,
@@ -12,6 +12,8 @@ import {
   Lightning,
 } from "@phosphor-icons/react";
 import { HistoryPoint } from "@/types/validator";
+import { ConnectedPill } from "@/components/Swap";
+import { useTokens } from "@/hooks/useToken";
 
 interface ValidatorDetailContentProps {
   validator: Validator;
@@ -64,21 +66,30 @@ function StakeChart({
     const last = pts[pts.length - 1];
     const areaPath = `${path} L ${last[0].toFixed(1)},${(H - PAD.bottom).toFixed(1)} L ${PAD.left},${(H - PAD.bottom).toFixed(1)} Z`;
 
-    const steps = 4;
-    const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
-      y: PAD.top + (1 - i / steps) * iH,
-      label: ((minVal + ((maxVal - minVal) * i) / steps) / 1e3).toFixed(1) + "k",
-    }));
+   const steps = 4;
+// values are activatedStake in lamports; convert to readable SOL
+const toSolLabel = (lamports: number) => {
+  const sol = lamports / 1e9;
+  if (sol >= 1_000_000) return (sol / 1_000_000).toFixed(1) + "M";
+  if (sol >= 1_000) return (sol / 1_000).toFixed(1) + "k";
+  return sol.toFixed(0);
+};
+const yLabels = Array.from({ length: steps + 1 }, (_, i) => ({
+  y: PAD.top + (1 - i / steps) * iH,
+  label: toSolLabel(minVal + ((maxVal - minVal) * i) / steps),
+}));
 
-    const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
+// epoch is a Solana epoch number (~750, 751…), NOT a unix timestamp.
+// Use the ISO timestamp string if present, otherwise label as "Ep N".
+const xLabels = Array.from({ length: Math.min(5, data.length) }, (_, i) => {
   const idx = Math.round((i / 4) * (data.length - 1));
   const pt = data[idx];
-  const date = pt.timestamp
-    ? new Date(pt.timestamp)          // string → Date directly, no arithmetic
-    : new Date(pt.epoch * 1000);      // epoch (number) fallback
+  const label = pt.timestamp
+    ? new Date(pt.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : `Ep ${pt.epoch}`;
   return {
     x: PAD.left + (idx / (data.length - 1)) * iW,
-    label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    label,
   };
 });
 
@@ -200,11 +211,12 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
   const { isConnected, account } = useWallet();
   const { solBalance } = useBalance({ enabled: isConnected });
   const { executeStakeAction, fetchActiveStakes, status } = useStakeTransaction();
-
+  const { tokens } = useTokens();
   const [amount, setAmount] = useState("");
   const [stakes, setStakes] = useState<StakePosition[]>([]);
   const [isLoadingStakes, setIsLoadingStakes] = useState(true);
-
+  const connector = useConnector();
+  const sol = tokens.find((token) => token.assetId === 'solana');
   useEffect(() => {
     if (isConnected && account) {
       fetchActiveStakes(account)
@@ -533,9 +545,15 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           RIGHT — Sidebar
          ══════════════════════ */}
       <div className="td-sidebar">
-        {/* Stake action card */}
+         <div className=" h-[36px] mb-[26px] bg-amber-0">
+                    {isConnected && (
+                      <div className="td-sidebar-pill">
+                        <ConnectedPill onDisconnect={() => connector.disconnect()} />
+                      </div>
+                    )}
+                  </div>
         <div className="sw-card">
-          {/* Tab bar */}
+         
           <div className="sw-tabs">
             <div className="sw-tab sw-tab--active">
               <Lightning size={12} weight="fill" />
@@ -582,7 +600,10 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                         marginLeft: 4,
                       }}
                     >
-                      SOL
+                      {
+                        sol?.imageUrl === '' ?  (<div className="w-full h-full rounded-full">SOL</div>) : (<img className="w-full h-full rounded-full" src={sol?.imageUrl ||''} />) 
+                      }
+                     <img />
                     </span>
                   </span>
                 </div>
