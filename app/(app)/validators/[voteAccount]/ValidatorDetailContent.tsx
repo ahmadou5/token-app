@@ -547,7 +547,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           RIGHT — Sidebar
          ══════════════════════ */}
       <div className="td-sidebar">
-         <div className=" h-[45px] mb-[26px] bg-amber-0">
+         <div className=" h-[50px] mb-[26px] bg-amber-0">
                     {isConnected && (
                       <div className="td-sidebar-pill">
                         <ConnectedPill onDisconnect={() => connector.disconnect()} />
@@ -661,7 +661,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
                       onChange={(e) => setAmount(e.target.value)}
                     />
                     <div className="sw-token-fixed">
-                      <span className="sw-token-fixed__sym">SOL</span>
+                      <span className="sw-token-fixed__sym">{sol?.name}</span>
                     </div>
                   </div>
                 </div>
