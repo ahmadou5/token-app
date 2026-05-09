@@ -234,7 +234,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
       ),
     [stakes, validator],
   );
-
+   console.log('History', validator.stakeHistory)
   const handleMax = () => {
     if (solBalance) {
       setAmount(Math.max(0, solBalance - 0.01).toFixed(4));
