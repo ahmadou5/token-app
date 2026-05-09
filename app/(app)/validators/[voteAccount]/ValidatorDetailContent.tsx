@@ -597,10 +597,14 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
         <div className="td-section">
           <h2 className="td-section__title">About Validator</h2>
           <div className="td-card">
-            <p className="td-card__desc">
+            <div className="flex items-center justify-between ">
+              <img className=" rounded-xl h-8 w-8" src={validator.avatar} />
+ <p className="td-card__desc">
               {validator.description ||
                 "This validator contributes to the security and decentralization of the Solana network by processing transactions and participating in consensus. They maintain high uptime and competitive APY for their delegators."}
             </p>
+            </div>
+           
 
             <div
               style={{
@@ -721,7 +725,7 @@ export function ValidatorDetailContent({ validator }: ValidatorDetailContentProp
           RIGHT — Sidebar
          ══════════════════════════════ */}
       <div className="td-sidebar">
-           <div className=" h-[50px] mb-[26px] bg-amber-0">
+           <div className=" h-[54px] mb-[26px] bg-amber-0">
                     {isConnected && (
                       <div className="td-sidebar-pill">
                         <ConnectedPill onDisconnect={() => connector.disconnect()} />
