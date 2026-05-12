@@ -10378,3 +10378,85 @@ html.dark .pf-drawer {
     @apply font-sans;
   }
 }
+
+
+
+/* ─── Chart controls bar — flex row with toggle on the right ─── */
+.td-chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.td-chart-controls__group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ─── Line / Candles toggle ─── */
+.td-chart-type-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--tc-bg-secondary, rgba(0, 0, 0, 0.04));
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid var(--tc-border, rgba(0, 0, 0, 0.08));
+}
+
+.td-chart-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--tc-font-sans);
+  font-weight: 400;
+  color: var(--tc-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.td-chart-type-btn:hover:not(.td-chart-type-btn--active) {
+  color: var(--tc-text-primary);
+  background: var(--tc-bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+.td-chart-type-btn--active {
+  background: var(--tc-bg, #fff);
+  color: var(--tc-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .td-chart-type-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  .td-chart-type-btn--active {
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .td-chart-type-btn:hover:not(.td-chart-type-btn--active) {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* ─── Responsive: stack on narrow screens ─── */
+@media (max-width: 480px) {
+  .td-chart-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
