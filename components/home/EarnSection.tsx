@@ -1,21 +1,67 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { GearSix, CheckCircle, CaretDown } from "@phosphor-icons/react";
 import Link from "next/link";
 import { EARN_PROVIDER_META, EarnProvider } from "@/context/SwapSettingsContext";
 import { getProviderColor, PROVIDER_ICONS } from "@/lib/yieldPrivider";
 
-// ─── Stablecoin options ───────────────────────────────────────────────────────
+// ─── Stablecoins ──────────────────────────────────────────────────────────────
 const STABLES = [
-  { symbol: "USDC", label: "USDC", icon: "💵" },
-  { symbol: "USDT", label: "USDT", icon: "💵" },
-  { symbol: "USDG", label: "USDG", icon: "💵" },
+  {
+    symbol: "USDC",
+    logo: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+  },
+  {
+    symbol: "USDT",
+    logo: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png",
+  },
+  {
+    symbol: "USDG",
+    logo: "https://assets.coingecko.com/coins/images/32138/small/USDG.png",
+  },
 ] as const;
 
 type StableSymbol = (typeof STABLES)[number]["symbol"];
 
-// ─── Stable selector dropdown ─────────────────────────────────────────────────
+// Active providers — drift is excluded (paused)
+const ACTIVE_PROVIDERS: EarnProvider[] = ["kamino", "marginfi", "jupiter"];
+
+// ─── Stable logo avatar ───────────────────────────────────────────────────────
+function StableLogo({ src, symbol, size = 18 }: { src: string; symbol: string; size?: number }) {
+  const [err, setErr] = useState(false);
+  return err ? (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: "var(--tc-bg-muted)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 9,
+        fontWeight: 700,
+        color: "var(--tc-text-muted)",
+        flexShrink: 0,
+      }}
+    >
+      {symbol.slice(0, 1)}
+    </span>
+  ) : (
+    <img
+      src={src}
+      alt={symbol}
+      width={size}
+      height={size}
+      style={{ borderRadius: "50%", flexShrink: 0, display: "block" }}
+      onError={() => setErr(true)}
+    />
+  );
+}
+
+// ─── Portal dropdown — escapes overflow:hidden ────────────────────────────────
 function StableDropdown({
   selected,
   onChange,
@@ -24,28 +70,44 @@ function StableDropdown({
   onChange: (s: StableSymbol) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Position the portal dropdown below the button
+  const openDropdown = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
+    }
+    setOpen(true);
+  };
 
   useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+    if (!open) return;
+    function close(e: MouseEvent) {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const selected_stable = STABLES.find((s) => s.symbol === selected)!;
 
   return (
-    <div ref={ref} className="hp-stable-selector" style={{ position: "relative" }}>
+    <>
       <button
+        ref={btnRef}
         className="hp-stable-btn"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Switch stablecoin"
+        onClick={() => (open ? setOpen(false) : openDropdown())}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
+        <StableLogo src={selected_stable.logo} symbol={selected_stable.symbol} size={16} />
         <span className="hp-stable-btn__label">{selected}</span>
         <CaretDown
-          size={11}
+          size={10}
           weight="bold"
           style={{
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
@@ -55,32 +117,59 @@ function StableDropdown({
         />
       </button>
 
-      {open && (
-        <div className="hp-stable-dropdown">
-          {STABLES.map((s) => (
-            <button
-              key={s.symbol}
-              className={`hp-stable-option ${selected === s.symbol ? "hp-stable-option--active" : ""}`}
-              onClick={() => {
-                onChange(s.symbol);
-                setOpen(false);
-              }}
-            >
-              <span className="hp-stable-option__sym">{s.symbol}</span>
-              {selected === s.symbol && (
-                <CheckCircle size={12} weight="fill" style={{ color: "var(--tc-accent)", marginLeft: "auto" }} />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              transform: "translateX(-50%)",
+              zIndex: 9999,
+              minWidth: 120,
+              background: "var(--tc-bg)",
+              border: "1px solid var(--tc-border)",
+              borderRadius: 14,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+              padding: 4,
+              animation: "tcFadeUp 140ms cubic-bezier(0.22,1,0.36,1)",
+            }}
+          >
+            {STABLES.map((s) => (
+              <button
+                key={s.symbol}
+                role="option"
+                aria-selected={selected === s.symbol}
+                className={`hp-stable-option ${selected === s.symbol ? "hp-stable-option--active" : ""}`}
+                onClick={() => {
+                  onChange(s.symbol);
+                  setOpen(false);
+                }}
+              >
+                <StableLogo src={s.logo} symbol={s.symbol} size={18} />
+                <span className="hp-stable-option__sym">{s.symbol}</span>
+                {selected === s.symbol && (
+                  <CheckCircle
+                    size={12}
+                    weight="fill"
+                    style={{ color: "var(--tc-accent)", marginLeft: "auto", flexShrink: 0 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 
 // ─── Vault card ───────────────────────────────────────────────────────────────
 interface VaultProps {
-  protocol: string;
+  protocol: EarnProvider;
   color: string;
   label: string;
   apy: number;
@@ -95,44 +184,31 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
   const cardRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Animate APY counter whenever the apy prop changes AND card is visible
   const animateApy = useCallback(
-    (targetApy: number) => {
-      const start = displayApy;
-      const end = targetApy;
+    (from: number, to: number) => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       const duration = 900;
       const startTime = performance.now();
-
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
 
       const update = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const ease = 1 - Math.pow(2, -10 * progress);
-        setDisplayApy(start + (end - start) * ease);
-
-        if (progress < 1) {
-          rafRef.current = requestAnimationFrame(update);
-        } else {
-          setDisplayApy(end);
-        }
+        setDisplayApy(from + (to - from) * ease);
+        if (progress < 1) rafRef.current = requestAnimationFrame(update);
+        else setDisplayApy(to);
       };
-
       rafRef.current = requestAnimationFrame(update);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apy]
+    []
   );
 
-  // Intersection observer — kick off animation on first intersection
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated) {
           setHasAnimated(true);
-          animateApy(apy);
+          animateApy(0, apy);
         }
       },
       { threshold: 0.2 }
@@ -142,13 +218,15 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasAnimated]);
 
-  // Re-animate when APY changes after initial render
+  // Re-animate when APY changes (stable switched)
+  const prevApyRef = useRef(apy);
   useEffect(() => {
-    if (hasAnimated) {
-      animateApy(apy);
+    if (hasAnimated && prevApyRef.current !== apy) {
+      animateApy(prevApyRef.current, apy);
+      prevApyRef.current = apy;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apy]);
+  }, [apy, hasAnimated]);
 
   return (
     <div
@@ -160,58 +238,58 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
         <div className="hp-earn-card__logo">
           <img
             className="w-full h-full rounded-xl"
-            src={PROVIDER_ICONS[protocol as EarnProvider]}
+            src={PROVIDER_ICONS[protocol]}
             alt={protocol}
           />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ fontWeight: 700 }}>{label}</span>
             <CheckCircle size={14} weight="fill" style={{ color: "var(--tc-accent)" }} />
           </div>
-          <span className="hp-label" style={{ fontSize: "9px" }}>
-            Verified
-          </span>
+          <span className="hp-label" style={{ fontSize: 9 }}>Verified</span>
         </div>
       </div>
 
       <div>
-        <div className="hp-earn-card__apy" style={{ position: "relative" }}>
-          {loading ? (
-            <span
-              style={{
-                display: "inline-block",
-                width: "90px",
-                height: "48px",
-                borderRadius: "8px",
-                background:
-                  "linear-gradient(90deg, var(--tc-bg-muted) 25%, var(--tc-border) 50%, var(--tc-bg-muted) 75%)",
-                backgroundSize: "200% 100%",
-                animation: "hpShimmer 1.5s infinite",
-              }}
-            />
-          ) : (
-            <>
+        {loading ? (
+          <div
+            style={{
+              height: 52,
+              width: 100,
+              borderRadius: 8,
+              background:
+                "linear-gradient(90deg,var(--tc-bg-muted) 25%,var(--tc-border) 50%,var(--tc-bg-muted) 75%)",
+              backgroundSize: "200% 100%",
+              animation: "hpShimmer 1.5s infinite",
+            }}
+          />
+        ) : apy > 0 ? (
+          <>
+            <div className="hp-earn-card__apy">
               {displayApy.toFixed(1)}
               <span className="hp-earn-card__apy-sign">%</span>
-            </>
-          )}
-        </div>
-        <div className="hp-label">Current APY</div>
+            </div>
+            <div className="hp-label">Current APY</div>
+          </>
+        ) : (
+          <>
+            <div className="hp-earn-card__apy" style={{ fontSize: 28, color: "var(--tc-text-muted)" }}>
+              —
+            </div>
+            <div className="hp-label">No pool data</div>
+          </>
+        )}
       </div>
 
       <div className="hp-earn-card__stats">
         <div className="hp-earn-card__stat">
-          <span className="hp-label" style={{ fontSize: "9px" }}>
-            TVL
-          </span>
-          <span style={{ fontSize: "13px", fontWeight: 600 }}>{tvl}</span>
+          <span className="hp-label" style={{ fontSize: 9 }}>TVL</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{tvl}</span>
         </div>
         <div className="hp-earn-card__stat">
-          <span className="hp-label" style={{ fontSize: "9px" }}>
-            Vaults
-          </span>
-          <span style={{ fontSize: "13px", fontWeight: 600 }}>3 Active</span>
+          <span className="hp-label" style={{ fontSize: 9 }}>Vaults</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Active</span>
         </div>
       </div>
 
@@ -243,36 +321,24 @@ export function EarnSection() {
   const [yieldData, setYieldData] = useState<Record<string, { apy: number; tvlUsd: number }> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch yields whenever selectedStable changes
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    async function fetchData() {
-      try {
-        const res = await fetch(`/api/yield/quote/all?symbol=${selectedStable}`);
-        const data = await res.json();
-        if (!cancelled && data.apyMap) {
-          setYieldData(data.apyMap);
-        }
-      } catch (err) {
-        console.error("Failed to fetch yield data:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+    fetch(`/api/yield/quote/all?symbol=${selectedStable}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && data.apyMap) setYieldData(data.apyMap);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedStable]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
-      },
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
       { threshold: 0.2 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
@@ -280,17 +346,11 @@ export function EarnSection() {
   }, []);
 
   const formatTVL = (usd: number) => {
+    if (usd <= 0) return "—";
     if (usd >= 1e9) return `$${(usd / 1e9).toFixed(1)}B`;
     if (usd >= 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
-    return `$${usd.toLocaleString()}`;
-  };
-
-  // Fallback APYs
-  const FALLBACK_APYS: Record<string, number> = {
-    kamino: 7.2,
-    marginfi: 6.5,
-    drift: 8.0,
-    jupiter: 4.5,
+    if (usd >= 1e3) return `$${(usd / 1e3).toFixed(0)}K`;
+    return `$${usd.toFixed(0)}`;
   };
 
   return (
@@ -299,94 +359,63 @@ export function EarnSection() {
       ref={sectionRef}
       className={`hp-section hp-earn-section ${isVisible ? "hp-is-visible" : ""} rounded-2xl`}
     >
-      {/* Decorative blurs */}
-      <div
-        className="hp-blur-circle"
-        style={{
-          width: "400px",
-          height: "400px",
-          background: "rgba(153,69,255,0.06)",
-          top: "-100px",
-          left: "-100px",
-          animation: "hpFloat 8s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="hp-blur-circle"
-        style={{
-          width: "300px",
-          height: "300px",
-          background: "rgba(99,153,255,0.05)",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          animation: "hpFloat 10s ease-in-out infinite",
-          animationDelay: "2s",
-        }}
-      />
-      <div
-        className="hp-blur-circle"
-        style={{
-          width: "350px",
-          height: "350px",
-          background: "rgba(74,222,128,0.05)",
-          bottom: "-100px",
-          right: "-100px",
-          animation: "hpFloat 12s ease-in-out infinite",
-          animationDelay: "4s",
-        }}
-      />
+      {/* Decorative blur circles — isolated so they don't clip the dropdown */}
+      <div className="hp-earn-section__blurs" aria-hidden>
+        <div
+          className="hp-blur-circle"
+          style={{ width: 400, height: 400, background: "rgba(153,69,255,0.06)", top: -100, left: -100, animation: "hpFloat 8s ease-in-out infinite" }}
+        />
+        <div
+          className="hp-blur-circle"
+          style={{ width: 300, height: 300, background: "rgba(99,153,255,0.05)", top: "50%", left: "50%", transform: "translate(-50%,-50%)", animation: "hpFloat 10s ease-in-out infinite", animationDelay: "2s" }}
+        />
+        <div
+          className="hp-blur-circle"
+          style={{ width: 350, height: 350, background: "rgba(74,222,128,0.05)", bottom: -100, right: -100, animation: "hpFloat 12s ease-in-out infinite", animationDelay: "4s" }}
+        />
+      </div>
 
-      {/* Header + stable switcher */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          marginBottom: "48px",
-          gap: "20px",
-        }}
-      >
+      {/* Header */}
+      <div style={{ position: "relative", zIndex: 2, textAlign: "center", marginBottom: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
         <div className="hp-label hp-anim-fade-up">Yield Vaults</div>
-        <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1" style={{ textAlign: "center", margin: 0 }}>
+        <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1" style={{ margin: 0, textAlign: "center" }}>
           Put your stables to work.
         </h2>
 
-        {/* Stable selector */}
+        {/* Stable switcher pill */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
+            gap: 10,
             background: "var(--tc-surface)",
             border: "1px solid var(--tc-border)",
-            borderRadius: "40px",
+            borderRadius: 40,
             padding: "6px 16px",
-            fontSize: "12px",
+            fontSize: 12,
             color: "var(--tc-text-muted)",
+            position: "relative",
+            zIndex: 3,
           }}
         >
           <span>Showing APYs for</span>
-          <StableDropdown
-            selected={selectedStable}
-            onChange={(s) => setSelectedStable(s)}
-          />
+          <StableDropdown selected={selectedStable} onChange={setSelectedStable} />
         </div>
       </div>
 
-      <div className="hp-earn-grid">
-        {Object.entries(EARN_PROVIDER_META).map(([protocol, meta], i) => {
-          const data = yieldData?.[protocol] || { apy: FALLBACK_APYS[protocol] || 5, tvlUsd: 0 };
+      {/* Cards */}
+      <div className="hp-earn-grid" style={{ position: "relative", zIndex: 1 }}>
+        {ACTIVE_PROVIDERS.map((protocol, i) => {
+          const meta = EARN_PROVIDER_META[protocol];
+          const data = yieldData?.[protocol] || { apy: 0, tvlUsd: 0 };
           return (
             <VaultCard
               key={protocol}
               protocol={protocol}
               label={meta.label}
-              color={getProviderColor(protocol as EarnProvider)}
+              color={getProviderColor(protocol)}
               apy={data.apy}
-              tvl={data.tvlUsd > 0 ? formatTVL(data.tvlUsd) : "$252M"}
+              tvl={formatTVL(data.tvlUsd)}
               delay={`${i * 100}ms`}
               loading={loading}
             />

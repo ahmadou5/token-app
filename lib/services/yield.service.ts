@@ -16,11 +16,14 @@ interface YieldPool {
 
 const LLAMA_YIELD_URL = "https://yields.llama.fi/pools";
 
+// Active providers only — drift is excluded (paused)
+const ACTIVE_PROVIDERS: EarnProvider[] = ["kamino", "marginfi", "jupiter"];
+
 const PROVIDER_MAP: Record<EarnProvider, string[]> = {
-  kamino: ["kamino-lend", "kamino-liquidity"],
-  marginfi: ["marginfi-lst", "marginfi"],
+  kamino: ["kamino-lend", "kamino-liquidity", "kamino"],
+  marginfi: ["marginfi", "marginfi-lst", "marginfi-lend"],
   drift: [],
-  jupiter: ["jupiter-lend", "jupiter-staked-sol"],
+  jupiter: ["jupiter-lend", "jupiter-perpetuals", "jupiter", "jup"],
 };
 
 export async function fetchYieldAPY(
@@ -66,55 +69,59 @@ export interface ProviderYieldData {
 export async function getAllProviderYields(
   symbol: string
 ): Promise<Record<EarnProvider, ProviderYieldData>> {
-  const providers: EarnProvider[] = ["kamino", "marginfi", "drift", "jupiter"];
-
   try {
     const res = await fetch(LLAMA_YIELD_URL);
     if (!res.ok) throw new Error("Failed to fetch from DeFiLlama");
     const { data } = (await res.json()) as { data: YieldPool[] };
 
+    // Normalise the search symbol so "USDC" matches "USDC", "USDC.e", etc.
+    const sym = symbol.toUpperCase();
+
     const results: Partial<Record<EarnProvider, ProviderYieldData>> = {};
 
-    for (const p of providers) {
-      if (p === "drift") {
-        results[p] = { apy: 0, tvlUsd: 0 };
-        continue;
-      }
-      const projects = PROVIDER_MAP[p];
+    for (const p of ACTIVE_PROVIDERS) {
+      const slugs = PROVIDER_MAP[p];
+
       const pools = data.filter(
         (pool) =>
-          projects.includes(pool.project.toLowerCase()) &&
-          pool.symbol.toUpperCase().includes(symbol.toUpperCase()) &&
-          pool.chain.toLowerCase() === "solana"
+          slugs.some((slug) => pool.project.toLowerCase().startsWith(slug)) &&
+          pool.symbol.toUpperCase().includes(sym) &&
+          pool.chain.toLowerCase() === "solana" &&
+          pool.apy > 0
       );
 
       if (pools.length > 0) {
-        const bestPool = pools.sort((a, b) => b.tvlUsd - a.tvlUsd)[0];
+        // Best APY pool (highest TVL as tiebreaker)
+        const sorted = [...pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
+        const bestPool = sorted[0];
+        // Sum TVL across all matching pools for this provider
+        const totalTvl = pools.reduce((acc, pool) => acc + (pool.tvlUsd || 0), 0);
         results[p] = {
           apy: bestPool.apy,
-          tvlUsd: bestPool.tvlUsd,
+          tvlUsd: totalTvl,
         };
       } else {
         results[p] = { apy: 0, tvlUsd: 0 };
       }
     }
 
+    // drift always 0 (paused)
+    results["drift"] = { apy: 0, tvlUsd: 0 };
+
     return results as Record<EarnProvider, ProviderYieldData>;
   } catch (error) {
     console.error("Error fetching all yields:", error);
+    // Realistic fallback APYs only for active providers
     const fallbacks: Record<string, number> = {
       kamino: 7.2,
       marginfi: 6.5,
-      drift: 8.0,
       jupiter: 4.5,
     };
     const results: Partial<Record<EarnProvider, ProviderYieldData>> = {};
-    for (const p of providers) {
-      results[p] = {
-        apy: fallbacks[p] || 5.0,
-        tvlUsd: 150000000,
-      };
+    for (const p of ACTIVE_PROVIDERS) {
+      results[p] = { apy: fallbacks[p] || 5.0, tvlUsd: 0 };
     }
+    results["drift"] = { apy: 0, tvlUsd: 0 };
     return results as Record<EarnProvider, ProviderYieldData>;
   }
 }

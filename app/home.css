@@ -448,8 +448,18 @@
 /* Earn Section */
 .hp-earn-section {
   position: relative;
-  overflow: hidden;
+  /* No overflow:hidden here — let the portal dropdown escape */
   scroll-margin-top: 80px;
+}
+
+/* Blur circles isolated layer — has its own overflow:hidden so they're clipped */
+.hp-earn-section__blurs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
 }
 
 .hp-earn-grid {

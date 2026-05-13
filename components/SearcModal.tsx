@@ -18,11 +18,11 @@ function fmtVol(n: number | null | undefined): string {
   return `Vol: $${n.toFixed(2)}`;
 }
 
-function fmtStake(n: number): string {
-  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B SOL`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M SOL`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K SOL`;
-  return `${n.toFixed(0)} SOL`;
+function fmtStake(lamports: number): string {
+  const sol = lamports / 1e9;
+  if (sol >= 1e6) return `${(sol / 1e6).toFixed(1)}M SOL`;
+  if (sol >= 1e3) return `${(sol / 1e3).toFixed(1)}K SOL`;
+  return `${sol.toFixed(0)} SOL`;
 }
 
 function safeInitials(name: string | null | undefined): string {
@@ -35,13 +35,18 @@ function safeInitials(name: string | null | undefined): string {
 function SearchAvatar({
   src,
   name,
+  square,
 }: {
   src?: string | null;
   name?: string | null;
+  square?: boolean;
 }) {
   const init = safeInitials(name);
   return (
-    <div className="srch-avatar">
+    <div
+      className="srch-avatar"
+      style={square ? { borderRadius: "10px" } : undefined}
+    >
       {src ? (
         <img
           src={src}
@@ -137,8 +142,6 @@ function ValidatorRow({
 }) {
   const name = validator.name || safeInitials(validator.address);
   const apy = validator.apy ?? validator.totalApy ?? 0;
-  const commission = validator.commission ?? 0;
-  const status = validator.status ?? "active";
 
   return (
     <div
@@ -148,34 +151,21 @@ function ValidatorRow({
       role="option"
       aria-selected={active}
     >
-      {/* Avatar */}
-      <div className="srch-avatar" style={{ borderRadius: "10px" }}>
-        {validator.avatar ? (
-          <img
-            src={validator.avatar}
-            alt={name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-              const p = e.currentTarget.parentElement;
-              if (p) p.textContent = safeInitials(name);
-            }}
-          />
-        ) : (
-          safeInitials(name)
-        )}
-      </div>
-
+      <SearchAvatar src={validator.avatar} name={name} square />
       <div className="srch-row__body">
         <div className="srch-row__top">
           <span className="srch-name">{name}</span>
-          {/* Status dot */}
+          {/* Active status dot */}
           <span
+            aria-label={validator.status}
             style={{
               width: 6,
               height: 6,
               borderRadius: "50%",
-              background: status === "active" ? "var(--tc-accent-up)" : "var(--tc-accent-down)",
+              background:
+                validator.status === "active"
+                  ? "var(--tc-accent-up)"
+                  : "var(--tc-accent-down)",
               flexShrink: 0,
               display: "inline-block",
             }}
@@ -183,15 +173,12 @@ function ValidatorRow({
         </div>
         <div className="srch-row__bottom">
           <span className="srch-vol">
-            {fmtStake(validator.stake / 1e9)} staked
+            {fmtStake(validator.stake)} staked
           </span>
-          <span className="srch-vol" style={{ marginLeft: 4 }}>
-            · {commission}% commission
-          </span>
+          <span className="srch-vol">· {validator.commission}% fee</span>
         </div>
       </div>
-
-      {/* APY badge on the right */}
+      {/* APY on the right (same slot as PctChip) */}
       {apy > 0 && (
         <span
           style={{
@@ -287,37 +274,6 @@ function SectionLabel({
   );
 }
 
-// ─── Tab pill ──────────────────────────────────────────────────────────────────
-function TabBar({
-  active,
-  onChange,
-}: {
-  active: "tokens" | "validators";
-  onChange: (t: "tokens" | "validators") => void;
-}) {
-  return (
-    <div className="srch-tab-bar">
-      {(["tokens", "validators"] as const).map((tab) => (
-        <button
-          key={tab}
-          className={`srch-tab ${active === tab ? "srch-tab--active" : ""}`}
-          onClick={() => onChange(tab)}
-        >
-          {tab === "tokens" ? (
-            <>
-              <BarIcon /> Tokens
-            </>
-          ) : (
-            <>
-              <ValidatorIcon /> Validators
-            </>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
 const ClockIcon = () => (
@@ -357,13 +313,13 @@ const ValidatorIcon = () => (
   <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
     <circle cx="7" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.2" />
     <path
-      d="M2 12c0-2.761 2.239-5 5-5s5 2.239 5 5"
+      d="M2 13c0-2.761 2.239-5 5-5s5 2.239 5 5"
       stroke="currentColor"
       strokeWidth="1.2"
       strokeLinecap="round"
     />
     <path
-      d="M5.5 10.5l1.5 1.5 2-2"
+      d="M5.5 11l1.5 1.5 2-2"
       stroke="currentColor"
       strokeWidth="1.2"
       strokeLinecap="round"
@@ -386,9 +342,8 @@ export function SearchModal({
 
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
-  const [activeTab, setActiveTab] = useState<"tokens" | "validators">("tokens");
 
-  // Validators state
+  // Validators — loaded lazily once on first open, kept in memory
   const [validators, setValidators] = useState<ValidatorInfo[]>([]);
   const [validatorsLoading, setValidatorsLoading] = useState(false);
 
@@ -402,7 +357,7 @@ export function SearchModal({
     clearRecentSearches,
   } = useSearchStore();
 
-  // ── Fetch validators when modal opens (lazy) ──────────────────────────────
+  // ── Lazy-load validators once the modal is first opened ───────────────────
   useEffect(() => {
     if (!open || validators.length > 0) return;
     let cancelled = false;
@@ -411,18 +366,15 @@ export function SearchModal({
     fetch("/api/validators")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) {
-          setValidators((data.validators || []).slice(0, 100));
-        }
+        if (!cancelled)
+          setValidators((data.validators || []).slice(0, 200));
       })
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setValidatorsLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -430,6 +382,7 @@ export function SearchModal({
 
   const trimmed = query.trim().toLowerCase();
 
+  // Token matches
   const localFiltered = trimmed
     ? tokens
         .filter((t) => {
@@ -440,29 +393,34 @@ export function SearchModal({
             n.includes(trimmed) || s.includes(trimmed) || id.includes(trimmed)
           );
         })
-        .slice(0, 12)
+        .slice(0, 10)
+    : [];
+
+  // Validator matches — only when user is actively typing
+  const matchedValidators = trimmed
+    ? validators
+        .filter((v) => {
+          const n = (v.name ?? "").toLowerCase();
+          const a = (v.address ?? "").toLowerCase();
+          const vk = (v.votingPubkey ?? "").toLowerCase();
+          return (
+            n.includes(trimmed) ||
+            a.startsWith(trimmed) ||
+            vk.startsWith(trimmed)
+          );
+        })
+        .slice(0, 5)
     : [];
 
   const topByVolume = [...tokens]
     .sort((a, b) => (b.stats?.volume24hUSD ?? 0) - (a.stats?.volume24hUSD ?? 0))
     .slice(0, 8);
 
-  // Validator filtering
-  const filteredValidators = trimmed
-    ? validators
-        .filter((v) => {
-          const n = (v.name ?? "").toLowerCase();
-          const a = (v.address ?? "").toLowerCase();
-          const vk = (v.votingPubkey ?? "").toLowerCase();
-          return n.includes(trimmed) || a.includes(trimmed) || vk.includes(trimmed);
-        })
-        .slice(0, 10)
-    : validators.slice(0, 8);
-
-  const showRecent = !trimmed && recentSearches.length > 0 && activeTab === "tokens";
-  const showTokenResults = !!trimmed && activeTab === "tokens";
-  const showTopTokens = !trimmed && activeTab === "tokens";
-  const showValidators = activeTab === "validators";
+  const showRecent = !trimmed && recentSearches.length > 0;
+  const showResults = !!trimmed;
+  const showTop = !trimmed;
+  // Validators section shows only when searching and we have matches
+  const showValidatorResults = showResults && matchedValidators.length > 0;
 
   type NavItem =
     | { type: "recent"; entry: RecentSearch }
@@ -473,33 +431,31 @@ export function SearchModal({
     ...(showRecent
       ? recentSearches.map((e) => ({ type: "recent" as const, entry: e }))
       : []),
-    ...(showTokenResults
+    ...(showResults
       ? localFiltered.map((t) => ({ type: "token" as const, token: t }))
       : []),
-    ...(showTopTokens
-      ? topByVolume.map((t) => ({ type: "token" as const, token: t }))
+    ...(showValidatorResults
+      ? matchedValidators.map((v) => ({
+          type: "validator" as const,
+          validator: v,
+        }))
       : []),
-    ...(showValidators
-      ? filteredValidators.map((v) => ({ type: "validator" as const, validator: v }))
+    ...(showTop
+      ? topByVolume.map((t) => ({ type: "token" as const, token: t }))
       : []),
   ];
 
-  // ── Sync open state ────────────────────────────────────────────────────────
-  if (open && !prevOpenRef.current) {
-    prevOpenRef.current = true;
-  }
-  if (!open && prevOpenRef.current) {
-    prevOpenRef.current = false;
-  }
+  // ── Focus ──────────────────────────────────────────────────────────────────
+  if (open && !prevOpenRef.current) prevOpenRef.current = true;
+  if (!open && prevOpenRef.current) prevOpenRef.current = false;
 
-  // Focus input
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => inputRef.current?.focus(), 60);
     return () => clearTimeout(t);
   }, [open]);
 
-  // ── Navigation handlers ────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   function selectToken(token: AnyToken) {
     addRecentSearch(token);
@@ -522,16 +478,13 @@ export function SearchModal({
     setActiveIdx(0);
   }
 
-  // ── Keyboard navigation ────────────────────────────────────────────────────
+  // ── Keyboard ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!open) return;
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
+      if (e.key === "Escape") { onClose(); return; }
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setActiveIdx((i) => Math.min(i + 1, navItems.length - 1));
@@ -568,34 +521,19 @@ export function SearchModal({
         className="srch-modal"
         role="dialog"
         aria-modal
-        aria-label="Search tokens and validators"
+        aria-label="Search tokens"
       >
         {/* Input */}
         <div className="srch-input-wrap">
           <svg className="srch-input-icon" viewBox="0 0 16 16" fill="none">
-            <circle
-              cx="6.5"
-              cy="6.5"
-              r="4.5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M10.5 10.5L14 14"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
+            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           <input
             ref={inputRef}
             className="srch-input"
             type="text"
-            placeholder={
-              activeTab === "tokens"
-                ? "Search tokens..."
-                : "Search validators..."
-            }
+            placeholder="Search tokens, validators..."
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             autoComplete="off"
@@ -605,22 +543,17 @@ export function SearchModal({
             <span className="srch-spinner" />
           )}
           {query && (
-            <button
-              className="srch-clear"
-              onClick={() => handleQueryChange("")}
-            >
+            <button className="srch-clear" onClick={() => handleQueryChange("")}>
               ✕
             </button>
           )}
         </div>
 
-        {/* Tab bar */}
-        <TabBar active={activeTab} onChange={(t) => { setActiveTab(t); setActiveIdx(0); }} />
-
         <div className="srch-divider" />
 
         <div className="srch-list" role="listbox">
-          {/* ── TOKENS TAB ── */}
+
+          {/* ── Recent searches ── */}
           {showRecent &&
             (() => {
               const start = off;
@@ -630,10 +563,7 @@ export function SearchModal({
                     icon={<ClockIcon />}
                     label="Recent searches"
                     action={
-                      <button
-                        className="srch-clear-all"
-                        onClick={clearRecentSearches}
-                      >
+                      <button className="srch-clear-all" onClick={clearRecentSearches}>
                         Clear all
                       </button>
                     }
@@ -657,7 +587,8 @@ export function SearchModal({
               return section;
             })()}
 
-          {showTokenResults &&
+          {/* ── Search results: tokens first ── */}
+          {showResults &&
             (() => {
               const start = off;
               const section = (
@@ -677,7 +608,10 @@ export function SearchModal({
                       />
                     ))
                   ) : (
-                    <div className="srch-empty">No tokens found</div>
+                    /* Only show "no tokens" placeholder if validators are also empty */
+                    !showValidatorResults && (
+                      <div className="srch-empty">No results found</div>
+                    )
                   )}
                 </div>
               );
@@ -685,7 +619,47 @@ export function SearchModal({
               return section;
             })()}
 
-          {showTopTokens &&
+          {/* ── Validator results — separated by a divider, inline ── */}
+          {showValidatorResults &&
+            (() => {
+              const start = off;
+              const section = (
+                <div className="srch-section" key="validators" style={{ borderTop: "1px solid var(--tc-divider)", paddingTop: 4 }}>
+                  <SectionLabel
+                    icon={<ValidatorIcon />}
+                    label="Validators"
+                    action={
+                      <a
+                        href="/network"
+                        onClick={onClose}
+                        style={{
+                          fontSize: 11,
+                          color: "var(--tc-accent)",
+                          textDecoration: "none",
+                          fontWeight: 500,
+                        }}
+                      >
+                        View all →
+                      </a>
+                    }
+                  />
+                  {matchedValidators.map((v, i) => (
+                    <ValidatorRow
+                      key={v.votingPubkey ?? v.address ?? i}
+                      validator={v}
+                      active={activeIdx === start + i}
+                      onSelect={() => selectValidator(v)}
+                      onHover={() => setActiveIdx(start + i)}
+                    />
+                  ))}
+                </div>
+              );
+              off += matchedValidators.length;
+              return section;
+            })()}
+
+          {/* ── Top by volume (idle state) ── */}
+          {showTop &&
             (() => {
               const start = off;
               return (
@@ -703,68 +677,13 @@ export function SearchModal({
                 </div>
               );
             })()}
-
-          {/* ── VALIDATORS TAB ── */}
-          {showValidators &&
-            (() => {
-              const start = off;
-              return (
-                <div className="srch-section" key="validators">
-                  <SectionLabel
-                    icon={<ValidatorIcon />}
-                    label={
-                      trimmed
-                        ? `Validators for "${query}"`
-                        : "Top validators by stake"
-                    }
-                    action={
-                      <a
-                        href="/network"
-                        style={{
-                          fontSize: 11,
-                          color: "var(--tc-accent)",
-                          textDecoration: "none",
-                          fontWeight: 500,
-                        }}
-                        onClick={onClose}
-                      >
-                        View all →
-                      </a>
-                    }
-                  />
-                  {validatorsLoading ? (
-                    <div className="srch-empty" style={{ padding: "24px 16px" }}>
-                      <span className="srch-spinner" style={{ margin: "0 auto" }} />
-                    </div>
-                  ) : filteredValidators.length > 0 ? (
-                    filteredValidators.map((v, i) => (
-                      <ValidatorRow
-                        key={v.votingPubkey ?? v.address ?? i}
-                        validator={v}
-                        active={activeIdx === start + i}
-                        onSelect={() => selectValidator(v)}
-                        onHover={() => setActiveIdx(start + i)}
-                      />
-                    ))
-                  ) : (
-                    <div className="srch-empty">No validators found</div>
-                  )}
-                </div>
-              );
-            })()}
         </div>
 
         {/* Keyboard hints */}
         <div className="srch-footer">
-          <span className="srch-hint">
-            <kbd>↑↓</kbd> Navigate
-          </span>
-          <span className="srch-hint">
-            <kbd>↵</kbd> Select
-          </span>
-          <span className="srch-hint">
-            <kbd>Esc</kbd> Close
-          </span>
+          <span className="srch-hint"><kbd>↑↓</kbd> Navigate</span>
+          <span className="srch-hint"><kbd>↵</kbd> Select</span>
+          <span className="srch-hint"><kbd>Esc</kbd> Close</span>
         </div>
       </div>
     </>
@@ -792,25 +711,10 @@ export function SearchTrigger({
   }, [onClick]);
 
   return (
-    <button
-      className="srch-trigger"
-      onClick={onClick}
-      aria-label="Search tokens and validators"
-    >
+    <button className="srch-trigger" onClick={onClick} aria-label="Search tokens">
       <svg className="srch-trigger__icon" viewBox="0 0 16 16" fill="none">
-        <circle
-          cx="6.5"
-          cy="6.5"
-          r="4.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M10.5 10.5L14 14"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
+        <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <span className="srch-trigger__text">{placeholder}</span>
       <span className="srch-trigger__kbd">⌘K</span>
