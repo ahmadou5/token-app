@@ -21,9 +21,8 @@ interface EarnVaultProps {
 }
 
 const PROVIDER_ICONS: Record<EarnProvider, string> = {
-  kamino: "https://kamino.com/favicon.ico",
+  kamino: "https://kamino.finance/favicon.ico",
   marginfi: "https://app.marginfi.com/favicon.ico",
-  drift: "https://app.drift.trade/favicon.ico",
   jupiter: "https://jup.ag/favicon.ico",
 };
 
@@ -58,7 +57,6 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
   const [allAPYs, setAllAPYs] = useState<Record<EarnProvider, number | null>>({
     kamino: null,
     marginfi: null,
-    drift: null,
     jupiter: null,
   });
 
@@ -72,7 +70,7 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
     }
   }, [isConnected, wallet, loadPositions]);
 
-  // Fetch APYs for all providers to show in dropdown
+  // Fetch APYs for all active providers to show in dropdown
   useEffect(() => {
     async function fetchAllAPYs() {
       if (!symbol) return;
@@ -80,7 +78,10 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
         const res = await fetch(`/api/yield/quote/all?symbol=${symbol}`);
         if (res.ok) {
           const data = await res.json();
-          setAllAPYs(data.apyMap);
+          // Merge current symbols with previous if needed
+          if (data.apyMap) {
+            setAllAPYs(data.apyMap);
+          }
         }
       } catch (err) {
         console.error("Error fetching all APYs:", err);
@@ -125,6 +126,7 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
 
   const currentApy = asFiniteNumber(quote?.apy);
   const fallbackApy = asFiniteNumber(allAPYs[earnProvider]);
+  // Use current live APY from map if quote isn't loaded yet
   const displayApy = currentApy ?? fallbackApy ?? 0;
 
   const {
@@ -215,10 +217,10 @@ export function EarnVault({ mint, symbol }: EarnVaultProps) {
               >
                 Connect Wallet to Start
               </button>
-              <div className="flex items-center gap-3 mt-2 opacity-50 grayscale">
-                <img src={PROVIDER_ICONS.kamino} className="w-4 h-4 rounded-full" alt="Kamino" />
-                <img src={PROVIDER_ICONS.jupiter} className="w-4 h-4 rounded-full" alt="Jupiter" />
-                <img src={PROVIDER_ICONS.drift} className="w-4 h-4 rounded-full" alt="Drift" />
+              <div className="flex items-center gap-3 mt-2">
+                <img src={PROVIDER_ICONS.kamino} className="w-4 h-4 rounded-full border border-[var(--tc-border)]" alt="Kamino" />
+                <img src={PROVIDER_ICONS.marginfi} className="w-4 h-4 rounded-full border border-[var(--tc-border)]" alt="MarginFi" />
+                <img src={PROVIDER_ICONS.jupiter} className="w-4 h-4 rounded-full border border-[var(--tc-border)]" alt="Jupiter" />
               </div>
           </div>
         </div>

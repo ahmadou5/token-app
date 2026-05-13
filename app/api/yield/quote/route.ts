@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
     if (
       (provider !== "kamino" &&
         provider !== "marginfi" &&
-        provider !== "drift" &&
         provider !== "jupiter") ||
       typeof symbol !== "string" ||
       !symbol ||
@@ -96,8 +95,6 @@ export async function POST(req: NextRequest) {
       } else {
         note = `Could not find an active Marginfi account for this wallet. Please create one on marginfi.com first.`;
       }
-    } else if (provider === "drift") {
-      note = "Drift Earn is temporarily paused and will return soon.";
     }
 
     return NextResponse.json({

@@ -85,7 +85,7 @@ export const PERP_PROVIDER_META: Record<
 
 // ─── Earn provider types ──────────────────────────────────────────────────────
 
-export type EarnProvider = "kamino" | "marginfi" | "drift" | "jupiter";
+export type EarnProvider = "kamino" | "marginfi" | "jupiter";
 
 export const EARN_PROVIDER_META: Record<
   EarnProvider,
@@ -107,12 +107,6 @@ export const EARN_PROVIDER_META: Record<
     badge: null,
     description: "Lending protocol. Earn interest by supplying stables.",
     apiBase: "https://marginfi.com/api",
-  },
-  drift: {
-    label: "Drift Protocol",
-    badge: "Paused",
-    description: "Temporarily paused. Coming soon after integration refresh.",
-    apiBase: "https://drift-public-api.drift.trade",
   },
   jupiter: {
     label: "Jupiter Earn",
@@ -173,9 +167,6 @@ export function SwapSettingsProvider({
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return DEFAULT_SETTINGS;
       const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as SwapSettings;
-      if (parsed.earnProvider === "drift") {
-        parsed.earnProvider = DEFAULT_SETTINGS.earnProvider;
-      }
       return parsed;
     } catch {
       return DEFAULT_SETTINGS;

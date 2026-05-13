@@ -566,18 +566,13 @@ export function SettingsModal({
                   (p) => {
                     const meta = EARN_PROVIDER_META[p];
                     const active = settings.earnProvider === p;
-                    const isPaused = p === "drift";
                     return (
                       <button
                         key={p}
                         className={`sw-modal-provider ${active ? "sw-modal-provider--active" : ""}`}
                         onClick={() => {
-                          if (isPaused) return;
                           setEarnProvider(p);
                         }}
-                        disabled={isPaused}
-                        title={isPaused ? "Temporarily paused" : undefined}
-                        style={isPaused ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
                       >
                         <div className="sw-modal-provider__top">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -589,9 +584,6 @@ export function SettingsModal({
                             <span className="sw-modal-provider__name">
                               {meta.label}
                             </span>
-                            {isPaused && (
-                              <span className="sw-modal-summary__badge">Paused</span>
-                            )}
                           </div>
                           
                           {active && (

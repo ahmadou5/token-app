@@ -22,7 +22,6 @@ const ACTIVE_PROVIDERS: EarnProvider[] = ["kamino", "marginfi", "jupiter"];
 const PROVIDER_MAP: Record<EarnProvider, string[]> = {
   kamino: ["kamino-lend", "kamino-liquidity", "kamino"],
   marginfi: ["marginfi", "marginfi-lst", "marginfi-lend"],
-  drift: [],
   jupiter: ["jupiter-lend", "jupiter-perpetuals", "jupiter", "jup"],
 };
 
@@ -30,7 +29,6 @@ export async function fetchYieldAPY(
   provider: EarnProvider,
   symbol: string
 ): Promise<number> {
-  if (provider === "drift") return 0;
   try {
     const projects = PROVIDER_MAP[provider];
     const res = await fetch(LLAMA_YIELD_URL);
@@ -54,7 +52,6 @@ export async function fetchYieldAPY(
     const fallbacks: Record<string, number> = {
       kamino: 7.2,
       marginfi: 6.5,
-      drift: 8.0,
       jupiter: 4.5,
     };
     return fallbacks[provider] || 5.0;
@@ -105,9 +102,6 @@ export async function getAllProviderYields(
       }
     }
 
-    // drift always 0 (paused)
-    results["drift"] = { apy: 0, tvlUsd: 0 };
-
     return results as Record<EarnProvider, ProviderYieldData>;
   } catch (error) {
     console.error("Error fetching all yields:", error);
@@ -121,7 +115,6 @@ export async function getAllProviderYields(
     for (const p of ACTIVE_PROVIDERS) {
       results[p] = { apy: fallbacks[p] || 5.0, tvlUsd: 0 };
     }
-    results["drift"] = { apy: 0, tvlUsd: 0 };
     return results as Record<EarnProvider, ProviderYieldData>;
   }
 }
@@ -257,13 +250,6 @@ export async function fetchMarginfiPositions(
     console.error("Error fetching Marginfi positions:", error);
     return [];
   }
-}
-
-export async function fetchDriftPositions(
-  wallet: string,
-): Promise<RealYieldPosition[]> {
-  console.info("Drift yield positions are temporarily paused.");
-  return [];
 }
 
 export async function fetchOnChainYieldPositions(
@@ -481,14 +467,4 @@ export async function fetchMarginfiYieldTx(params: {
     console.error("Error fetching Marginfi yield tx:", error);
     return null;
   }
-}
-
-export async function fetchDriftYieldTx(params: {
-  owner: string;
-  inputMint: string;
-  amount: number;
-  action?: "deposit" | "withdraw";
-}): Promise<string | null> {
-  console.info("Drift yield execution is temporarily paused.", params.owner);
-  return null;
 }
