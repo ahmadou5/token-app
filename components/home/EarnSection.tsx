@@ -7,49 +7,57 @@ import Link from "next/link";
 import { EARN_PROVIDER_META, EarnProvider } from "@/context/SwapSettingsContext";
 import { getProviderColor, PROVIDER_ICONS } from "@/lib/yieldPrivider";
 
-// ─── Stablecoins ──────────────────────────────────────────────────────────────
-const STABLES = [
+// ─── Active providers (drift excluded — paused) ───────────────────────────────
+const ACTIVE_PROVIDERS: EarnProvider[] = ["kamino", "marginfi", "jupiter"];
+
+// ─── Stable type ──────────────────────────────────────────────────────────────
+interface StableOption {
+  symbol: string;
+  logo: string | null;
+  mint?: string;
+}
+
+// ─── Fallback stables (used while the API loads) ──────────────────────────────
+const FALLBACK_STABLES: StableOption[] = [
   {
     symbol: "USDC",
     logo: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+    mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   },
   {
     symbol: "USDT",
     logo: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png",
+    mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
   },
-  {
-    symbol: "USDG",
-    logo: "https://assets.coingecko.com/coins/images/32138/small/USDG.png",
-  },
-] as const;
-
-type StableSymbol = (typeof STABLES)[number]["symbol"];
-
-// Active providers — drift is excluded (paused)
-const ACTIVE_PROVIDERS: EarnProvider[] = ["kamino", "marginfi", "jupiter"];
+];
 
 // ─── Stable logo avatar ───────────────────────────────────────────────────────
-function StableLogo({ src, symbol, size = 18 }: { src: string; symbol: string; size?: number }) {
+function StableLogo({ src, symbol, size = 18 }: { src: string | null; symbol: string; size?: number }) {
   const [err, setErr] = useState(false);
-  return err ? (
-    <span
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: "var(--tc-bg-muted)",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 9,
-        fontWeight: 700,
-        color: "var(--tc-text-muted)",
-        flexShrink: 0,
-      }}
-    >
-      {symbol.slice(0, 1)}
-    </span>
-  ) : (
+
+  if (!src || err) {
+    return (
+      <span
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: "var(--tc-bg-muted)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 8,
+          fontWeight: 700,
+          color: "var(--tc-text-muted)",
+          flexShrink: 0,
+        }}
+      >
+        {symbol.slice(0, 1)}
+      </span>
+    );
+  }
+
+  return (
     <img
       src={src}
       alt={symbol}
@@ -61,39 +69,45 @@ function StableLogo({ src, symbol, size = 18 }: { src: string; symbol: string; s
   );
 }
 
-// ─── Portal dropdown — escapes overflow:hidden ────────────────────────────────
+// ─── Portal dropdown — escapes overflow:hidden ancestors ──────────────────────
 function StableDropdown({
   selected,
+  stables,
   onChange,
 }: {
-  selected: StableSymbol;
-  onChange: (s: StableSymbol) => void;
+  selected: StableOption;
+  stables: StableOption[];
+  onChange: (s: StableOption) => void;
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Position the portal dropdown below the button
-  const openDropdown = () => {
+  function openDropdown() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       setPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
     }
     setOpen(true);
-  };
+  }
 
+  // Close when clicking outside BOTH the trigger button AND the dropdown panel
   useEffect(() => {
     if (!open) return;
-    function close(e: MouseEvent) {
-      if (btnRef.current && !btnRef.current.contains(e.target as Node)) {
+
+    function onMouseDown(e: MouseEvent) {
+      const target = e.target as Node;
+      const insideBtn = btnRef.current?.contains(target) ?? false;
+      const insideDrop = dropRef.current?.contains(target) ?? false;
+      if (!insideBtn && !insideDrop) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
 
-  const selected_stable = STABLES.find((s) => s.symbol === selected)!;
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [open]);
 
   return (
     <>
@@ -104,8 +118,8 @@ function StableDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <StableLogo src={selected_stable.logo} symbol={selected_stable.symbol} size={16} />
-        <span className="hp-stable-btn__label">{selected}</span>
+        <StableLogo src={selected.logo} symbol={selected.symbol} size={16} />
+        <span className="hp-stable-btn__label">{selected.symbol}</span>
         <CaretDown
           size={10}
           weight="bold"
@@ -121,6 +135,7 @@ function StableDropdown({
         pos &&
         createPortal(
           <div
+            ref={dropRef}
             role="listbox"
             style={{
               position: "fixed",
@@ -128,7 +143,7 @@ function StableDropdown({
               left: pos.left,
               transform: "translateX(-50%)",
               zIndex: 9999,
-              minWidth: 120,
+              minWidth: 130,
               background: "var(--tc-bg)",
               border: "1px solid var(--tc-border)",
               borderRadius: 14,
@@ -138,28 +153,33 @@ function StableDropdown({
               animation: "tcFadeUp 140ms cubic-bezier(0.22,1,0.36,1)",
             }}
           >
-            {STABLES.map((s) => (
-              <button
-                key={s.symbol}
-                role="option"
-                aria-selected={selected === s.symbol}
-                className={`hp-stable-option ${selected === s.symbol ? "hp-stable-option--active" : ""}`}
-                onClick={() => {
-                  onChange(s.symbol);
-                  setOpen(false);
-                }}
-              >
-                <StableLogo src={s.logo} symbol={s.symbol} size={18} />
-                <span className="hp-stable-option__sym">{s.symbol}</span>
-                {selected === s.symbol && (
-                  <CheckCircle
-                    size={12}
-                    weight="fill"
-                    style={{ color: "var(--tc-accent)", marginLeft: "auto", flexShrink: 0 }}
-                  />
-                )}
-              </button>
-            ))}
+            {stables.map((s) => {
+              const active = selected.symbol === s.symbol;
+              return (
+                <button
+                  key={s.symbol}
+                  role="option"
+                  aria-selected={active}
+                  className={`hp-stable-option ${active ? "hp-stable-option--active" : ""}`}
+                  onMouseDown={(e) => {
+                    // Prevent the document mousedown from firing before this click
+                    e.stopPropagation();
+                    onChange(s);
+                    setOpen(false);
+                  }}
+                >
+                  <StableLogo src={s.logo} symbol={s.symbol} size={18} />
+                  <span className="hp-stable-option__sym">{s.symbol}</span>
+                  {active && (
+                    <CheckCircle
+                      size={12}
+                      weight="fill"
+                      style={{ color: "var(--tc-accent)", marginLeft: "auto", flexShrink: 0 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>,
           document.body
         )}
@@ -183,25 +203,22 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
   const [hasAnimated, setHasAnimated] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  const prevApyRef = useRef(apy);
 
-  const animateApy = useCallback(
-    (from: number, to: number) => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      const duration = 900;
-      const startTime = performance.now();
-
-      const update = (now: number) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(2, -10 * progress);
-        setDisplayApy(from + (to - from) * ease);
-        if (progress < 1) rafRef.current = requestAnimationFrame(update);
-        else setDisplayApy(to);
-      };
-      rafRef.current = requestAnimationFrame(update);
-    },
-    []
-  );
+  const animateApy = useCallback((from: number, to: number) => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    const duration = 900;
+    const startTime = performance.now();
+    const update = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(2, -10 * progress);
+      setDisplayApy(from + (to - from) * ease);
+      if (progress < 1) rafRef.current = requestAnimationFrame(update);
+      else setDisplayApy(to);
+    };
+    rafRef.current = requestAnimationFrame(update);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -209,6 +226,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
         if (entry.isIntersecting && !hasAnimated) {
           setHasAnimated(true);
           animateApy(0, apy);
+          prevApyRef.current = apy;
         }
       },
       { threshold: 0.2 }
@@ -218,8 +236,6 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasAnimated]);
 
-  // Re-animate when APY changes (stable switched)
-  const prevApyRef = useRef(apy);
   useEffect(() => {
     if (hasAnimated && prevApyRef.current !== apy) {
       animateApy(prevApyRef.current, apy);
@@ -236,11 +252,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
     >
       <div className="hp-earn-card__header">
         <div className="hp-earn-card__logo">
-          <img
-            className="w-full h-full rounded-xl"
-            src={PROVIDER_ICONS[protocol]}
-            alt={protocol}
-          />
+          <img className="w-full h-full rounded-xl" src={PROVIDER_ICONS[protocol]} alt={protocol} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -267,7 +279,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
         ) : apy > 0 ? (
           <>
             <div className="hp-earn-card__apy">
-              {displayApy.toFixed(1)}
+              {displayApy.toFixed(2)}
               <span className="hp-earn-card__apy-sign">%</span>
             </div>
             <div className="hp-label">Current APY</div>
@@ -288,7 +300,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
           <span style={{ fontSize: 13, fontWeight: 600 }}>{tvl}</span>
         </div>
         <div className="hp-earn-card__stat">
-          <span className="hp-label" style={{ fontSize: 9 }}>Vaults</span>
+          <span className="hp-label" style={{ fontSize: 9 }}>Status</span>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Active</span>
         </div>
       </div>
@@ -317,15 +329,53 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
 export function EarnSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedStable, setSelectedStable] = useState<StableSymbol>("USDC");
+
+  // Stables pulled from the USD asset variants
+  const [stables, setStables] = useState<StableOption[]>(FALLBACK_STABLES);
+  const [selected, setSelected] = useState<StableOption>(FALLBACK_STABLES[0]);
+
+  // Yield data
   const [yieldData, setYieldData] = useState<Record<string, { apy: number; tvlUsd: number }> | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Fetch USD spot variants from the app's own API ─────────────────────────
+  useEffect(() => {
+    fetch("/api/getVariant?assetId=usd")
+      .then((r) => r.json())
+      .then((data) => {
+        // Spot variants come from variantGroups.spot
+        const spotVariants: any[] =
+          data?.asset?.variantGroups?.spot ?? [];
+
+        if (spotVariants.length === 0) return; // keep fallbacks
+
+        const options: StableOption[] = spotVariants
+          .filter((v: any) => v.symbol && v.mint)
+          .map((v: any) => ({
+            symbol: (v.symbol as string).toUpperCase(),
+            logo: v.market?.logoURI ?? null,
+            mint: v.mint as string,
+          }))
+          // Deduplicate by symbol
+          .filter(
+            (v: StableOption, idx: number, arr: StableOption[]) =>
+              arr.findIndex((x) => x.symbol === v.symbol) === idx
+          );
+
+        if (options.length > 0) {
+          setStables(options);
+          setSelected(options[0]);
+        }
+      })
+      .catch(() => {}); // silently keep fallbacks on error
+  }, []);
+
+  // ── Fetch yields whenever selected stable changes ─────────────────────────
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    fetch(`/api/yield/quote/all?symbol=${selectedStable}`)
+    fetch(`/api/yield/quote/all?symbol=${selected.symbol}`)
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled && data.apyMap) setYieldData(data.apyMap);
@@ -334,8 +384,9 @@ export function EarnSection() {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [selectedStable]);
+  }, [selected.symbol]);
 
+  // ── Section visibility ────────────────────────────────────────────────────
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
@@ -359,7 +410,7 @@ export function EarnSection() {
       ref={sectionRef}
       className={`hp-section hp-earn-section ${isVisible ? "hp-is-visible" : ""} rounded-2xl`}
     >
-      {/* Decorative blur circles — isolated so they don't clip the dropdown */}
+      {/* Blur decorations — isolated so they don't clip the portal dropdown */}
       <div className="hp-earn-section__blurs" aria-hidden>
         <div
           className="hp-blur-circle"
@@ -376,9 +427,23 @@ export function EarnSection() {
       </div>
 
       {/* Header */}
-      <div style={{ position: "relative", zIndex: 2, textAlign: "center", marginBottom: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          textAlign: "center",
+          marginBottom: 48,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 20,
+        }}
+      >
         <div className="hp-label hp-anim-fade-up">Yield Vaults</div>
-        <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1" style={{ margin: 0, textAlign: "center" }}>
+        <h2
+          className="hp-headline hp-anim-fade-up hp-anim-delay-1"
+          style={{ margin: 0, textAlign: "center" }}
+        >
           Put your stables to work.
         </h2>
 
@@ -394,16 +459,18 @@ export function EarnSection() {
             padding: "6px 16px",
             fontSize: 12,
             color: "var(--tc-text-muted)",
-            position: "relative",
-            zIndex: 3,
           }}
         >
           <span>Showing APYs for</span>
-          <StableDropdown selected={selectedStable} onChange={setSelectedStable} />
+          <StableDropdown
+            selected={selected}
+            stables={stables}
+            onChange={setSelected}
+          />
         </div>
       </div>
 
-      {/* Cards */}
+      {/* Cards grid */}
       <div className="hp-earn-grid" style={{ position: "relative", zIndex: 1 }}>
         {ACTIVE_PROVIDERS.map((protocol, i) => {
           const meta = EARN_PROVIDER_META[protocol];
