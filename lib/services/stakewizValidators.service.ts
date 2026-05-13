@@ -230,6 +230,6 @@ export async function getStakeWizValidatorByAddress(
   } catch (err) {
     console.error("Error fetching historical stats:", err);
   }
- console.log("History", info.stakeHistory)
+ 
   return info;
 }

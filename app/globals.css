@@ -2956,6 +2956,42 @@ html.dark {
   color: var(--tc-text-secondary);
 }
 
+/* ── Search modal – tab bar ──────────────────────────────── */
+.srch-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 12px 0;
+}
+
+.srch-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px 20px 0 0;
+  border: none;
+  background: transparent;
+  font-family: var(--tc-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tc-text-muted);
+  cursor: pointer;
+  transition: color var(--tc-ease), background var(--tc-ease);
+  letter-spacing: 0.01em;
+}
+
+.srch-tab:hover {
+  color: var(--tc-text-secondary);
+  background: var(--tc-bg-hover);
+}
+
+.srch-tab--active {
+  color: var(--tc-text-primary);
+  background: var(--tc-bg-hover);
+  font-weight: 600;
+}
+/* ─────────────────────────────────────────────────────────── */
+
 .srch-trigger {
   display: flex;
   align-items: center;
