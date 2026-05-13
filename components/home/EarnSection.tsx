@@ -137,20 +137,11 @@ function StableDropdown({
           <div
             ref={dropRef}
             role="listbox"
+            className="hp-stable-dropdown"
             style={{
-              position: "fixed",
               top: pos.top,
               left: pos.left,
               transform: "translateX(-50%)",
-              zIndex: 9999,
-              minWidth: 130,
-              background: "var(--tc-bg)",
-              border: "1px solid var(--tc-border)",
-              borderRadius: 14,
-              boxShadow: "0 16px 48px rgba(0,0,0,0.28)",
-              overflow: "hidden",
-              padding: 4,
-              animation: "tcFadeUp 140ms cubic-bezier(0.22,1,0.36,1)",
             }}
           >
             {stables.map((s) => {
@@ -160,9 +151,9 @@ function StableDropdown({
                   key={s.symbol}
                   role="option"
                   aria-selected={active}
+                  data-symbol={s.symbol}
                   className={`hp-stable-option ${active ? "hp-stable-option--active" : ""}`}
                   onMouseDown={(e) => {
-                    // Prevent the document mousedown from firing before this click
                     e.stopPropagation();
                     onChange(s);
                     setOpen(false);
@@ -172,9 +163,17 @@ function StableDropdown({
                   <span className="hp-stable-option__sym">{s.symbol}</span>
                   {active && (
                     <CheckCircle
-                      size={12}
+                      size={10}
                       weight="fill"
-                      style={{ color: "var(--tc-accent)", marginLeft: "auto", flexShrink: 0 }}
+                      style={{
+                        color: "var(--tc-accent)",
+                        position: "absolute",
+                        top: -2,
+                        right: -2,
+                        background: "var(--tc-bg)",
+                        borderRadius: "50%",
+                      }}
+                      className="hp-mobile-hide"
                     />
                   )}
                 </button>
@@ -196,9 +195,10 @@ interface VaultProps {
   tvl: string;
   delay: string;
   loading: boolean;
+  mint: string;
 }
 
-function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultProps) {
+function VaultCard({ protocol, color, apy, tvl, delay, label, loading, mint }: VaultProps) {
   const [displayApy, setDisplayApy] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -279,7 +279,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
         ) : apy > 0 ? (
           <>
             <div className="hp-earn-card__apy">
-              {displayApy.toFixed(2)}
+              {displayApy.toFixed(1)}
               <span className="hp-earn-card__apy-sign">%</span>
             </div>
             <div className="hp-label">Current APY</div>
@@ -306,7 +306,7 @@ function VaultCard({ protocol, color, apy, tvl, delay, label, loading }: VaultPr
       </div>
 
       <Link
-        href="/token/usd?mint=Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+        href={`/token/usd?mint=${mint}`}
         className="hp-earn-card__cta"
         onMouseEnter={(e) => {
           e.currentTarget.style.background = color;
@@ -485,6 +485,7 @@ export function EarnSection() {
               tvl={formatTVL(data.tvlUsd)}
               delay={`${i * 100}ms`}
               loading={loading}
+              mint={selected.mint || "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
             />
           );
         })}

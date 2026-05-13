@@ -85,7 +85,7 @@ export async function getAllProviderYields(
       const pools = data.filter(
         (pool) =>
           slugs.some((slug) => pool.project.toLowerCase().startsWith(slug)) &&
-          pool.symbol.toUpperCase().includes(sym) &&
+          (pool.symbol.toUpperCase().includes(sym) || sym.includes(pool.symbol.toUpperCase())) &&
           pool.chain.toLowerCase() === "solana" &&
           pool.apy > 0
       );
