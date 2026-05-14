@@ -81,6 +81,11 @@ body {
   transition: background 0.18s ease, color 0.18s ease;
 }
 
+body.splash-active {
+  overflow: hidden !important;
+  height: 100vh;
+}
+
 /* ══════════════════════════════════════════════════════
    Token Design System — LIGHT MODE (default)
    ══════════════════════════════════════════════════════ */
