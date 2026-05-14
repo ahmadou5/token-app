@@ -60,7 +60,10 @@ export default function SplashScreen() {
           </h1>
           
           <div className="h-[3px] w-48 overflow-hidden rounded-full bg-muted/20">
-            <div className="h-full w-full bg-primary animate-progress origin-left" />
+            <div 
+              className="h-full w-full animate-progress origin-left" 
+              style={{ backgroundColor: '#9945FF' }} 
+            />
           </div>
           
           <p className="text-[12px] font-bold uppercase tracking-[0.3em] text-muted-foreground/50">

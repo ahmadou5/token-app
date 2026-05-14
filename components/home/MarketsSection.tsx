@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useLayoutEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { CaretDown, CheckCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { fmtCompact } from "@/components/TokenCard";
 import { useTokens } from "@/hooks/useToken";
@@ -64,7 +66,8 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
         <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1">Top tokens across every category.</h2>
       </div>
 
-      <div className="hp-cat-tabs hp-anim-fade-up hp-anim-delay-2" ref={tabsRef}>
+      {/* Desktop Tabs */}
+      <div className="hp-cat-tabs hp-anim-fade-up hp-anim-delay-2 hp-mobile-hide-flex" ref={tabsRef}>
         <div 
           className="hp-cat-tab-slider" 
           style={{ 
@@ -82,6 +85,30 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
             {cat.label}
           </button>
         ))}
+      </div>
+
+      {/* Mobile Dropdown Selector */}
+      <div className="hp-mobile-show-flex hp-anim-fade-up hp-anim-delay-2" style={{ justifyContent: 'center', marginBottom: 32 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "var(--tc-surface)",
+            border: "1px solid var(--tc-border)",
+            borderRadius: 40,
+            padding: "6px 16px",
+            fontSize: 12,
+            color: "var(--tc-text-muted)",
+          }}
+        >
+          <span>Category:</span>
+          <CategoryDropdown
+            selected={categories.find(c => c.key === activeCategory) || categories[0]}
+            options={categories}
+            onChange={(cat) => setActiveCategory(cat.key)}
+          />
+        </div>
       </div>
 
       <div className="hp-market-table hp-anim-fade-up hp-anim-delay-3">
@@ -155,5 +182,107 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
         </svg>
       </Link>
     </section>
+  );
+}
+
+function CategoryDropdown({
+  selected,
+  options,
+  onChange,
+}: {
+  selected: any;
+  options: any[];
+  onChange: (cat: any) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  function openDropdown() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left + r.width / 2 });
+    }
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onMouseDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (!btnRef.current?.contains(target) && !dropRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className="hp-stable-btn"
+        onClick={() => (open ? setOpen(false) : openDropdown())}
+      >
+        <span className="hp-stable-btn__label">{selected.label}</span>
+        <CaretDown
+          size={10}
+          weight="bold"
+          style={{
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms",
+          }}
+        />
+      </button>
+
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            ref={dropRef}
+            className="hp-stable-dropdown"
+            style={{
+              top: pos.top,
+              left: pos.left,
+              transform: "translateX(-50%)",
+            }}
+          >
+            {options.map((cat) => {
+              const active = selected.key === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  className={`hp-stable-option ${active ? "hp-stable-option--active" : ""}`}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    onChange(cat);
+                    setOpen(false);
+                  }}
+                  style={{ minWidth: '100px' }}
+                >
+                  <span className="hp-stable-option__sym" style={{ fontSize: 11 }}>{cat.label}</span>
+                  {active && (
+                    <CheckCircle
+                      size={12}
+                      weight="fill"
+                      style={{
+                        color: "var(--tc-accent)",
+                        position: "absolute",
+                        top: -2,
+                        right: -2,
+                        background: "var(--tc-bg)",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
