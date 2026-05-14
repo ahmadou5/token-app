@@ -50,19 +50,19 @@
 }
 
 .hp-mobile-hide-flex {
-  display: flex;
+  display: flex !important;
 }
 
 .hp-mobile-show-flex {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
   .hp-mobile-hide-flex {
-    display: none;
+    display: none !important;
   }
   .hp-mobile-show-flex {
-    display: flex;
+    display: flex !important;
   }
 }
 @keyframes hpFadeUp {
@@ -702,7 +702,8 @@
   }
 
   .hp-stable-option__sym {
-    font-size: 8px;
+    font-size: 11px;
+    font-weight: 600;
   }
 }
 

@@ -262,7 +262,7 @@ function CategoryDropdown({
                   }}
                   style={{ minWidth: '100px' }}
                 >
-                  <span className="hp-stable-option__sym" style={{ fontSize: 11 }}>{cat.label}</span>
+                  <span className="hp-stable-option__sym">{cat.label}</span>
                   {active && (
                     <CheckCircle
                       size={12}
