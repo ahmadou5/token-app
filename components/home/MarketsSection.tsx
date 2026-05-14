@@ -242,7 +242,7 @@ function CategoryDropdown({
         createPortal(
           <div
             ref={dropRef}
-            className="hp-stable-dropdown"
+            className="hp-stable-dropdown hp-category-dropdown"
             style={{
               top: pos.top,
               left: pos.left,

@@ -688,12 +688,16 @@
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     min-width: min(320px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
     gap: 6px;
     padding: 12px;
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.4), 0 16px 48px rgba(0, 0, 0, 0.5);
+  }
+
+  .hp-category-dropdown {
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 
   .hp-stable-option {
