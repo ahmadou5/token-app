@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkline } from "@/components/Sparkline";
 import type { AnyToken } from "@/hooks/useToken";
