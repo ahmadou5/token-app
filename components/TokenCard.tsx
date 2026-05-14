@@ -193,6 +193,14 @@ function InlineSparkline({
   price: number | null;
   change24h: number | null;
 }) {
+  const [animated, setAnimated] = useState(false);
+  const id = useMemo(() => `spark-${Math.random().toString(36).substr(2, 9)}`, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimated(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const data = useMemo(() => {
     if (!price || price <= 0) return [];
     const seed = change24h ?? 0;
@@ -234,15 +242,28 @@ function InlineSparkline({
       className="tc-spark-svg"
       aria-hidden
     >
-      <path d={areaD} fill={areaColor} opacity="0.6" />
-      <path
-        d={pathD}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <defs>
+        <clipPath id={id}>
+          <rect
+            x="0"
+            y="0"
+            width={animated ? W : 0}
+            height={H}
+            style={{ transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+          />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id})`}>
+        <path d={areaD} fill={areaColor} opacity="0.6" />
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
     </svg>
   );
 }

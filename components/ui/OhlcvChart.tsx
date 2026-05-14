@@ -293,11 +293,11 @@ export function OHLCVChart({
           <clipPath id="chartClip">
             <rect
               x={PAD.left}
-              y={PAD.top - 4}
+              y={animated ? PAD.top - 4 : H - PAD.bottom}
               width={animated ? W - PAD.left - PAD.right : 0}
-              height={H - PAD.top - PAD.bottom + 8}
+              height={animated ? H - PAD.top - PAD.bottom + 8 : 0}
               style={{
-                transition: animated ? "width 900ms cubic-bezier(0.22,1,0.36,1)" : "none",
+                transition: animated ? "all 1400ms cubic-bezier(0.22,1,0.36,1)" : "none",
               }}
             />
           </clipPath>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 interface SparklineProps {
   data: number[];
   width?: number;
@@ -13,6 +15,14 @@ export function Sparkline({
   height = 28,
   positive,
 }: SparklineProps) {
+  const [animated, setAnimated] = useState(false);
+  const id = useMemo(() => `spark-lib-${Math.random().toString(36).substr(2, 9)}`, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimated(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!data || !Array.isArray(data) || data.length < 2) return null;
 
   // Filter out bad values
@@ -50,14 +60,27 @@ export function Sparkline({
       className="sparkline"
       aria-hidden
     >
-      <path d={areaD} fill={areaColor} opacity="0.5" />
-      <path
-        d={pathD}
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <defs>
+        <clipPath id={id}>
+          <rect
+            x="0"
+            y="0"
+            width={animated ? width : 0}
+            height={height}
+            style={{ transition: 'width 1s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id})`}>
+        <path d={areaD} fill={areaColor} opacity="0.5" />
+        <path
+          d={pathD}
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
     </svg>
   );
 }
