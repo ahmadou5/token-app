@@ -46,8 +46,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Analytics />
-        <SplashScreen />
         <Providers>
+          <SplashScreen />
           <Navbar />
           {children}
         </Providers>

@@ -616,12 +616,12 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 8px;
-  min-width: 480px; /* Wider to accommodate labels */
+  min-width: 480px; 
 }
 
 .hp-stable-option {
   display: flex;
-  flex-direction: column; /* Stack icon and label */
+  flex-direction: column; 
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -661,37 +661,34 @@
   color: var(--tc-text-primary);
 }
 
-/* Hide the absolute checkmark in this version to keep it clean */
+/* Utility to hide checkmark if needed */
 .hp-mobile-hide {
   display: none;
 }
 
-/* Mobile: Revert to list */
+/* Responsive Grid Adjustments */
 @media (max-width: 768px) {
   .hp-stable-dropdown {
-    display: flex;
-    flex-direction: column;
-    min-width: 140px;
-    max-width: 200px;
-    grid-template-columns: none;
-    gap: 4px;
-    padding: 4px;
+    grid-template-columns: repeat(4, 1fr);
+    min-width: min(320px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    gap: 6px;
+    padding: 8px;
   }
 
   .hp-stable-option {
-    flex-direction: row; /* List row layout */
-    width: 100%;
-    padding: 8px 12px;
-    justify-content: flex-start;
-    gap: 10px;
-    border-radius: 8px;
-    transform: none !important;
+    padding: 6px 4px;
+    gap: 4px;
   }
 
   .hp-stable-option__sym {
-    font-size: 12px;
-    text-align: left;
-    font-weight: 600;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hp-stable-dropdown {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 /* ─────────────────────────────────────────────────────────── */
