@@ -5,8 +5,9 @@ import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Layout/Navbar";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { Analytics } from "@vercel/analytics/next"
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+import { Analytics } from "@vercel/analytics/next";
+import SplashScreen from "../components/ui/SplashScreen";
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = DM_Mono({
   weight: "400",
@@ -21,7 +22,8 @@ const geistMono = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: "Vela",
-  description: "Vela is a high-fidelity Capital Market Explorer and Yield Hub designed to be the Bloomberg Terminal for the Solana ecosystem.",
+  description:
+    "Vela is a high-fidelity Capital Market Explorer and Yield Hub designed to be the Bloomberg Terminal for the Solana ecosystem.",
 };
 
 export default function RootLayout({
@@ -33,14 +35,22 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">
         <Analytics />
+        <SplashScreen />
         <Providers>
           <Navbar />
           {children}
-          </Providers>
+        </Providers>
       </body>
     </html>
   );
