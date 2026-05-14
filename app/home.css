@@ -141,10 +141,20 @@
   0% {
     box-shadow: 0 0 0 0 rgba(153, 69, 255, 0.4);
   }
-
   100% {
     box-shadow: 0 0 0 20px rgba(153, 69, 255, 0);
   }
+}
+
+.hp-pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: #9945FF;
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(153, 69, 255, 0.4);
+  animation: hpGlow 2s infinite;
 }
 
 /* Animation utility classes */

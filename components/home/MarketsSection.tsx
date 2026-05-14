@@ -62,7 +62,10 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
       className={`hp-section hp-markets-section ${isVisible ? 'hp-is-visible' : ''}`}
     >
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <div className="hp-label hp-anim-fade-up">Live Markets</div>
+        <div className="hp-label hp-anim-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span className="hp-pulse-dot" />
+          Live Markets
+        </div>
         <h2 className="hp-headline hp-anim-fade-up hp-anim-delay-1">Top tokens across every category.</h2>
       </div>
 
@@ -167,7 +170,7 @@ export default function MarketsSection({ initialTokens = [] }: { initialTokens?:
                   {token.change24h >= 0 ? '▲' : '▼'} {Math.abs(token.change24h).toFixed(2)}%
                 </div>
                 <div className="hp-market-row__volume" style={{ textAlign: 'right' }}>
-                  ${token.volume24h}
+                  {token.volume24h}
                 </div>
               </div>
             ))
