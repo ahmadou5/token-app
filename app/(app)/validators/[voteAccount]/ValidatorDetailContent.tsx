@@ -252,9 +252,9 @@ function TotalStakeChart({
           </linearGradient>
           <clipPath id="stakeClip">
             <rect
-              x={PAD.left} y={0}
-              width={animated ? W : 0} height={H}
-              style={{ transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)" }}
+              x={PAD.left} y={animated ? 0 : H - PAD.bottom}
+              width={animated ? W - PAD.left - PAD.right : 0} height={animated ? H : 0}
+              style={{ transition: animated ? "all 1.4s cubic-bezier(0.22,1,0.36,1)" : "none" }}
             />
           </clipPath>
         </defs>
@@ -301,7 +301,7 @@ function TotalStakeChart({
 
 // ─── Epoch Flow (bar) chart ───────────────────────────────────────────────────
 
-function FlowChart({ data }: { data: HistoryPoint[] }) {
+function FlowChart({ data, animated }: { data: HistoryPoint[]; animated: boolean }) {
   const W = 800;
   const H = 220;
   const PAD = { top: 16, right: 16, bottom: 32, left: 72 };
@@ -401,17 +401,29 @@ function FlowChart({ data }: { data: HistoryPoint[] }) {
             stroke="var(--tc-divider)" strokeWidth="1" strokeDasharray="4,4" />
         ))}
 
-        {bars.map(({ x, topY, barH, epoch }) => (
-          <rect
-            key={epoch}
-            x={x} y={topY}
-            width={barW} height={barH}
-            rx="2"
-            fill="var(--tc-accent)"
-            opacity={hoveredEpoch === null || hoveredEpoch === epoch ? 0.85 : 0.35}
-            style={{ transition: "opacity 100ms" }}
-          />
-        ))}
+        <defs>
+          <clipPath id="flowClip">
+            <rect
+              x={PAD.left} y={animated ? 0 : H - PAD.bottom}
+              width={animated ? W - PAD.left - PAD.right : 0} height={animated ? H : 0}
+              style={{ transition: animated ? "all 1.4s cubic-bezier(0.22,1,0.36,1)" : "none" }}
+            />
+          </clipPath>
+        </defs>
+
+        <g clipPath="url(#flowClip)">
+          {bars.map(({ x, topY, barH, epoch }) => (
+            <rect
+              key={epoch}
+              x={x} y={topY}
+              width={barW} height={barH}
+              rx="2"
+              fill="var(--tc-accent)"
+              opacity={hoveredEpoch === null || hoveredEpoch === epoch ? 0.85 : 0.35}
+              style={{ transition: "opacity 100ms" }}
+            />
+          ))}
+        </g>
 
         {yLabels.map(({ y, label }) => (
           <text key={y} x={PAD.left - 8} y={y + 4} textAnchor="end"
@@ -445,11 +457,12 @@ function StakeChart({
   const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
+    setAnimated(false);
     if (rawHistory.length > 1) {
       const raf = requestAnimationFrame(() => requestAnimationFrame(() => setAnimated(true)));
       return () => cancelAnimationFrame(raf);
     }
-  }, [rawHistory.length]);
+  }, [rawHistory.length, view]);
 
   const cumulativeData = useMemo(
     () => buildCumulative(rawHistory, currentStakeSol),
@@ -489,7 +502,7 @@ function StakeChart({
 
       {view === "total"
         ? <TotalStakeChart data={cumulativeData} animated={animated} />
-        : <FlowChart data={rawHistory} />
+        : <FlowChart data={rawHistory} animated={animated} />
       }
 
       <p style={{ margin: "6px 0 0", fontSize: 10, color: "var(--tc-text-muted)", fontStyle: "italic", lineHeight: 1.5 }}>
